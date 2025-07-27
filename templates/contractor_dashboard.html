@@ -9,8 +9,12 @@
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center">
                 <div>
-                    <h1 class="h3 mb-1">Welcome back, {{ current_user.first_name }}!</h1>
-                    <p class="text-muted mb-0">Find and bid on home improvement projects</p>
+                    <div class="d-flex align-items-center mb-2">
+                        <i class="fas fa-tools text-primary me-2" style="font-size: 1.5rem;"></i>
+                        <span class="badge bg-primary me-2">Contractor</span>
+                        <h1 class="h3 mb-0">Welcome back, {{ user.first_name }}!</h1>
+                    </div>
+                    <p class="text-muted mb-0">Find and bid on home improvement projects in your area</p>
                 </div>
                 <div class="d-flex gap-2">
                     <button class="btn btn-outline-primary" onclick="toggleFilters()">
@@ -44,7 +48,7 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between">
                         <div>
-                            <h4 class="mb-0">{{ current_user.bids|length }}</h4>
+                            <h4 class="mb-0">{{ bids|length }}</h4>
                             <p class="mb-0">Your Bids</p>
                         </div>
                         <i class="fas fa-handshake fa-2x opacity-75"></i>
@@ -57,7 +61,7 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between">
                         <div>
-                            <h4 class="mb-0">{{ current_user.bids|selectattr('status', 'equalto', 'Accepted')|list|length }}</h4>
+                            <h4 class="mb-0">{{ bids|selectattr('status', 'equalto', 'Accepted')|list|length }}</h4>
                             <p class="mb-0">Accepted Bids</p>
                         </div>
                         <i class="fas fa-check-circle fa-2x opacity-75"></i>
@@ -70,7 +74,7 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between">
                         <div>
-                            <h4 class="mb-0">${{ "%.0f"|format(current_user.bids|selectattr('status', 'equalto', 'Accepted')|map(attribute='amount')|sum or 0) }}</h4>
+                            <h4 class="mb-0">${{ "%.0f"|format(bids|selectattr('status', 'equalto', 'Accepted')|map(attribute='amount')|sum or 0) }}</h4>
                             <p class="mb-0">Total Earnings</p>
                         </div>
                         <i class="fas fa-dollar-sign fa-2x opacity-75"></i>
@@ -144,7 +148,7 @@
                         <div class="card h-100 project-card">
                             <div class="card-body">
                                 <div class="d-flex justify-content-between align-items-start mb-3">
-                                    <h5 class="card-title mb-0">{{ project.title }}</h5>
+                                    <h5 class="card-title mb-0">{{ project.title }}{% if project.original_file_path %} <i class="fas fa-microphone ms-2 text-primary" title="Audio recording available"></i>{% endif %}</h5>
                                     <span class="badge bg-primary">{{ project.project_type }}</span>
                                 </div>
                                 
@@ -176,7 +180,7 @@
                                     </div>
                                     <div class="col-6">
                                         <small class="text-muted d-block"><i class="fas fa-handshake me-1"></i>Bids</small>
-                                        <strong>{{ project.bids|length }} submitted</strong>
+                                        <strong>{{ project.bid_count }} submitted</strong>
                                     </div>
                                 </div>
                                 
@@ -185,8 +189,7 @@
                                         <i class="fas fa-calendar me-1"></i>Posted {{ project.created_at.strftime('%m/%d/%Y') }}
                                     </small>
                                     
-                                    {% set user_bid = project.bids|selectattr('contractor_id', 'equalto', current_user.id)|first %}
-                                    {% if user_bid %}
+                                    {% if project.has_user_bid > 0 %}
                                         <span class="badge bg-success">
                                             <i class="fas fa-check me-1"></i>Bid Submitted
                                         </span>
@@ -217,7 +220,7 @@
     </div>
     
     <!-- My Bids Section -->
-    {% if current_user.bids %}
+    {% if bids %}
     <div class="row mt-5">
         <div class="col-12">
             <div class="card">
@@ -238,14 +241,13 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                {% set recent_bids = current_user.bids|sort(attribute='created_at', reverse=true)|list %}
-                            {% for bid in recent_bids[:10] %}
+                            {% for bid in bids[:10] %}
                                 <tr>
                                     <td>
                                         <div>
-                                            <strong>{{ bid.project.title }}</strong>
+                                            <strong>{{ bid.title }}</strong>
                                             <br>
-                                            <small class="text-muted">{{ bid.project.project_type }}</small>
+                                            <small class="text-muted">{{ bid.project_type }}</small>
                                         </div>
                                     </td>
                                     <td>
@@ -261,7 +263,7 @@
                                         <small>{{ bid.created_at.strftime('%m/%d/%Y') }}</small>
                                     </td>
                                     <td>
-                                        <a href="{{ url_for('view_project', project_id=bid.project.id) }}" class="btn btn-outline-primary btn-sm">
+                                        <a href="{{ url_for('view_project', project_id=bid.project_id) }}" class="btn btn-outline-primary btn-sm">
                                             <i class="fas fa-eye"></i>
                                         </a>
                                     </td>

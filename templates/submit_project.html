@@ -15,38 +15,49 @@
             <!-- Submission Methods -->
             <div class="card shadow">
                 <div class="card-body p-4">
-                    <!-- Method Selection -->
-                    <div class="mb-4">
-                        <h5 class="mb-3">Choose your submission method:</h5>
-                        <div class="row g-3">
-                            <div class="col-md-4">
-                                <input type="radio" class="btn-check" name="submission_method" id="audio_method" value="audio">
-                                <label class="btn btn-outline-primary w-100 p-3" for="audio_method">
-                                    <i class="fas fa-microphone d-block mb-2" style="font-size: 2rem;"></i>
-                                    <strong>Audio</strong>
-                                    <small class="d-block text-muted">Record your description</small>
-                                </label>
-                            </div>
-                            <div class="col-md-4">
-                                <input type="radio" class="btn-check" name="submission_method" id="video_method" value="video">
-                                <label class="btn btn-outline-primary w-100 p-3" for="video_method">
-                                    <i class="fas fa-video d-block mb-2" style="font-size: 2rem;"></i>
-                                    <strong>Video</strong>
-                                    <small class="d-block text-muted">Show and tell your project</small>
-                                </label>
-                            </div>
-                            <div class="col-md-4">
-                                <input type="radio" class="btn-check" name="submission_method" id="text_method" value="text" checked>
-                                <label class="btn btn-outline-primary w-100 p-3" for="text_method">
-                                    <i class="fas fa-keyboard d-block mb-2" style="font-size: 2rem;"></i>
-                                    <strong>Text</strong>
-                                    <small class="d-block text-muted">Type your description</small>
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-                    
                     <form method="POST" enctype="multipart/form-data" id="projectForm">
+                        <!-- Method Selection Cards -->
+                        <div class="mb-4">
+                            <h5 class="mb-3">Choose your submission method:</h5>
+                            <div class="row g-3">
+                                <!-- Text Method -->
+                                <div class="col-md-4">
+                                    <div class="method-card card h-100 border-2 border-primary cursor-pointer selected" data-method="text" id="text_card">
+                                        <div class="card-body text-center p-4">
+                                            <i class="fas fa-keyboard fa-3x text-primary mb-3"></i>
+                                            <h6 class="card-title">Text</h6>
+                                            <p class="card-text small text-muted">Type your description</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Audio Method -->
+                                <div class="col-md-4">
+                                    <div class="method-card card h-100 border-2 cursor-pointer" data-method="audio" id="audio_card">
+                                        <div class="card-body text-center p-4">
+                                            <i class="fas fa-microphone fa-3x text-primary mb-3"></i>
+                                            <h6 class="card-title">Audio</h6>
+                                            <p class="card-text small text-muted">Record your description</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Video Method -->
+                                <div class="col-md-4">
+                                    <div class="method-card card h-100 border-2 cursor-pointer opacity-50" data-method="video" id="video_card">
+                                        <div class="card-body text-center p-4">
+                                            <i class="fas fa-video fa-3x text-muted mb-3"></i>
+                                            <h6 class="card-title text-muted">Video</h6>
+                                            <p class="card-text small text-muted">Coming soon</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Hidden input for submission method -->
+                            <input type="hidden" name="submission_method" id="submission_method" value="text">
+                        </div>
+                        
                         <!-- File Upload Section -->
                         <div id="file_upload_section" style="display: none;">
                             <div class="mb-4">
@@ -76,23 +87,64 @@
                                         </span>
                                     </div>
                                 </div>
+                                
+                                <!-- Progress Bar -->
+                                <div id="upload_progress" class="mt-3" style="display: none;">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <span class="text-muted">Uploading and processing...</span>
+                                        <span id="progress_percentage" class="text-muted">0%</span>
+                                    </div>
+                                    <div class="progress mb-2">
+                                        <div id="progress_bar" class="progress-bar progress-bar-striped progress-bar-animated" 
+                                             role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                                    </div>
+                                    <div id="progress_status" class="text-muted small">
+                                        <i class="fas fa-upload me-1"></i>Preparing upload...
+                                    </div>
+                                    <div id="estimated_time" class="text-muted small mt-1" style="display: none;">
+                                        <i class="fas fa-clock me-1"></i>Estimated time remaining: <span id="time_remaining">--</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         
                         <!-- Text Description Section -->
-                        <div id="text_description_section">
+                        <div id="text_description_section" style="display: block;">
                             <div class="mb-4">
-                                <label for="text_description" class="form-label">Project Description</label>
-                                <textarea class="form-control" id="text_description" name="text_description" rows="6" 
-                                          placeholder="Describe your project in detail. Include:
-• What type of work needs to be done?
-• What's the scope of the project?
-• What's your budget range?
-• When do you need it completed?
-• Any specific requirements or preferences?
-
-Example: I need to renovate my kitchen. The cabinets are old and need replacement, and I'd like to update the countertops to granite. My budget is around $15,000 to $20,000. I'm flexible on timing but would prefer to have it done within 2 months."></textarea>
-                                <div class="form-text">Be as detailed as possible to help our AI understand your project requirements.</div>
+                                <label for="title" class="form-label">Project Title</label>
+                                <input type="text" class="form-control" id="title" name="title" placeholder="e.g., Kitchen Renovation" required>
+                            </div>
+                            <div class="mb-4">
+                                <label for="project_type" class="form-label">Project Type</label>
+                                <select class="form-select" id="project_type" name="project_type">
+                                    <option value="General">General</option>
+                                    <option value="Plumbing">Plumbing</option>
+                                    <option value="Electrical">Electrical</option>
+                                    <option value="Renovation">Renovation</option>
+                                    <!-- Add more options as needed -->
+                                </select>
+                            </div>
+                            <div class="mb-4">
+                                <label for="location" class="form-label">Location</label>
+                                <input type="text" class="form-control" id="location" name="location" placeholder="e.g., New York, NY">
+                            </div>
+                            <div class="mb-4">
+                                <label for="description" class="form-label">Description</label>
+                                <textarea class="form-control" id="description" name="description" rows="6" placeholder="Describe your project in detail..." required></textarea>
+                            </div>
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <label for="budget_min" class="form-label">Minimum Budget</label>
+                                    <input type="number" class="form-control" id="budget_min" name="budget_min" placeholder="e.g., 1000">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="budget_max" class="form-label">Maximum Budget</label>
+                                    <input type="number" class="form-control" id="budget_max" name="budget_max" placeholder="e.g., 5000">
+                                </div>
+                            </div>
+                            <div class="mb-4">
+                                <label for="timeline" class="form-label">Timeline</label>
+                                <input type="text" class="form-control" id="timeline" name="timeline" placeholder="e.g., Within 2 months">
                             </div>
                         </div>
                         
@@ -121,7 +173,7 @@ Example: I need to renovate my kitchen. The cabinets are old and need replacemen
                                 <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
                             </a>
                             <button type="submit" class="btn btn-primary" id="submitBtn">
-                                <i class="fas fa-magic me-2"></i>Process with AI
+                                <i class="fas fa-magic me-2"></i>Submit Project
                             </button>
                         </div>
                     </form>
@@ -158,35 +210,62 @@ Example: I need to renovate my kitchen. The cabinets are old and need replacemen
 {% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const audioMethod = document.getElementById('audio_method');
-    const videoMethod = document.getElementById('video_method');
-    const textMethod = document.getElementById('text_method');
+    const methodCards = document.querySelectorAll('.method-card');
+    const submissionMethodInput = document.getElementById('submission_method');
     const fileUploadSection = document.getElementById('file_upload_section');
-    const textDescriptionSection = document.getElementById('text_description_section');
+    const textFormSection = document.getElementById('text_description_section');
     const fileInput = document.getElementById('file');
     const uploadArea = document.getElementById('uploadArea');
     const submitBtn = document.getElementById('submitBtn');
     
-    function updateSubmissionMethod() {
-        if (audioMethod.checked || videoMethod.checked) {
-            fileUploadSection.style.display = 'block';
-            textDescriptionSection.style.display = 'none';
+    // Method card selection
+    methodCards.forEach(card => {
+        card.addEventListener('click', function() {
+            const method = this.dataset.method;
             
-            // Update file input accept attribute
-            if (audioMethod.checked) {
-                fileInput.accept = '.mp3,.wav';
-            } else {
-                fileInput.accept = '.mp4,.mov';
-            }
+            // Skip if video (disabled)
+            if (method === 'video') return;
+            
+            // Remove selected class from all cards
+            methodCards.forEach(c => {
+                c.classList.remove('selected', 'border-primary');
+                c.classList.add('border-2');
+            });
+            
+            // Add selected class to clicked card
+            this.classList.add('selected', 'border-primary');
+            
+            // Update hidden input
+            submissionMethodInput.value = method;
+            
+            // Update form sections
+            updateSubmissionMethod(method);
+        });
+    });
+    
+    function updateSubmissionMethod(method) {
+        if (method === 'audio') {
+            fileUploadSection.style.display = 'block';
+            textFormSection.style.display = 'none';
+            fileInput.accept = '.mp3,.wav';
+            // Remove required from text fields
+            document.getElementById('title').removeAttribute('required');
+            document.getElementById('description').removeAttribute('required');
+        } else if (method === 'video') {
+            fileUploadSection.style.display = 'block';
+            textFormSection.style.display = 'none';
+            fileInput.accept = '.mp4,.mov';
+            // Remove required from text fields
+            document.getElementById('title').removeAttribute('required');
+            document.getElementById('description').removeAttribute('required');
         } else {
             fileUploadSection.style.display = 'none';
-            textDescriptionSection.style.display = 'block';
+            textFormSection.style.display = 'block';
+            // Add required back to text fields
+            document.getElementById('title').setAttribute('required', 'required');
+            document.getElementById('description').setAttribute('required', 'required');
         }
     }
-    
-    audioMethod.addEventListener('change', updateSubmissionMethod);
-    videoMethod.addEventListener('change', updateSubmissionMethod);
-    textMethod.addEventListener('change', updateSubmissionMethod);
     
     // File upload handling
     fileInput.addEventListener('change', function(e) {
@@ -236,27 +315,142 @@ document.addEventListener('DOMContentLoaded', function() {
         return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     }
     
-    // Form validation
+    // Form validation and submission
     document.getElementById('projectForm').addEventListener('submit', function(e) {
-        const textDescription = document.getElementById('text_description').value.trim();
+        const method = submissionMethodInput.value;
+        const textDescription = document.getElementById('description').value.trim();
         const file = fileInput.files[0];
         
-        if (textMethod.checked && !textDescription) {
+        console.log('Form submission:', { method, hasFile: !!file, textDescription: textDescription.length });
+        
+        if (method === 'text' && !textDescription) {
             e.preventDefault();
             alert('Please provide a project description.');
             return;
         }
         
-        if ((audioMethod.checked || videoMethod.checked) && !file) {
+        if ((method === 'audio' || method === 'video') && !file) {
             e.preventDefault();
             alert('Please upload a file.');
             return;
         }
         
-        // Show loading state
+        // For audio/video uploads, use AJAX with progress
+        if ((method === 'audio' || method === 'video') && file) {
+            e.preventDefault();
+            submitWithProgress(this, file);
+            return;
+        }
+        
+        // Show loading state for text submissions
         submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing...';
         submitBtn.disabled = true;
     });
+    
+    function submitWithProgress(form, file) {
+        const formData = new FormData(form);
+        const progressContainer = document.getElementById('upload_progress');
+        const progressBar = document.getElementById('progress_bar');
+        const progressPercentage = document.getElementById('progress_percentage');
+        const progressStatus = document.getElementById('progress_status');
+        const estimatedTime = document.getElementById('estimated_time');
+        const timeRemaining = document.getElementById('time_remaining');
+        
+        // Show progress bar
+        progressContainer.style.display = 'block';
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Uploading...';
+        submitBtn.disabled = true;
+        
+        // Track upload start time and progress
+        let startTime = Date.now();
+        let lastProgressTime = startTime;
+        let lastProgressValue = 0;
+        
+        const xhr = new XMLHttpRequest();
+        
+        // Upload progress handler
+        xhr.upload.addEventListener('progress', function(e) {
+            if (e.lengthComputable) {
+                const percentComplete = Math.round((e.loaded / e.total) * 100);
+                const currentTime = Date.now();
+                
+                // Update progress bar
+                progressBar.style.width = percentComplete + '%';
+                progressBar.setAttribute('aria-valuenow', percentComplete);
+                progressPercentage.textContent = percentComplete + '%';
+                
+                // Update status based on progress
+                if (percentComplete < 50) {
+                    progressStatus.innerHTML = '<i class="fas fa-upload me-1"></i>Uploading file...';
+                } else if (percentComplete < 90) {
+                    progressStatus.innerHTML = '<i class="fas fa-cog fa-spin me-1"></i>Processing audio...';
+                } else {
+                    progressStatus.innerHTML = '<i class="fas fa-magic me-1"></i>Finalizing...';
+                }
+                
+                // Calculate estimated time remaining
+                if (percentComplete > 5 && percentComplete < 95) {
+                    const elapsedTime = currentTime - startTime;
+                    const progressRate = percentComplete / elapsedTime;
+                    const remainingProgress = 100 - percentComplete;
+                    const estimatedRemainingTime = remainingProgress / progressRate;
+                    
+                    if (estimatedRemainingTime > 0) {
+                        const seconds = Math.ceil(estimatedRemainingTime / 1000);
+                        let timeText;
+                        
+                        if (seconds < 60) {
+                            timeText = seconds + ' seconds';
+                        } else {
+                            const minutes = Math.floor(seconds / 60);
+                            const remainingSeconds = seconds % 60;
+                            timeText = minutes + 'm ' + remainingSeconds + 's';
+                        }
+                        
+                        timeRemaining.textContent = timeText;
+                        estimatedTime.style.display = 'block';
+                    }
+                }
+                
+                lastProgressTime = currentTime;
+                lastProgressValue = percentComplete;
+            }
+        });
+        
+        // Handle completion
+        xhr.addEventListener('load', function() {
+            if (xhr.status === 200) {
+                // Success - redirect to review page
+                progressStatus.innerHTML = '<i class="fas fa-check me-1"></i>Upload complete!';
+                progressBar.classList.remove('progress-bar-animated');
+                progressBar.classList.add('bg-success');
+                
+                setTimeout(() => {
+                    window.location.href = '/review_project';
+                }, 500);
+            } else {
+                // Error
+                progressStatus.innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i>Upload failed. Please try again.';
+                progressBar.classList.remove('progress-bar-animated');
+                progressBar.classList.add('bg-danger');
+                submitBtn.innerHTML = '<i class="fas fa-magic me-2"></i>Submit Project';
+                submitBtn.disabled = false;
+            }
+        });
+        
+        // Handle errors
+        xhr.addEventListener('error', function() {
+            progressStatus.innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i>Upload failed. Please check your connection.';
+            progressBar.classList.remove('progress-bar-animated');
+            progressBar.classList.add('bg-danger');
+            submitBtn.innerHTML = '<i class="fas fa-magic me-2"></i>Submit Project';
+            submitBtn.disabled = false;
+        });
+        
+        // Send the request
+        xhr.open('POST', form.action);
+        xhr.send(formData);
+    }
 });
 
 function removeFile() {
@@ -264,4 +458,24 @@ function removeFile() {
     document.getElementById('file_info').style.display = 'none';
 }
 </script>
+
+<style>
+.method-card {
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.method-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.method-card.selected {
+    background-color: #f8f9ff;
+}
+
+.cursor-pointer {
+    cursor: pointer;
+}
+</style>
 {% endblock %}

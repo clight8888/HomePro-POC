@@ -1,0 +1,27 @@
+[
+  {
+    "Namespace": "aws:ec2:vpc",
+    "OptionName": "VPCId",
+    "Value": "vpc-03954f0562eb1eafe"
+  },
+  {
+    "Namespace": "aws:ec2:vpc",
+    "OptionName": "Subnets",
+    "Value": "subnet-0edc5f96140ea34a5,subnet-006acebce26f6435b"
+  },
+  {
+    "Namespace": "aws:ec2:vpc",
+    "OptionName": "ELBSubnets",
+    "Value": "subnet-09f21c1ff6a24e86e,subnet-08bf34578b894452f"
+  },
+  {
+    "Namespace": "aws:ec2:vpc",
+    "OptionName": "ELBScheme",
+    "Value": "internet-facing"
+  },
+  {
+    "Namespace": "aws:ec2:vpc",
+    "OptionName": "AssociatePublicIpAddress",
+    "Value": "false"
+  }
+]

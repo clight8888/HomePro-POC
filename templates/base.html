@@ -72,25 +72,49 @@
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('index') }}">Home</a>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('submit_project') }}">Submit Project</a>
-                    </li>
-                    {% if current_user.is_authenticated %}
+                    {% if user %}
+                        {% if user.role == 'homeowner' %}
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('submit_project') }}">
+                                    <i class="fas fa-plus me-1"></i>Submit Project
+                                </a>
+                            </li>
+                        {% endif %}
                         <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('dashboard') }}">Dashboard</a>
+                            <a class="nav-link" href="{{ url_for('dashboard') }}">
+                                {% if user.role == 'contractor' %}
+                                    <i class="fas fa-briefcase me-1"></i>Find Projects
+                                {% else %}
+                                    <i class="fas fa-tachometer-alt me-1"></i>Dashboard
+                                {% endif %}
+                            </a>
+                        </li>
+                    {% else %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('submit_project') }}">Submit Project</a>
                         </li>
                     {% endif %}
                 </ul>
                 <ul class="navbar-nav ms-auto">
-                    {% if current_user.is_authenticated %}
+                    {% if user %}
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
-                                <i class="fas fa-user me-1"></i>{{ current_user.first_name }}
+                                {% if user.role == 'contractor' %}
+                                    <i class="fas fa-tools me-1"></i>{{ user.first_name }}
+                                    <span class="badge bg-primary ms-1">Contractor</span>
+                                {% else %}
+                                    <i class="fas fa-home me-1"></i>{{ user.first_name }}
+                                    <span class="badge bg-success ms-1">Homeowner</span>
+                                {% endif %}
                             </a>
                             <ul class="dropdown-menu">
-                                <li><a class="dropdown-item" href="#">Profile</a></li>
+                                <li><a class="dropdown-item" href="#">
+                                    <i class="fas fa-user me-2"></i>Profile
+                                </a></li>
                                 <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item" href="{{ url_for('logout') }}">Logout</a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('logout') }}">
+                                    <i class="fas fa-sign-out-alt me-2"></i>Logout
+                                </a></li>
                             </ul>
                         </li>
                     {% else %}

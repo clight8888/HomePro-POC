@@ -1,0 +1,190 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "HomePro Application Infrastructure with RDS MySQL Free Tier - Simplified",
+  "Parameters": {
+    "EnvironmentName": {
+      "Type": "String",
+      "Default": "homepro-prod",
+      "Description": "Environment name for the application"
+    },
+    "DBUsername": {
+      "Type": "String",
+      "Default": "homeproadmin",
+      "Description": "Database administrator username"
+    },
+    "DBPassword": {
+      "Type": "String",
+      "NoEcho": true,
+      "MinLength": 8,
+      "MaxLength": 41,
+      "Description": "Database administrator password (8-41 characters)"
+    }
+  },
+  "Resources": {
+    "AudioFilesBucket": {
+      "Type": "AWS::S3::Bucket",
+      "Properties": {
+        "PublicAccessBlockConfiguration": {
+          "BlockPublicAcls": true,
+          "BlockPublicPolicy": true,
+          "IgnorePublicAcls": true,
+          "RestrictPublicBuckets": true
+        },
+        "LifecycleConfiguration": {
+          "Rules": [
+            {
+              "Id": "DeleteOldAudioFiles",
+              "Status": "Enabled",
+              "ExpirationInDays": 90
+            }
+          ]
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "HomePro Audio Files Bucket"
+          }
+        ]
+      }
+    },
+    "DefaultUploadsBucket": {
+      "Type": "AWS::S3::Bucket",
+      "Properties": {
+        "PublicAccessBlockConfiguration": {
+          "BlockPublicAcls": true,
+          "BlockPublicPolicy": true,
+          "IgnorePublicAcls": true,
+          "RestrictPublicBuckets": true
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "HomePro Uploads Bucket"
+          }
+        ]
+      }
+    },
+    "HomeProDatabase": {
+      "Type": "AWS::RDS::DBInstance",
+      "Properties": {
+        "DBInstanceIdentifier": "homepro-mysql-db",
+        "DBInstanceClass": "db.t3.micro",
+        "Engine": "mysql",
+        "EngineVersion": "8.0.35",
+        "AllocatedStorage": 20,
+        "StorageType": "gp2",
+        "DBName": "homeprodb",
+        "MasterUsername": {"Ref": "DBUsername"},
+        "MasterUserPassword": {"Ref": "DBPassword"},
+        "BackupRetentionPeriod": 7,
+        "MultiAZ": false,
+        "PubliclyAccessible": true,
+        "StorageEncrypted": true,
+        "DeletionProtection": false,
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "HomePro MySQL Database"
+          }
+        ]
+      }
+    },
+    "HomeProRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "ec2.amazonaws.com"
+              },
+              "Action": "sts:AssumeRole"
+            }
+          ]
+        },
+        "Policies": [
+          {
+            "PolicyName": "HomeProS3Access",
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "s3:GetObject",
+                    "s3:PutObject",
+                    "s3:DeleteObject"
+                  ],
+                  "Resource": [
+                    {"Fn::Join": ["", ["arn:aws:s3:::", {"Ref": "AudioFilesBucket"}, "/*"]]},
+                    {"Fn::Join": ["", ["arn:aws:s3:::", {"Ref": "DefaultUploadsBucket"}, "/*"]]}
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "PolicyName": "HomeProAIServices",
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "transcribe:StartTranscriptionJob",
+                    "transcribe:GetTranscriptionJob",
+                    "transcribe:ListTranscriptionJobs"
+                  ],
+                  "Resource": "*"
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "comprehend:DetectEntities",
+                    "comprehend:DetectKeyPhrases",
+                    "comprehend:DetectSentiment"
+                  ],
+                  "Resource": "*"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "HomeProInstanceProfile": {
+      "Type": "AWS::IAM::InstanceProfile",
+      "Properties": {
+        "Roles": [{"Ref": "HomeProRole"}]
+      }
+    }
+  },
+  "Outputs": {
+    "AudioBucketName": {
+      "Description": "Name of the S3 bucket for audio files",
+      "Value": {"Ref": "AudioFilesBucket"}
+    },
+    "UploadsBucketName": {
+      "Description": "Name of the S3 bucket for general uploads",
+      "Value": {"Ref": "DefaultUploadsBucket"}
+    },
+    "IAMRoleArn": {
+      "Description": "ARN of the IAM role for the application",
+      "Value": {"Fn::GetAtt": ["HomeProRole", "Arn"]}
+    },
+    "DatabaseEndpoint": {
+      "Description": "RDS MySQL database endpoint",
+      "Value": {"Fn::GetAtt": ["HomeProDatabase", "Endpoint.Address"]}
+    },
+    "DatabasePort": {
+      "Description": "RDS MySQL database port",
+      "Value": {"Fn::GetAtt": ["HomeProDatabase", "Endpoint.Port"]}
+    },
+    "DatabaseConnectionString": {
+      "Description": "MySQL connection string for the application",
+      "Value": {"Fn::Sub": "mysql://${DBUsername}:${DBPassword}@${HomeProDatabase.Endpoint.Address}:${HomeProDatabase.Endpoint.Port}/homeprodb"}
+    }
+  }
+}

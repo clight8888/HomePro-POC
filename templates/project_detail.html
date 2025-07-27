@@ -31,7 +31,7 @@
                                 </small>
                             </div>
                         </div>
-                        {% if current_user.user_type == 'homeowner' and current_user.id == project.homeowner_id and project.status == 'Active' %}
+                        {% if user and user.role == 'homeowner' and user.id == project.homeowner_id and project.status == 'Active' %}
                             <button class="btn btn-outline-danger" onclick="closeProject({{ project.id }})">
                                 <i class="fas fa-times me-2"></i>Close Project
                             </button>
@@ -121,6 +121,16 @@
                         </div>
                     </div>
                     
+                    {% if audio_url %}
+                    <div class="mb-4">
+                        <h5><i class="fas fa-microphone me-2"></i>Original Audio Recording</h5>
+                        <audio controls class="w-100">
+                            <source src="{{ audio_url }}" type="audio/mpeg">
+                            Your browser does not support the audio element.
+                        </audio>
+                    </div>
+                    {% endif %}
+                    
                     <!-- Homeowner Info -->
                     <div class="border-top pt-4">
                         <h6><i class="fas fa-user me-2"></i>Posted by</h6>
@@ -142,8 +152,8 @@
         <!-- Sidebar -->
         <div class="col-lg-4">
             <!-- Bid Submission (for contractors) -->
-            {% if current_user.user_type == 'contractor' and project.status == 'Active' %}
-                {% set user_bid = bids|selectattr('contractor_id', 'equalto', current_user.id)|first %}
+            {% if user and user.role == 'contractor' and project.status == 'Active' %}
+                {% set user_bid = bids|selectattr('contractor_id', 'equalto', user.id)|first %}
                 {% if not user_bid %}
                     <div class="card shadow mb-4">
                         <div class="card-header bg-primary text-white">
@@ -253,7 +263,7 @@
                     <div class="d-grid gap-2">
                         {% set accepted_bid = bids|selectattr('status', 'equalto', 'Accepted')|first %}
                         
-                        {% if current_user.user_type == 'homeowner' and current_user.id == project.homeowner_id %}
+                        {% if user and user.role == 'homeowner' and user.id == project.homeowner_id %}
                             {% if accepted_bid and project.status == 'Active' %}
                                 <button class="btn btn-success" onclick="completeProject({{ project.id }})">
                                     <i class="fas fa-check-circle me-2"></i>Mark as Completed
@@ -266,7 +276,7 @@
                                 <i class="fas fa-share me-2"></i>Share Project
                             </button>
                         {% else %}
-                            {% if accepted_bid and current_user.id == accepted_bid.contractor_id and project.status == 'Active' %}
+                            {% if accepted_bid and user and user.id == accepted_bid.contractor_id and project.status == 'Active' %}
                                 <button class="btn btn-success" onclick="completeProject({{ project.id }})">
                                     <i class="fas fa-check-circle me-2"></i>Mark as Completed
                                 </button>
@@ -304,7 +314,7 @@
                     </div>
                 </div>
                 <div class="card-body">
-                    {% if not current_user.is_authenticated %}
+                    {% if not user %}
                         <div class="text-center py-4">
                             <i class="fas fa-lock fa-3x text-muted mb-3"></i>
                             <h5 class="text-muted">Login Required</h5>
@@ -354,7 +364,7 @@
                                                 <i class="fas fa-calendar me-1"></i>{{ bid.created_at.strftime('%m/%d/%Y') }}
                                             </small>
                                             
-                                            {% if current_user.user_type == 'homeowner' and current_user.id == project.homeowner_id and bid.status == 'Submitted' %}
+                                            {% if user and user.role == 'homeowner' and user.id == project.homeowner_id and bid.status == 'Submitted' %}
                                                 <div class="btn-group btn-group-sm">
                                                     <button class="btn btn-outline-success" onclick="acceptBid({{ bid.id }})">
                                                         <i class="fas fa-check"></i>

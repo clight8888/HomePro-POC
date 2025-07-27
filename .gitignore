@@ -25,7 +25,6 @@ instance/
 .webassets-cache
 
 # Environment variables
-.env
 .venv
 env/
 venv/
@@ -57,6 +56,11 @@ Thumbs.db
 # Uploads
 uploads/*
 !uploads/.gitkeep
+*.zip
 
 # Logs
 *.log
+# Elastic Beanstalk Files
+.elasticbeanstalk/*
+!.elasticbeanstalk/*.cfg.yml
+!.elasticbeanstalk/*.global.yml

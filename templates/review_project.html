@@ -23,6 +23,25 @@
                         <strong>Processing Complete!</strong> Our AI has analyzed your submission and extracted the following project details.
                     </div>
                     
+                    {% if file_path %}
+                    <div class="mb-3">
+                        <h6><i class="fas fa-headphones me-2"></i>Original Audio Recording</h6>
+                        <div class="bg-light p-3 rounded">
+                            <audio controls class="w-100" style="max-width: 400px;">
+                                <source src="{{ url_for('uploaded_file', filename=file_path) }}" type="audio/mpeg">
+                                <source src="{{ url_for('uploaded_file', filename=file_path) }}" type="audio/wav">
+                                Your browser does not support the audio element.
+                            </audio>
+                            <div class="mt-2">
+                                <small class="text-muted">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    You can listen to your original recording to verify the transcription accuracy.
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
                     {% if ai_results.transcribed_text %}
                     <div class="mb-3">
                         <h6><i class="fas fa-quote-left me-2"></i>Transcribed Text</h6>
@@ -72,7 +91,7 @@
                             <div class="col-md-6">
                                 <label for="location" class="form-label">Location *</label>
                                 <input type="text" class="form-control" id="location" name="location" 
-                                       value="{{ ai_results.location or current_user.location or '' }}" 
+                                       value="{{ ai_results.location or (user.location if user else '') or '' }}" 
                                        placeholder="City, State" required>
                                 <div class="form-text">Where is this project located?</div>
                             </div>
