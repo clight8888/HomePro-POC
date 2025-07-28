@@ -242,6 +242,97 @@ def extract_timeline(text):
     
     return '2-4 weeks'
 
+# Bid management helper functions
+def add_bid_history(bid_id, action, old_status=None, new_status=None, old_amount=None, new_amount=None, notes=None, created_by=None):
+    """Add an entry to bid history for tracking changes"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            INSERT INTO bid_history (bid_id, action, old_status, new_status, old_amount, new_amount, notes, created_by)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+        ''', (bid_id, action, old_status, new_status, old_amount, new_amount, notes, created_by))
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        return True
+    except Exception as e:
+        print(f"Error adding bid history: {e}")
+        return False
+
+def calculate_bid_expiration(days=30):
+    """Calculate bid expiration date (default 30 days from now)"""
+    from datetime import datetime, timedelta
+    return datetime.now() + timedelta(days=days)
+
+def expire_old_bids():
+    """Expire bids that have passed their expiration date"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Find expired bids
+        cursor.execute('''
+            SELECT id, status FROM bids 
+            WHERE expires_at < NOW() AND status = 'Submitted'
+        ''')
+        expired_bids = cursor.fetchall()
+        
+        # Update expired bids
+        for bid in expired_bids:
+            cursor.execute('''
+                UPDATE bids SET status = 'Expired' WHERE id = %s
+            ''', (bid['id'],))
+            
+            # Add history entry
+            add_bid_history(bid['id'], 'Expired', bid['status'], 'Expired', 
+                          notes='Automatically expired due to time limit')
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        return len(expired_bids)
+    except Exception as e:
+        print(f"Error expiring bids: {e}")
+        return 0
+
+def send_bid_notification(bid_id, action, recipient_email=None, recipient_name=None, project_title=None, contractor_name=None, amount=None):
+    """Send email notification for bid status changes"""
+    # This is a placeholder for email functionality
+    # In production, you would integrate with AWS SES, SendGrid, or similar
+    try:
+        print(f"EMAIL NOTIFICATION:")
+        print(f"To: {recipient_email} ({recipient_name})")
+        print(f"Subject: Bid {action.title()} - {project_title}")
+        
+        if action == 'submitted':
+            print(f"Body: A new bid of ${amount} has been submitted by {contractor_name} for your project '{project_title}'.")
+        elif action == 'accepted':
+            print(f"Body: Congratulations! Your bid of ${amount} for '{project_title}' has been accepted.")
+        elif action == 'rejected':
+            print(f"Body: Your bid for '{project_title}' has been rejected. Thank you for your interest.")
+        elif action == 'withdrawn':
+            print(f"Body: The bid by {contractor_name} for '{project_title}' has been withdrawn.")
+        elif action == 'expired':
+            print(f"Body: Your bid for '{project_title}' has expired after 30 days.")
+        
+        print(f"Bid ID: {bid_id}")
+        print("---")
+        
+        # TODO: Implement actual email sending with services like:
+        # - AWS SES
+        # - SendGrid
+        # - Mailgun
+        # - SMTP
+        
+        return True
+    except Exception as e:
+        print(f"Error sending notification: {e}")
+        return False
+
 # Routes
 @app.route('/')
 def index():
@@ -429,15 +520,40 @@ def init_database():
                 amount DECIMAL(10,2) NOT NULL,
                 timeline VARCHAR(255),
                 description TEXT,
-                status ENUM('Submitted', 'Accepted', 'Rejected') DEFAULT 'Submitted',
+                status ENUM('Submitted', 'Accepted', 'Rejected', 'Withdrawn', 'Expired') DEFAULT 'Submitted',
                 project_id INT NOT NULL,
                 contractor_id INT NOT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                expires_at TIMESTAMP NULL,
+                withdrawn_at TIMESTAMP NULL,
+                withdrawal_reason TEXT NULL,
                 FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
                 FOREIGN KEY (contractor_id) REFERENCES contractors(id) ON DELETE CASCADE,
                 INDEX idx_project (project_id),
                 INDEX idx_contractor (contractor_id),
-                INDEX idx_status (status)
+                INDEX idx_status (status),
+                INDEX idx_expires (expires_at)
+            )
+        ''')
+        
+        # Create bid_history table for tracking bid changes
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS bid_history (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                bid_id INT NOT NULL,
+                action ENUM('Created', 'Updated', 'Withdrawn', 'Accepted', 'Rejected', 'Expired') NOT NULL,
+                old_status VARCHAR(50),
+                new_status VARCHAR(50),
+                old_amount DECIMAL(10,2),
+                new_amount DECIMAL(10,2),
+                notes TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                created_by INT,
+                FOREIGN KEY (bid_id) REFERENCES bids(id) ON DELETE CASCADE,
+                FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+                INDEX idx_bid (bid_id),
+                INDEX idx_action (action),
+                INDEX idx_created (created_at)
             )
         ''')
         
@@ -815,11 +931,24 @@ def submit_bid(project_id):
     timeline = request.form['timeline']
     description = request.form['description']
     
+    # Calculate expiration date (30 days from now)
+    expires_at = calculate_bid_expiration(30)
+    
     cursor.execute('''
-        INSERT INTO bids (amount, timeline, description, status, created_at, project_id, contractor_id)
-        VALUES (%s, %s, %s, 'Submitted', NOW(), %s, %s)
-    ''', (amount, timeline, description, project_id, contractor_id))
+        INSERT INTO bids (amount, timeline, description, status, created_at, expires_at, project_id, contractor_id)
+        VALUES (%s, %s, %s, 'Submitted', NOW(), %s, %s, %s)
+    ''', (amount, timeline, description, expires_at, project_id, contractor_id))
+    
+    bid_id = cursor.lastrowid
     conn.commit()
+    
+    # Add history entry
+    add_bid_history(bid_id, 'Created', None, 'Submitted', None, amount, 
+                   f'Initial bid submission: {description[:100]}...', user['id'])
+    
+    # Send notification (placeholder)
+    send_bid_notification(bid_id, 'Bid Submitted')
+    
     cursor.close()
     conn.close()
     
@@ -864,6 +993,11 @@ def edit_bid(bid_id):
         timeline = request.form['timeline']
         description = request.form['description']
         
+        # Store old values for history
+        old_amount = bid['amount']
+        old_timeline = bid['timeline']
+        old_description = bid['description']
+        
         # Update the bid
         cursor.execute('''
             UPDATE bids 
@@ -871,6 +1005,13 @@ def edit_bid(bid_id):
             WHERE id = %s
         ''', (amount, timeline, description, bid_id))
         conn.commit()
+        
+        # Add history entry
+        add_bid_history(bid_id, 'Updated', bid['status'], bid['status'], 
+                       old_amount, amount, 
+                       f'Bid updated by contractor. Timeline changed from "{old_timeline}" to "{timeline}"', 
+                       user['id'])
+        
         cursor.close()
         conn.close()
         
@@ -921,9 +1062,29 @@ def accept_bid(bid_id):
         conn.close()
         return jsonify({'success': False, 'message': 'This project is no longer active'}), 400
     
+    # Store old status for history
+    old_status = bid['status']
+    
     cursor.execute("UPDATE bids SET status = 'Accepted' WHERE id = %s", (bid_id,))
     cursor.execute("UPDATE bids SET status = 'Rejected' WHERE project_id = %s AND id != %s AND status = 'Submitted'", (project['id'], bid_id))
     conn.commit()
+    
+    # Add history entry for accepted bid
+    add_bid_history(bid_id, 'Accepted', old_status, 'Accepted', 
+                   notes=f'Bid accepted by homeowner', created_by=user['id'])
+    
+    # Add history entries for rejected bids
+    cursor.execute("SELECT id FROM bids WHERE project_id = %s AND id != %s AND status = 'Rejected'", (project['id'], bid_id))
+    rejected_bids = cursor.fetchall()
+    for rejected_bid in rejected_bids:
+        add_bid_history(rejected_bid['id'], 'Auto-Rejected', 'Submitted', 'Rejected', 
+                       notes=f'Automatically rejected when bid {bid_id} was accepted', created_by=user['id'])
+    
+    # Send notifications
+    send_bid_notification(bid_id, 'Bid Accepted')
+    for rejected_bid in rejected_bids:
+        send_bid_notification(rejected_bid['id'], 'Bid Rejected')
+    
     cursor.close()
     conn.close()
     
@@ -961,12 +1122,132 @@ def reject_bid(bid_id):
         conn.close()
         return jsonify({'success': False, 'message': 'You can only reject bids for your own projects'}), 403
     
+    # Store old status for history
+    old_status = bid['status']
+    
     cursor.execute("UPDATE bids SET status = 'Rejected' WHERE id = %s", (bid_id,))
     conn.commit()
+    
+    # Add history entry
+    add_bid_history(bid_id, 'Rejected', old_status, 'Rejected', 
+                   notes=f'Bid rejected by homeowner', created_by=user['id'])
+    
+    # Send notification
+    send_bid_notification(bid_id, 'Bid Rejected')
+    
     cursor.close()
     conn.close()
     
     return jsonify({'success': True, 'message': 'Bid rejected successfully'})
+
+@app.route('/withdraw_bid/<int:bid_id>', methods=['POST'])
+@login_required
+def withdraw_bid(bid_id):
+    user = session['user']
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Get contractor ID from contractors table
+    cursor.execute('SELECT id FROM contractors WHERE user_id = %s', (user['id'],))
+    contractor_result = cursor.fetchone()
+    if not contractor_result:
+        cursor.close()
+        conn.close()
+        return jsonify({'success': False, 'message': 'Contractor profile not found'}), 404
+    contractor_id = contractor_result['id']
+    
+    # Check if the bid exists and belongs to the current contractor
+    cursor.execute('SELECT * FROM bids WHERE id = %s AND contractor_id = %s', (bid_id, contractor_id))
+    bid = cursor.fetchone()
+    if not bid:
+        cursor.close()
+        conn.close()
+        return jsonify({'success': False, 'message': 'Bid not found or you do not have permission to withdraw it'}), 404
+    
+    # Check if the bid can be withdrawn (only submitted bids can be withdrawn)
+    if bid['status'] != 'Submitted':
+        cursor.close()
+        conn.close()
+        return jsonify({'success': False, 'message': 'You can only withdraw bids that are still pending review'}), 400
+    
+    # Get withdrawal reason from request
+    withdrawal_reason = request.form.get('reason', 'No reason provided')
+    
+    # Store old status for history
+    old_status = bid['status']
+    
+    # Update bid status and add withdrawal information
+    cursor.execute('''
+        UPDATE bids 
+        SET status = 'Withdrawn', withdrawn_at = NOW(), withdrawal_reason = %s
+        WHERE id = %s
+    ''', (withdrawal_reason, bid_id))
+    conn.commit()
+    
+    # Add history entry
+    add_bid_history(bid_id, 'Withdrawn', old_status, 'Withdrawn', 
+                   notes=f'Bid withdrawn by contractor. Reason: {withdrawal_reason}', 
+                   created_by=user['id'])
+    
+    # Send notification
+    send_bid_notification(bid_id, 'Bid Withdrawn')
+    
+    cursor.close()
+    conn.close()
+    
+    return jsonify({'success': True, 'message': 'Bid withdrawn successfully'})
+
+@app.route('/bid_history/<int:bid_id>')
+@login_required
+def bid_history(bid_id):
+    user = session['user']
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Check if user has permission to view this bid's history
+    if user['role'] == 'contractor':
+        cursor.execute('SELECT id FROM contractors WHERE user_id = %s', (user['id'],))
+        contractor_result = cursor.fetchone()
+        if contractor_result:
+            cursor.execute('SELECT * FROM bids WHERE id = %s AND contractor_id = %s', (bid_id, contractor_result['id']))
+            bid = cursor.fetchone()
+            if not bid:
+                cursor.close()
+                conn.close()
+                abort(403)
+    elif user['role'] == 'homeowner':
+        cursor.execute('SELECT id FROM homeowners WHERE user_id = %s', (user['id'],))
+        homeowner_result = cursor.fetchone()
+        if homeowner_result:
+            cursor.execute('''
+                SELECT b.* FROM bids b 
+                JOIN projects p ON b.project_id = p.id 
+                WHERE b.id = %s AND p.homeowner_id = %s
+            ''', (bid_id, homeowner_result['id']))
+            bid = cursor.fetchone()
+            if not bid:
+                cursor.close()
+                conn.close()
+                abort(403)
+    else:
+        cursor.close()
+        conn.close()
+        abort(403)
+    
+    # Get bid history
+    cursor.execute('''
+        SELECT bh.*, u.first_name, u.last_name 
+        FROM bid_history bh
+        LEFT JOIN users u ON bh.created_by = u.id
+        WHERE bh.bid_id = %s
+        ORDER BY bh.created_at DESC
+    ''', (bid_id,))
+    history = cursor.fetchall()
+    
+    cursor.close()
+    conn.close()
+    
+    return render_template('bid_history.html', bid=bid, history=history)
 
 @app.route('/complete_project/<int:project_id>', methods=['POST'])
 @login_required
@@ -1080,6 +1361,12 @@ if __name__ == '__main__':
     # Initialize database tables
     print("Initializing database...")
     init_database()
+    
+    # Expire old bids on startup
+    print("Checking for expired bids...")
+    expired_count = expire_old_bids()
+    if expired_count > 0:
+        print(f"Expired {expired_count} old bids")
     
     # Tables should be created in RDS separately
     # create_demo_users()  # If needed, adapt and run separately
