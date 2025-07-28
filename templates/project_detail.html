@@ -302,13 +302,52 @@
                     <div class="d-flex justify-content-between align-items-center">
                         <h5 class="mb-0"><i class="fas fa-handshake me-2"></i>Bids{% if show_bids %} ({{ bids|length }}){% endif %}</h5>
                         {% if show_bids and bids %}
-                        <div class="btn-group btn-group-sm">
-                            <button class="btn btn-outline-primary" onclick="sortBids('amount')">
-                                <i class="fas fa-sort-amount-down me-1"></i>Price
+                        <div class="d-flex gap-2">
+                            <!-- View Toggle -->
+                            <div class="btn-group btn-group-sm" role="group">
+                                <button class="btn btn-outline-secondary active" id="cardViewBtn" onclick="toggleView('card')">
+                                    <i class="fas fa-th-large me-1"></i>Cards
+                                </button>
+                                <button class="btn btn-outline-secondary" id="tableViewBtn" onclick="toggleView('table')">
+                                    <i class="fas fa-table me-1"></i>Table
+                                </button>
+                            </div>
+                            
+                            <!-- Sorting Options -->
+                            <div class="btn-group btn-group-sm">
+                                <button class="btn btn-outline-primary" onclick="sortBids('amount')">
+                                    <i class="fas fa-sort-amount-down me-1"></i>Price
+                                </button>
+                                <button class="btn btn-outline-primary" onclick="sortBids('timeline')">
+                                    <i class="fas fa-clock me-1"></i>Timeline
+                                </button>
+                                <button class="btn btn-outline-primary" onclick="sortBids('date')">
+                                    <i class="fas fa-sort me-1"></i>Date
+                                </button>
+                            </div>
+                            
+                            <!-- Filter Options -->
+                            <div class="dropdown">
+                                <button class="btn btn-outline-info btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                    <i class="fas fa-filter me-1"></i>Filter
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="#" onclick="filterBids('all')">All Bids</a></li>
+                                    <li><a class="dropdown-item" href="#" onclick="filterBids('Submitted')">Submitted Only</a></li>
+                                    <li><a class="dropdown-item" href="#" onclick="filterBids('Accepted')">Accepted Only</a></li>
+                                    <li><a class="dropdown-item" href="#" onclick="filterBids('Rejected')">Rejected Only</a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item" href="#" onclick="filterBids('low-price')">Lowest Price First</a></li>
+                                    <li><a class="dropdown-item" href="#" onclick="filterBids('high-price')">Highest Price First</a></li>
+                                </ul>
+                            </div>
+                            
+                            {% if user and user.role == 'homeowner' and user.id == project.homeowner_id and bids|selectattr('status', 'equalto', 'Submitted')|list|length > 1 %}
+                            <!-- Compare Selected Bids -->
+                            <button class="btn btn-success btn-sm" onclick="openComparisonModal()" id="compareBtn" style="display: none;">
+                                <i class="fas fa-balance-scale me-1"></i>Compare (<span id="selectedCount">0</span>)
                             </button>
-                            <button class="btn btn-outline-primary" onclick="sortBids('date')">
-                                <i class="fas fa-sort me-1"></i>Date
-                            </button>
+                            {% endif %}
                         </div>
                         {% endif %}
                     </div>
@@ -324,10 +363,16 @@
                             </a>
                         </div>
                     {% elif show_bids and bids %}
+                        <!-- Card View (Default) -->
                         <div class="row g-4" id="bidsContainer">
                             {% for bid in bids %}
-                            <div class="col-md-6 bid-item" data-amount="{{ bid.amount }}" data-date="{{ bid.created_at.timestamp() }}">
-                                <div class="card bid-card h-100">
+                            <div class="col-md-6 bid-item" data-amount="{{ bid.amount }}" data-date="{{ bid.created_at.timestamp() }}" data-timeline="{{ bid.timeline }}" data-status="{{ bid.status }}">
+                                <div class="card bid-card h-100 {% if bid.status == 'Accepted' %}border-success{% elif bid.status == 'Rejected' %}border-danger{% endif %}">
+                                    {% if user and user.role == 'homeowner' and user.id == project.homeowner_id and bid.status == 'Submitted' %}
+                                    <div class="position-absolute top-0 start-0 p-2">
+                                        <input type="checkbox" class="form-check-input bid-checkbox" data-bid-id="{{ bid.id }}" onchange="updateCompareButton()">
+                                    </div>
+                                    {% endif %}
                                     <div class="card-body">
                                         <div class="d-flex justify-content-between align-items-start mb-3">
                                             <div class="d-flex align-items-center">
@@ -337,6 +382,17 @@
                                                 <div>
                                                     <h6 class="mb-0">{{ bid.contractor.first_name }} {{ bid.contractor.last_name }}</h6>
                                                     <small class="text-muted">{{ bid.contractor.location or 'Location not specified' }}</small>
+                                                    <!-- Placeholder for future rating system -->
+                                                    <div class="mt-1">
+                                                        <small class="text-warning">
+                                                            <i class="fas fa-star"></i>
+                                                            <i class="fas fa-star"></i>
+                                                            <i class="fas fa-star"></i>
+                                                            <i class="fas fa-star"></i>
+                                                            <i class="far fa-star"></i>
+                                                            <span class="text-muted">(4.0)</span>
+                                                        </small>
+                                                    </div>
                                                 </div>
                                             </div>
                                             <span class="badge {% if bid.status == 'Accepted' %}bg-success{% elif bid.status == 'Rejected' %}bg-danger{% else %}bg-warning{% endif %}">
@@ -364,12 +420,12 @@
                                                 <i class="fas fa-calendar me-1"></i>{{ bid.created_at.strftime('%m/%d/%Y') }}
                                             </small>
                                             
-                                            {% if user and user.role == 'homeowner' and user.id == project.homeowner_id and bid.status == 'Submitted' %}
+                                            {% if user and user.role == 'homeowner' and user.id == project.homeowner_user_id and bid.status == 'Submitted' %}
                                                 <div class="btn-group btn-group-sm">
-                                                    <button class="btn btn-outline-success" onclick="acceptBid({{ bid.id }})">
+                                                    <button class="btn btn-outline-success" onclick="showAcceptConfirmation({{ bid.id }}, '{{ bid.contractor.first_name }} {{ bid.contractor.last_name }}', {{ bid.amount }})">
                                                         <i class="fas fa-check"></i>
                                                     </button>
-                                                    <button class="btn btn-outline-danger" onclick="rejectBid({{ bid.id }})">
+                                                    <button class="btn btn-outline-danger" onclick="showRejectConfirmation({{ bid.id }}, '{{ bid.contractor.first_name }} {{ bid.contractor.last_name }}')">
                                                         <i class="fas fa-times"></i>
                                                     </button>
                                                     <button class="btn btn-outline-primary" onclick="contactContractor({{ bid.contractor.id }})">
@@ -382,6 +438,94 @@
                                 </div>
                             </div>
                             {% endfor %}
+                        </div>
+                        
+                        <!-- Table View (Hidden by default) -->
+                        <div class="table-responsive" id="bidsTable" style="display: none;">
+                            <table class="table table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        {% if user and user.role == 'homeowner' and user.id == project.homeowner_id %}
+                                        <th width="50">
+                                            <input type="checkbox" class="form-check-input" id="selectAllBids" onchange="toggleAllBids()">
+                                        </th>
+                                        {% endif %}
+                                        <th>Contractor</th>
+                                        <th>Amount</th>
+                                        <th>Timeline</th>
+                                        <th>Rating</th>
+                                        <th>Status</th>
+                                        <th>Submitted</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for bid in bids %}
+                                    <tr class="bid-row" data-amount="{{ bid.amount }}" data-date="{{ bid.created_at.timestamp() }}" data-timeline="{{ bid.timeline }}" data-status="{{ bid.status }}">
+                                        {% if user and user.role == 'homeowner' and user.id == project.homeowner_id %}
+                                        <td>
+                                            {% if bid.status == 'Submitted' %}
+                                            <input type="checkbox" class="form-check-input bid-checkbox-table" data-bid-id="{{ bid.id }}" onchange="updateCompareButton()">
+                                            {% endif %}
+                                        </td>
+                                        {% endif %}
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 30px; height: 30px;">
+                                                    <i class="fas fa-user text-white small"></i>
+                                                </div>
+                                                <div>
+                                                    <strong>{{ bid.contractor.first_name }} {{ bid.contractor.last_name }}</strong>
+                                                    <br>
+                                                    <small class="text-muted">{{ bid.contractor.location or 'Location not specified' }}</small>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <strong class="text-success">${{ "%.0f"|format(bid.amount) }}</strong>
+                                        </td>
+                                        <td>{{ bid.timeline }}</td>
+                                        <td>
+                                            <small class="text-warning">
+                                                <i class="fas fa-star"></i>
+                                                <i class="fas fa-star"></i>
+                                                <i class="fas fa-star"></i>
+                                                <i class="fas fa-star"></i>
+                                                <i class="far fa-star"></i>
+                                                <span class="text-muted">(4.0)</span>
+                                            </small>
+                                        </td>
+                                        <td>
+                                            <span class="badge {% if bid.status == 'Accepted' %}bg-success{% elif bid.status == 'Rejected' %}bg-danger{% else %}bg-warning{% endif %}">
+                                                {{ bid.status }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <small>{{ bid.created_at.strftime('%m/%d/%Y') }}</small>
+                                        </td>
+                                        <td>
+                                            {% if user and user.role == 'homeowner' and user.id == project.homeowner_id and bid.status == 'Submitted' %}
+                                                <div class="btn-group btn-group-sm">
+                                                    <button class="btn btn-outline-success btn-sm" onclick="showAcceptConfirmation({{ bid.id }}, '{{ bid.contractor.first_name }} {{ bid.contractor.last_name }}', {{ bid.amount }})" title="Accept Bid">
+                                                        <i class="fas fa-check"></i>
+                                                    </button>
+                                                    <button class="btn btn-outline-danger btn-sm" onclick="showRejectConfirmation({{ bid.id }}, '{{ bid.contractor.first_name }} {{ bid.contractor.last_name }}')" title="Reject Bid">
+                                                        <i class="fas fa-times"></i>
+                                                    </button>
+                                                    <button class="btn btn-outline-primary btn-sm" onclick="contactContractor({{ bid.contractor.id }})" title="Contact Contractor">
+                                                        <i class="fas fa-envelope"></i>
+                                                    </button>
+                                                </div>
+                                            {% elif bid.status != 'Submitted' %}
+                                                <button class="btn btn-outline-secondary btn-sm" onclick="contactContractor({{ bid.contractor.id }})" title="Contact Contractor">
+                                                    <i class="fas fa-envelope"></i>
+                                                </button>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
                         </div>
                     {% else %}
                         <div class="text-center py-4">
@@ -416,15 +560,150 @@
         </div>
     </div>
 </div>
+
+<!-- Accept Bid Confirmation Modal -->
+<div class="modal fade" id="acceptBidModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title"><i class="fas fa-check-circle me-2"></i>Accept Bid</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="text-center mb-3">
+                    <i class="fas fa-handshake fa-3x text-success mb-3"></i>
+                    <h6>You're about to accept this bid:</h6>
+                </div>
+                <div class="card bg-light">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-6">
+                                <strong>Contractor:</strong><br>
+                                <span id="acceptContractorName"></span>
+                            </div>
+                            <div class="col-6">
+                                <strong>Amount:</strong><br>
+                                <span class="text-success" id="acceptBidAmount"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="alert alert-warning mt-3">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Important:</strong> Accepting this bid will automatically reject all other bids for this project.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" id="confirmAcceptBtn">
+                    <i class="fas fa-check me-2"></i>Accept Bid
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Reject Bid Confirmation Modal -->
+<div class="modal fade" id="rejectBidModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="fas fa-times-circle me-2"></i>Reject Bid</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="text-center mb-3">
+                    <i class="fas fa-times-circle fa-3x text-danger mb-3"></i>
+                    <h6>You're about to reject this bid from:</h6>
+                    <strong id="rejectContractorName"></strong>
+                </div>
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    The contractor will be notified that their bid was not selected.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmRejectBtn">
+                    <i class="fas fa-times me-2"></i>Reject Bid
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bid Comparison Modal -->
+<div class="modal fade" id="bidComparisonModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title"><i class="fas fa-balance-scale me-2"></i>Compare Selected Bids</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row" id="comparisonContent">
+                    <!-- Comparison content will be dynamically generated -->
+                </div>
+                <div class="mt-4">
+                    <h6><i class="fas fa-chart-bar me-2"></i>Quick Comparison</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Metric</th>
+                                    <th class="text-success">Lowest Price</th>
+                                    <th class="text-info">Fastest Timeline</th>
+                                    <th class="text-warning">Highest Rated</th>
+                                </tr>
+                            </thead>
+                            <tbody id="comparisonSummary">
+                                <!-- Summary will be populated by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="selectBestBid()">
+                    <i class="fas fa-star me-2"></i>Select Best Overall
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
 <script>
+let selectedBids = [];
+let currentBidToAccept = null;
+let currentBidToReject = null;
+
 function closeProject(projectId) {
     const form = document.getElementById('closeProjectForm');
     form.action = `/close_project/${projectId}`;
     const modal = new bootstrap.Modal(document.getElementById('closeProjectModal'));
     modal.show();
+}
+
+function toggleView(viewType) {
+    const cardView = document.getElementById('bidsContainer');
+    const tableView = document.getElementById('bidsTable');
+    const cardBtn = document.getElementById('cardViewBtn');
+    const tableBtn = document.getElementById('tableViewBtn');
+
+    if (viewType === 'card') {
+        cardView.style.display = 'block';
+        tableView.style.display = 'none';
+        cardBtn.classList.add('active');
+        tableBtn.classList.remove('active');
+    } else {
+        cardView.style.display = 'none';
+        tableView.style.display = 'block';
+        cardBtn.classList.remove('active');
+        tableBtn.classList.add('active');
+    }
 }
 
 function sortBids(criteria) {
@@ -434,6 +713,8 @@ function sortBids(criteria) {
     bids.sort((a, b) => {
         if (criteria === 'amount') {
             return parseFloat(a.dataset.amount) - parseFloat(b.dataset.amount);
+        } else if (criteria === 'timeline') {
+            return a.dataset.timeline.localeCompare(b.dataset.timeline);
         } else {
             return parseFloat(b.dataset.date) - parseFloat(a.dataset.date);
         }
@@ -442,52 +723,225 @@ function sortBids(criteria) {
     bids.forEach(bid => container.appendChild(bid));
 }
 
-function acceptBid(bidId) {
-    if (confirm('Are you sure you want to accept this bid? This will reject all other bids.')) {
-        fetch(`/accept_bid/${bidId}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                alert(data.message);
-                location.reload(); // Refresh the page to show updated status
-            } else {
-                alert('Error: ' + data.message);
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('An error occurred while accepting the bid.');
-        });
+function filterBids(filter) {
+    const bids = document.querySelectorAll('.bid-item, .bid-row');
+    
+    bids.forEach(bid => {
+        const status = bid.dataset.status;
+        const amount = parseFloat(bid.dataset.amount);
+        let show = false;
+
+        switch(filter) {
+            case 'all':
+                show = true;
+                break;
+            case 'Submitted':
+                show = status === 'Submitted';
+                break;
+            case 'Accepted':
+                show = status === 'Accepted';
+                break;
+            case 'Rejected':
+                show = status === 'Rejected';
+                break;
+            case 'low-price':
+                const allAmounts = Array.from(bids).map(b => parseFloat(b.dataset.amount)).sort((a, b) => a - b);
+                const threshold = allAmounts[Math.floor(allAmounts.length * 0.25)];
+                show = amount <= threshold;
+                break;
+            case 'high-price':
+                const allAmountsHigh = Array.from(bids).map(b => parseFloat(b.dataset.amount)).sort((a, b) => b - a);
+                const thresholdHigh = allAmountsHigh[Math.floor(allAmountsHigh.length * 0.25)];
+                show = amount >= thresholdHigh;
+                break;
+        }
+
+        bid.style.display = show ? 'block' : 'none';
+    });
+}
+
+function updateCompareButton() {
+    const checkboxes = document.querySelectorAll('.bid-checkbox:checked, .bid-checkbox-table:checked');
+    const compareBtn = document.getElementById('compareBtn');
+    const selectedCount = document.getElementById('selectedCount');
+    
+    if (compareBtn && selectedCount) {
+        const count = checkboxes.length;
+        selectedCount.textContent = count;
+        
+        if (count >= 2) {
+            compareBtn.style.display = 'inline-block';
+        } else {
+            compareBtn.style.display = 'none';
+        }
     }
 }
 
-function rejectBid(bidId) {
-    if (confirm('Are you sure you want to reject this bid?')) {
-        fetch(`/reject_bid/${bidId}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
+function toggleAllBids() {
+    const selectAll = document.getElementById('selectAllBids');
+    const checkboxes = document.querySelectorAll('.bid-checkbox-table');
+    
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = selectAll.checked;
+    });
+    
+    updateCompareButton();
+}
+
+function openComparisonModal() {
+    const checkedBoxes = document.querySelectorAll('.bid-checkbox:checked, .bid-checkbox-table:checked');
+    const selectedBidIds = Array.from(checkedBoxes).map(cb => cb.dataset.bidId);
+    
+    if (selectedBidIds.length < 2) {
+        alert('Please select at least 2 bids to compare.');
+        return;
+    }
+    
+    const comparisonContent = document.getElementById('comparisonContent');
+    comparisonContent.innerHTML = '';
+    
+    selectedBidIds.forEach(bidId => {
+        const bidCard = document.querySelector(`[data-bid-id="${bidId}"]`).closest('.bid-item, .bid-row');
+        const contractorName = bidCard.querySelector('h6').textContent;
+        const amount = bidCard.dataset.amount;
+        const timeline = bidCard.dataset.timeline;
+        const description = bidCard.querySelector('.card-text, td').textContent;
+        
+        const comparisonCard = `
+            <div class="col-md-6 col-lg-4 mb-3">
+                <div class="card h-100 border-primary">
+                    <div class="card-header bg-primary text-white">
+                        <h6 class="mb-0">${contractorName}</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-2">
+                            <strong>Amount:</strong>
+                            <span class="text-success fs-5">$${parseFloat(amount).toLocaleString()}</span>
+                        </div>
+                        <div class="mb-2">
+                            <strong>Timeline:</strong>
+                            <span class="text-info">${timeline}</span>
+                        </div>
+                        <div class="mb-2">
+                            <strong>Description:</strong>
+                            <p class="text-muted small">${description}</p>
+                        </div>
+                    </div>
+                    <div class="card-footer">
+                        <button class="btn btn-success btn-sm" onclick="showAcceptConfirmation(${bidId}, '${contractorName}', ${amount})">
+                            <i class="fas fa-check me-1"></i>Accept
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        comparisonContent.innerHTML += comparisonCard;
+    });
+    
+    new bootstrap.Modal(document.getElementById('bidComparisonModal')).show();
+}
+
+function selectBestBid() {
+    const checkedBoxes = document.querySelectorAll('.bid-checkbox:checked, .bid-checkbox-table:checked');
+    const amounts = Array.from(checkedBoxes).map(cb => {
+        const bidCard = cb.closest('.bid-item, .bid-row');
+        return {
+            id: cb.dataset.bidId,
+            amount: parseFloat(bidCard.dataset.amount),
+            contractor: bidCard.querySelector('h6').textContent
+        };
+    });
+    
+    const bestBid = amounts.reduce((min, bid) => bid.amount < min.amount ? bid : min);
+    
+    if (confirm(`Based on price analysis, we recommend accepting the bid from ${bestBid.contractor} for $${bestBid.amount.toLocaleString()}. Accept this bid?`)) {
+        showAcceptConfirmation(bestBid.id, bestBid.contractor, bestBid.amount);
+    }
+}
+
+function showAcceptConfirmation(bidId, contractorName, amount) {
+    currentBidToAccept = bidId;
+    document.getElementById('acceptContractorName').textContent = contractorName;
+    document.getElementById('acceptBidAmount').textContent = `$${parseFloat(amount).toLocaleString()}`;
+    
+    new bootstrap.Modal(document.getElementById('acceptBidModal')).show();
+}
+
+function showRejectConfirmation(bidId, contractorName) {
+    currentBidToReject = bidId;
+    document.getElementById('rejectContractorName').textContent = contractorName;
+    
+    new bootstrap.Modal(document.getElementById('rejectBidModal')).show();
+}
+
+// Event listeners for confirmation buttons
+document.addEventListener('DOMContentLoaded', function() {
+    const confirmAcceptBtn = document.getElementById('confirmAcceptBtn');
+    const confirmRejectBtn = document.getElementById('confirmRejectBtn');
+    
+    if (confirmAcceptBtn) {
+        confirmAcceptBtn.addEventListener('click', function() {
+            if (currentBidToAccept) {
+                acceptBid(currentBidToAccept);
             }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                alert(data.message);
-                location.reload(); // Refresh the page to show updated status
-            } else {
-                alert('Error: ' + data.message);
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('An error occurred while rejecting the bid.');
         });
     }
+    
+    if (confirmRejectBtn) {
+        confirmRejectBtn.addEventListener('click', function() {
+            if (currentBidToReject) {
+                rejectBid(currentBidToReject);
+            }
+        });
+    }
+});
+
+function acceptBid(bidId) {
+    fetch(`/accept_bid/${bidId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const modal = bootstrap.Modal.getInstance(document.getElementById('acceptBidModal'));
+            if (modal) modal.hide();
+            alert('Bid accepted successfully!');
+            location.reload();
+        } else {
+            alert('Error accepting bid: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred while accepting the bid.');
+    });
+}
+
+function rejectBid(bidId) {
+    fetch(`/reject_bid/${bidId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const modal = bootstrap.Modal.getInstance(document.getElementById('rejectBidModal'));
+            if (modal) modal.hide();
+            alert('Bid rejected successfully!');
+            location.reload();
+        } else {
+            alert('Error rejecting bid: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred while rejecting the bid.');
+    });
 }
 
 function completeProject(projectId) {

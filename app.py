@@ -256,6 +256,7 @@ def register():
         first_name = request.form['first_name']
         last_name = request.form['last_name']
         location = request.form.get('location', '')
+        company = request.form.get('company', '') if user_type == 'contractor' else ''
         specialties = request.form.get('specialties', '') if user_type == 'contractor' else ''
         business_info = request.form.get('business_info', '') if user_type == 'contractor' else ''
         
@@ -277,14 +278,34 @@ def register():
                 conn.close()
                 return redirect(url_for('register'))
             
-            # Hash the password
+            # Hash password
             password_hash = generate_password_hash(password)
             
-            # Insert new user into database
+            # Insert into users table
             cursor.execute('''
-                INSERT INTO users (email, password_hash, first_name, last_name, role, location, specialties, business_info, created_at)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-            ''', (email, password_hash, first_name, last_name, user_type, location, specialties, business_info, datetime.now()))
+                INSERT INTO users (email, password_hash, first_name, last_name, role)
+                VALUES (%s, %s, %s, %s, %s)
+            ''', (email, password_hash, first_name, last_name, user_type))
+            
+            user_id = cursor.lastrowid
+            
+            # Insert into appropriate role-specific table
+            if user_type == 'homeowner':
+                cursor.execute('''
+                    INSERT INTO homeowners (user_id, location)
+                    VALUES (%s, %s)
+                ''', (user_id, location))
+            else:  # contractor
+                # Get contractor-specific fields
+                company = request.form.get('company', '')
+                specialties = request.form.get('specialties', '')
+                business_info = request.form.get('business_info', '')
+                
+                cursor.execute('''
+                    INSERT INTO contractors (user_id, location, company, specialties, business_info)
+                    VALUES (%s, %s, %s, %s, %s)
+                ''', (user_id, location, company, specialties, business_info))
+            
             conn.commit()
             cursor.close()
             conn.close()
@@ -336,7 +357,7 @@ def init_database():
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        # Create users table
+        # Create users table (base table for authentication)
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS users (
                 id INT AUTO_INCREMENT PRIMARY KEY,
@@ -345,12 +366,36 @@ def init_database():
                 first_name VARCHAR(100) NOT NULL,
                 last_name VARCHAR(100) NOT NULL,
                 role ENUM('homeowner', 'contractor') NOT NULL,
-                location VARCHAR(255),
-                specialties TEXT,
-                business_info TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 INDEX idx_email (email),
                 INDEX idx_role (role)
+            )
+        ''')
+        
+        # Create homeowners table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS homeowners (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                location VARCHAR(255),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                INDEX idx_user_id (user_id)
+            )
+        ''')
+        
+        # Create contractors table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS contractors (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                location VARCHAR(255),
+                company VARCHAR(255),
+                specialties TEXT,
+                business_info TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                INDEX idx_user_id (user_id)
             )
         ''')
         
@@ -370,7 +415,7 @@ def init_database():
                 ai_processed_text TEXT,
                 homeowner_id INT NOT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (homeowner_id) REFERENCES users(id),
+                FOREIGN KEY (homeowner_id) REFERENCES homeowners(id) ON DELETE CASCADE,
                 INDEX idx_status (status),
                 INDEX idx_homeowner (homeowner_id),
                 INDEX idx_created (created_at)
@@ -388,8 +433,8 @@ def init_database():
                 project_id INT NOT NULL,
                 contractor_id INT NOT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (project_id) REFERENCES projects(id),
-                FOREIGN KEY (contractor_id) REFERENCES users(id),
+                FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+                FOREIGN KEY (contractor_id) REFERENCES contractors(id) ON DELETE CASCADE,
                 INDEX idx_project (project_id),
                 INDEX idx_contractor (contractor_id),
                 INDEX idx_status (status)
@@ -454,20 +499,78 @@ def dashboard():
     user = session['user']
     conn = get_db_connection()
     cursor = conn.cursor()
+    
     if user['role'] == 'homeowner':
-        cursor.execute('SELECT p.*, (SELECT COUNT(*) FROM bids b WHERE b.project_id = p.id) as bid_count FROM projects p WHERE homeowner_id = %s ORDER BY created_at DESC', (user['id'],))
+        # Get homeowner ID from homeowners table
+        cursor.execute('SELECT id FROM homeowners WHERE user_id = %s', (user['id'],))
+        homeowner_result = cursor.fetchone()
+        if not homeowner_result:
+            flash('Homeowner profile not found. Please contact support.')
+            return redirect(url_for('login'))
+        homeowner_id = homeowner_result['id']
+        
+        cursor.execute('''
+            SELECT p.*, 
+                   (SELECT COUNT(*) FROM bids b WHERE b.project_id = p.id) as bid_count,
+                   (SELECT b.amount FROM bids b WHERE b.project_id = p.id AND b.status = 'Accepted' LIMIT 1) as accepted_bid_amount,
+                   (SELECT CONCAT(u.first_name, ' ', u.last_name) FROM bids b 
+                    JOIN contractors c ON b.contractor_id = c.id
+                    JOIN users u ON c.user_id = u.id 
+                    WHERE b.project_id = p.id AND b.status = 'Accepted' LIMIT 1) as accepted_contractor_name,
+                   (SELECT b.id FROM bids b WHERE b.project_id = p.id AND b.status = 'Accepted' LIMIT 1) as accepted_bid_id
+            FROM projects p 
+            WHERE homeowner_id = %s 
+            ORDER BY created_at DESC
+        ''', (homeowner_id,))
         projects = cursor.fetchall()
-        cursor.execute('SELECT b.*, p.title as project_title FROM bids b JOIN projects p ON b.project_id = p.id WHERE p.homeowner_id = %s ORDER BY b.created_at DESC LIMIT 15', (user['id'],))
+        
+        cursor.execute('''
+            SELECT b.*, p.title as project_title, 
+                   u.first_name as contractor_first_name, 
+                   u.last_name as contractor_last_name,
+                   c.company as contractor_company
+            FROM bids b 
+            JOIN projects p ON b.project_id = p.id 
+            JOIN contractors c ON b.contractor_id = c.id
+            JOIN users u ON c.user_id = u.id
+            WHERE p.homeowner_id = %s 
+            ORDER BY b.created_at DESC 
+            LIMIT 15
+        ''', (homeowner_id,))
         recent_bids = cursor.fetchall()
         template = 'homeowner_dashboard.html'
         render_args = {'projects': projects, 'recent_bids': recent_bids}
     else:
-        cursor.execute('SELECT p.*, (SELECT COUNT(*) FROM bids b WHERE b.project_id = p.id) as bid_count, (SELECT COUNT(*) FROM bids b WHERE b.project_id = p.id AND b.contractor_id = %s) as has_user_bid FROM projects p WHERE status = \'Active\' ORDER BY created_at DESC', (user['id'],))
+        # Get contractor ID from contractors table
+        cursor.execute('SELECT id FROM contractors WHERE user_id = %s', (user['id'],))
+        contractor_result = cursor.fetchone()
+        if not contractor_result:
+            flash('Contractor profile not found. Please contact support.')
+            return redirect(url_for('login'))
+        contractor_id = contractor_result['id']
+        
+        cursor.execute('''
+            SELECT p.*, h.location,
+                   (SELECT COUNT(*) FROM bids b WHERE b.project_id = p.id) as bid_count, 
+                   (SELECT COUNT(*) FROM bids b WHERE b.project_id = p.id AND b.contractor_id = %s) as has_user_bid 
+            FROM projects p 
+            JOIN homeowners h ON p.homeowner_id = h.id
+            WHERE status = 'Active' 
+            ORDER BY created_at DESC
+        ''', (contractor_id,))
         projects = cursor.fetchall()
-        cursor.execute('SELECT b.*, p.title, p.project_type FROM bids b JOIN projects p ON b.project_id = p.id WHERE b.contractor_id = %s ORDER BY b.created_at DESC', (user['id'],))
+        
+        cursor.execute('''
+            SELECT b.*, p.title, p.project_type 
+            FROM bids b 
+            JOIN projects p ON b.project_id = p.id 
+            WHERE b.contractor_id = %s 
+            ORDER BY b.created_at DESC
+        ''', (contractor_id,))
         bids = cursor.fetchall()
         template = 'contractor_dashboard.html'
         render_args = {'projects': projects, 'bids': bids}
+    
     cursor.close()
     conn.close()
     return render_template(template, **render_args)
@@ -580,10 +683,19 @@ def confirm_project():
     
     conn = get_db_connection()
     cursor = conn.cursor()
+    
+    # Get homeowner ID from homeowners table
+    cursor.execute('SELECT id FROM homeowners WHERE user_id = %s', (user['id'],))
+    homeowner_result = cursor.fetchone()
+    if not homeowner_result:
+        flash('Homeowner profile not found. Please contact support.')
+        return redirect(url_for('dashboard'))
+    homeowner_id = homeowner_result['id']
+    
     cursor.execute('''
         INSERT INTO projects (title, description, project_type, location, budget_min, budget_max, timeline, status, original_file_path, ai_processed_text, created_at, homeowner_id)
         VALUES (%s, %s, %s, %s, %s, %s, %s, 'Active', %s, %s, NOW(), %s)
-    ''', (title, description, project_type, location, budget_min, budget_max, timeline, original_file_path, ai_results.get('transcribed_text'), user['id']))
+    ''', (title, description, project_type, location, budget_min, budget_max, timeline, original_file_path, ai_results.get('transcribed_text'), homeowner_id))
     conn.commit()
     cursor.close()
     conn.close()
@@ -598,9 +710,10 @@ def view_project(project_id):
     
     # Fetch project with homeowner information
     cursor.execute('''
-        SELECT p.*, u.first_name as homeowner_first_name, u.last_name as homeowner_last_name, u.location as homeowner_location
+        SELECT p.*, u.first_name as homeowner_first_name, u.last_name as homeowner_last_name, h.location as homeowner_location, u.id as homeowner_user_id
         FROM projects p 
-        JOIN users u ON p.homeowner_id = u.id 
+        JOIN homeowners h ON p.homeowner_id = h.id
+        JOIN users u ON h.user_id = u.id 
         WHERE p.id = %s
     ''', (project_id,))
     project = cursor.fetchone()
@@ -613,6 +726,8 @@ def view_project(project_id):
         'last_name': project['homeowner_last_name'],
         'location': project['homeowner_location']
     }
+    # Add homeowner_user_id for template permission checking
+    project['homeowner_user_id'] = project['homeowner_user_id']
     
     audio_url = None
     if project['original_file_path']:
@@ -641,9 +756,10 @@ def view_project(project_id):
     if show_bids:
         # Fetch bids with contractor information
         cursor.execute('''
-            SELECT b.*, u.first_name as contractor_first_name, u.last_name as contractor_last_name, u.location as contractor_location
+            SELECT b.*, u.first_name as contractor_first_name, u.last_name as contractor_last_name, c.location as contractor_location, c.company as contractor_company
             FROM bids b 
-            JOIN users u ON b.contractor_id = u.id 
+            JOIN contractors c ON b.contractor_id = c.id
+            JOIN users u ON c.user_id = u.id 
             WHERE b.project_id = %s 
             ORDER BY b.amount ASC
         ''', (project_id,))
@@ -655,7 +771,8 @@ def view_project(project_id):
                 'id': bid['contractor_id'],
                 'first_name': bid['contractor_first_name'],
                 'last_name': bid['contractor_last_name'],
-                'location': bid['contractor_location']
+                'location': bid['contractor_location'],
+                'company': bid['contractor_company']
             }
             bids.append(bid)
     
@@ -674,12 +791,21 @@ def submit_bid(project_id):
     
     conn = get_db_connection()
     cursor = conn.cursor()
+    
+    # Get contractor ID from contractors table
+    cursor.execute('SELECT id FROM contractors WHERE user_id = %s', (user['id'],))
+    contractor_result = cursor.fetchone()
+    if not contractor_result:
+        flash('Contractor profile not found. Please contact support.')
+        return redirect(url_for('dashboard'))
+    contractor_id = contractor_result['id']
+    
     cursor.execute('SELECT * FROM projects WHERE id = %s', (project_id,))
     project = cursor.fetchone()
     if not project:
         abort(404)
     
-    cursor.execute('SELECT * FROM bids WHERE project_id = %s AND contractor_id = %s', (project_id, user['id']))
+    cursor.execute('SELECT * FROM bids WHERE project_id = %s AND contractor_id = %s', (project_id, contractor_id))
     existing_bid = cursor.fetchone()
     if existing_bid:
         flash('You have already submitted a bid for this project')
@@ -692,7 +818,7 @@ def submit_bid(project_id):
     cursor.execute('''
         INSERT INTO bids (amount, timeline, description, status, created_at, project_id, contractor_id)
         VALUES (%s, %s, %s, 'Submitted', NOW(), %s, %s)
-    ''', (amount, timeline, description, project_id, user['id']))
+    ''', (amount, timeline, description, project_id, contractor_id))
     conn.commit()
     cursor.close()
     conn.close()
@@ -700,23 +826,99 @@ def submit_bid(project_id):
     flash('Bid submitted successfully!')
     return redirect(url_for('view_project', project_id=project_id))
 
+@app.route('/edit_bid/<int:bid_id>', methods=['POST'])
+@login_required
+def edit_bid(bid_id):
+    user = session['user']
+    if user['role'] != 'contractor':
+        return jsonify({'success': False, 'message': 'Only contractors can edit bids'}), 403
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Get contractor ID from contractors table
+    cursor.execute('SELECT id FROM contractors WHERE user_id = %s', (user['id'],))
+    contractor_result = cursor.fetchone()
+    if not contractor_result:
+        cursor.close()
+        conn.close()
+        return jsonify({'success': False, 'message': 'Contractor profile not found'}), 404
+    contractor_id = contractor_result['id']
+    
+    # Check if the bid exists and belongs to the current contractor
+    cursor.execute('SELECT * FROM bids WHERE id = %s AND contractor_id = %s', (bid_id, contractor_id))
+    bid = cursor.fetchone()
+    if not bid:
+        cursor.close()
+        conn.close()
+        return jsonify({'success': False, 'message': 'Bid not found or you do not have permission to edit it'}), 404
+    
+    # Check if the bid is still in 'Submitted' status (can only edit submitted bids)
+    if bid['status'] != 'Submitted':
+        cursor.close()
+        conn.close()
+        return jsonify({'success': False, 'message': 'You can only edit bids that are still pending review'}), 400
+    
+    try:
+        amount = float(request.form['amount'])
+        timeline = request.form['timeline']
+        description = request.form['description']
+        
+        # Update the bid
+        cursor.execute('''
+            UPDATE bids 
+            SET amount = %s, timeline = %s, description = %s
+            WHERE id = %s
+        ''', (amount, timeline, description, bid_id))
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        return jsonify({'success': True, 'message': 'Bid updated successfully!'})
+        
+    except ValueError:
+        cursor.close()
+        conn.close()
+        return jsonify({'success': False, 'message': 'Invalid bid amount. Please enter a valid number.'}), 400
+    except Exception as e:
+        cursor.close()
+        conn.close()
+        return jsonify({'success': False, 'message': 'An error occurred while updating your bid. Please try again.'}), 500
+
 @app.route('/accept_bid/<int:bid_id>', methods=['POST'])
 @login_required
 def accept_bid(bid_id):
     user = session['user']
     conn = get_db_connection()
     cursor = conn.cursor()
+    
+    # Get homeowner ID from homeowners table
+    cursor.execute('SELECT id FROM homeowners WHERE user_id = %s', (user['id'],))
+    homeowner_result = cursor.fetchone()
+    if not homeowner_result:
+        cursor.close()
+        conn.close()
+        return jsonify({'success': False, 'message': 'Homeowner profile not found'}), 404
+    homeowner_id = homeowner_result['id']
+    
     cursor.execute('SELECT * FROM bids WHERE id = %s', (bid_id,))
     bid = cursor.fetchone()
     if not bid:
+        cursor.close()
+        conn.close()
         abort(404)
+    
     cursor.execute('SELECT * FROM projects WHERE id = %s', (bid['project_id'],))
     project = cursor.fetchone()
     
-    if project['homeowner_id'] != user['id']:
+    if project['homeowner_id'] != homeowner_id:
+        cursor.close()
+        conn.close()
         return jsonify({'success': False, 'message': 'You can only accept bids for your own projects'}), 403
     
     if project['status'] != 'Active':
+        cursor.close()
+        conn.close()
         return jsonify({'success': False, 'message': 'This project is no longer active'}), 400
     
     cursor.execute("UPDATE bids SET status = 'Accepted' WHERE id = %s", (bid_id,))
@@ -734,14 +936,29 @@ def reject_bid(bid_id):
     user = session['user']
     conn = get_db_connection()
     cursor = conn.cursor()
+    
+    # Get homeowner ID from homeowners table
+    cursor.execute('SELECT id FROM homeowners WHERE user_id = %s', (user['id'],))
+    homeowner_result = cursor.fetchone()
+    if not homeowner_result:
+        cursor.close()
+        conn.close()
+        return jsonify({'success': False, 'message': 'Homeowner profile not found'}), 404
+    homeowner_id = homeowner_result['id']
+    
     cursor.execute('SELECT * FROM bids WHERE id = %s', (bid_id,))
     bid = cursor.fetchone()
     if not bid:
+        cursor.close()
+        conn.close()
         abort(404)
+    
     cursor.execute('SELECT * FROM projects WHERE id = %s', (bid['project_id'],))
     project = cursor.fetchone()
     
-    if project['homeowner_id'] != user['id']:
+    if project['homeowner_id'] != homeowner_id:
+        cursor.close()
+        conn.close()
         return jsonify({'success': False, 'message': 'You can only reject bids for your own projects'}), 403
     
     cursor.execute("UPDATE bids SET status = 'Rejected' WHERE id = %s", (bid_id,))
@@ -757,18 +974,40 @@ def complete_project(project_id):
     user = session['user']
     conn = get_db_connection()
     cursor = conn.cursor()
+    
     cursor.execute('SELECT * FROM projects WHERE id = %s', (project_id,))
     project = cursor.fetchone()
     if not project:
+        cursor.close()
+        conn.close()
         abort(404)
+    
     cursor.execute("SELECT * FROM bids WHERE project_id = %s AND status = 'Accepted'", (project_id,))
     accepted_bid = cursor.fetchone()
     
-    can_complete = (user['id'] == project['homeowner_id']) or (accepted_bid and user['id'] == accepted_bid['contractor_id'])
+    # Check permissions based on user role
+    can_complete = False
+    if user['role'] == 'homeowner':
+        # Get homeowner ID and check if they own the project
+        cursor.execute('SELECT id FROM homeowners WHERE user_id = %s', (user['id'],))
+        homeowner_result = cursor.fetchone()
+        if homeowner_result and homeowner_result['id'] == project['homeowner_id']:
+            can_complete = True
+    elif user['role'] == 'contractor' and accepted_bid:
+        # Get contractor ID and check if they have the accepted bid
+        cursor.execute('SELECT id FROM contractors WHERE user_id = %s', (user['id'],))
+        contractor_result = cursor.fetchone()
+        if contractor_result and contractor_result['id'] == accepted_bid['contractor_id']:
+            can_complete = True
+    
     if not can_complete:
+        cursor.close()
+        conn.close()
         return jsonify({'success': False, 'message': 'You do not have permission to complete this project'}), 403
     
     if not accepted_bid:
+        cursor.close()
+        conn.close()
         return jsonify({'success': False, 'message': 'Project must have an accepted bid before it can be completed'}), 400
     
     cursor.execute("UPDATE projects SET status = 'Completed' WHERE id = %s", (project_id,))
@@ -784,12 +1023,27 @@ def close_project(project_id):
     user = session['user']
     conn = get_db_connection()
     cursor = conn.cursor()
+    
+    # Get homeowner ID from homeowners table
+    cursor.execute('SELECT id FROM homeowners WHERE user_id = %s', (user['id'],))
+    homeowner_result = cursor.fetchone()
+    if not homeowner_result:
+        cursor.close()
+        conn.close()
+        flash('Homeowner profile not found. Please contact support.')
+        return redirect(url_for('dashboard'))
+    homeowner_id = homeowner_result['id']
+    
     cursor.execute('SELECT * FROM projects WHERE id = %s', (project_id,))
     project = cursor.fetchone()
     if not project:
+        cursor.close()
+        conn.close()
         abort(404)
     
-    if project['homeowner_id'] != user['id']:
+    if project['homeowner_id'] != homeowner_id:
+        cursor.close()
+        conn.close()
         flash('You can only close your own projects')
         return redirect(url_for('dashboard'))
     

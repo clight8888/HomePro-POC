@@ -124,7 +124,21 @@
                                             {% endif %}
                                         </td>
                                         <td>
-                                            <span class="badge bg-primary">{{ project.bid_count }} bids</span>
+                                            {% if project.accepted_bid_id %}
+                                                <div class="text-success fw-bold">
+                                                    <i class="fas fa-check-circle me-1"></i>
+                                                    Accepted: ${{ "{:,.2f}".format(project.accepted_bid_amount) }}
+                                                </div>
+                                                <small class="text-muted">by {{ project.accepted_contractor_name }}</small>
+                                            {% elif project.bid_count > 0 %}
+                                                <div class="d-flex align-items-center">
+                                                    <span class="badge bg-warning text-dark me-2">{{ project.bid_count }} bid{{ 's' if project.bid_count != 1 else '' }}</span>
+                                                    <i class="fas fa-exclamation-circle text-warning" title="Action required: Review and accept/reject bids"></i>
+                                                </div>
+                                                <small class="text-warning fw-bold">Awaiting your decision</small>
+                                            {% else %}
+                                                <span class="text-muted">No bids yet</span>
+                                            {% endif %}
                                         </td>
                                         <td>
                                             <span class="badge {% if project.status == 'Active' %}bg-success{% elif project.status == 'Closed' %}bg-secondary{% else %}bg-warning{% endif %}">
@@ -136,11 +150,17 @@
                                         </td>
                                         <td>
                                             <div class="btn-group btn-group-sm">
-                                                <a href="{{ url_for('view_project', project_id=project.id) }}" class="btn btn-outline-primary">
-                                                    <i class="fas fa-eye"></i>
+                                                {% if project.bid_count > 0 and not project.accepted_bid_id %}
+                                                <a href="{{ url_for('view_project', project_id=project.id) }}" class="btn btn-primary" title="View and manage bids">
+                                                    <i class="fas fa-handshake me-1"></i>Manage Bids
                                                 </a>
+                                                {% else %}
+                                                <a href="{{ url_for('view_project', project_id=project.id) }}" class="btn btn-outline-primary" title="View project details">
+                                                    <i class="fas fa-eye me-1"></i>View
+                                                </a>
+                                                {% endif %}
                                                 {% if project.status == 'Active' %}
-                                                <button type="button" class="btn btn-outline-danger" onclick="closeProject({{ project.id }})">
+                                                <button type="button" class="btn btn-outline-danger" onclick="closeProject({{ project.id }})" title="Close project">
                                                     <i class="fas fa-times"></i>
                                                 </button>
                                                 {% endif %}
@@ -183,6 +203,12 @@
                             </div>
                             <div class="flex-grow-1 ms-3">
                                 <div class="fw-bold">New bid on "{{ bid.project_title }}"</div>
+                                <div class="text-primary mb-1">
+                                    by {{ bid.contractor_first_name }} {{ bid.contractor_last_name }}
+                                    {% if bid.contractor_company %}
+                                        <span class="text-muted">from {{ bid.contractor_company }}</span>
+                                    {% endif %}
+                                </div>
                                 <div class="text-muted small">
                                     ${{ "%.0f"|format(bid.amount) }} - {{ bid.timeline }}
                                     <span class="ms-2">{{ bid.created_at.strftime('%m/%d/%Y %I:%M %p') }}</span>
