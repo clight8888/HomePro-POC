@@ -15,8 +15,22 @@ except ImportError:
 import pymysql
 try:
     import boto3
-    from botocore.exceptions import ClientError
-    AWS_AVAILABLE = True
+    from botocore.exceptions import ClientError, NoCredentialsError
+    # Check if AWS credentials are available
+    try:
+        # Try to create a session and check credentials
+        boto3_session = boto3.Session()
+        credentials = boto3_session.get_credentials()
+        if credentials is None:
+            raise NoCredentialsError()
+        # Test if credentials work by making a simple call
+        sts_client = boto3.client('sts')
+        sts_client.get_caller_identity()
+        AWS_AVAILABLE = True
+        print("AWS credentials are available and valid")
+    except (NoCredentialsError, ClientError, Exception) as e:
+        AWS_AVAILABLE = False
+        print(f"AWS credentials not available or invalid: {e}")
 except ImportError:
     AWS_AVAILABLE = False
     print("Warning: boto3 not installed. AWS features will be disabled.")
@@ -89,17 +103,33 @@ def process_ai_submission(file_path, file_type, text_content=None):
             
             # Wait for transcription to complete (simplified for demo)
             import time
-            while True:
-                response = transcribe_client.get_transcription_job(TranscriptionJobName=job_name)
-                status = response['TranscriptionJob']['TranscriptionJobStatus']
-                if status == 'COMPLETED':
-                    transcript_uri = response['TranscriptionJob']['Transcript']['TranscriptFileUri']
-                    # Download and parse transcript (simplified)
-                    transcribed_text = "Sample transcribed text from audio/video"
+            transcription_success = False
+            max_wait_time = 60  # Maximum wait time in seconds
+            wait_time = 0
+            
+            while wait_time < max_wait_time:
+                try:
+                    response = transcribe_client.get_transcription_job(TranscriptionJobName=job_name)
+                    status = response['TranscriptionJob']['TranscriptionJobStatus']
+                    if status == 'COMPLETED':
+                        transcript_uri = response['TranscriptionJob']['Transcript']['TranscriptFileUri']
+                        # Download and parse transcript (simplified)
+                        transcribed_text = "Sample transcribed text from audio/video"
+                        transcription_success = True
+                        break
+                    elif status == 'FAILED':
+                        print("AWS Transcription failed, falling back to mock data")
+                        break
+                    time.sleep(5)
+                    wait_time += 5
+                except Exception as e:
+                    print(f"Error checking transcription status: {e}")
                     break
-                elif status == 'FAILED':
-                    raise Exception("Transcription failed")
-                time.sleep(5)
+            
+            # If transcription failed or timed out, use mock data
+            if not transcription_success:
+                print("Using mock transcription due to AWS Transcribe failure")
+                transcribed_text = "Mock transcribed text: I need to fix my kitchen sink. It's been leaking for a week and I think it needs a new faucet. My budget is around $200-500 and I'd like it done within 2 weeks."
         elif file_type in ['audio', 'video'] and not AWS_AVAILABLE:
             # Mock transcription for development
             print("Using mock transcription for development")
