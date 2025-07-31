@@ -1,0 +1,125 @@
+HomePro Application - EC2 Deployment Instructions
+=================================================
+
+DEPLOYMENT PACKAGE: homepro_ec2_deployment.zip
+SIZE: 2.4 MB
+CREATED: $(Get-Date)
+
+PREREQUISITES:
+- Ubuntu/Amazon Linux EC2 instance
+- Python 3.8+ installed
+- pip installed
+- sudo access
+
+DEPLOYMENT STEPS:
+
+1. UPLOAD AND EXTRACT:
+   # Upload the zip file to your EC2 instance
+   scp homepro_ec2_deployment.zip ec2-user@your-ec2-ip:~/
+   
+   # SSH into your EC2 instance
+   ssh ec2-user@your-ec2-ip
+   
+   # Extract the files
+   unzip homepro_ec2_deployment.zip
+   cd homepro_ec2_deployment/
+
+2. INSTALL DEPENDENCIES:
+   # Update system packages
+   sudo yum update -y  # For Amazon Linux
+   # OR
+   sudo apt update && sudo apt upgrade -y  # For Ubuntu
+   
+   # Install Python and pip if not already installed
+   sudo yum install python3 python3-pip -y  # Amazon Linux
+   # OR
+   sudo apt install python3 python3-pip -y  # Ubuntu
+   
+   # Create virtual environment
+   python3 -m venv venv
+   source venv/bin/activate
+   
+   # Install Python dependencies
+   pip install -r requirements.txt
+
+3. CONFIGURE ENVIRONMENT:
+   # Create environment variables file
+   cat > .env << EOF
+   SECRET_KEY=your-super-secret-key-change-this-in-production
+   FLASK_ENV=production
+   DATABASE_URL=sqlite:///homepro.db
+   AWS_REGION=us-east-1
+   AWS_S3_BUCKET=homepro-uploads
+   EOF
+
+4. INITIALIZE DATABASE:
+   # Run database migration
+   python migrate_database.py
+
+5. RUN APPLICATION:
+   # For testing (development mode):
+   python app.py
+   
+   # For production (recommended):
+   pip install gunicorn
+   gunicorn -w 4 -b 0.0.0.0:8000 application:application
+
+6. CONFIGURE FIREWALL:
+   # Allow HTTP traffic on port 8000
+   sudo ufw allow 8000  # Ubuntu
+   # OR configure security group in AWS Console
+
+7. OPTIONAL - NGINX SETUP (Production):
+   # Install nginx
+   sudo yum install nginx -y  # Amazon Linux
+   # OR
+   sudo apt install nginx -y  # Ubuntu
+   
+   # Create nginx configuration
+   sudo tee /etc/nginx/sites-available/homepro << EOF
+   server {
+       listen 80;
+       server_name your-domain.com;
+       
+       location / {
+           proxy_pass http://127.0.0.1:8000;
+           proxy_set_header Host \$host;
+           proxy_set_header X-Real-IP \$remote_addr;
+           proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+       }
+       
+       location /static {
+           alias /path/to/your/app/static;
+       }
+   }
+   EOF
+   
+   # Enable the site
+   sudo ln -s /etc/nginx/sites-available/homepro /etc/nginx/sites-enabled/
+   sudo systemctl restart nginx
+
+INCLUDED FILES:
+- app.py (Main Flask application)
+- application.py (WSGI entry point)
+- auth.py (Authentication module)
+- config.py (Configuration settings)
+- migrate_database.py (Database migration script)
+- requirements.txt (Python dependencies)
+- static/ (CSS, JS, and static files)
+- templates/ (HTML templates)
+- uploads/ (File upload directory)
+
+SECURITY NOTES:
+- Change the SECRET_KEY to a secure random value
+- Use HTTPS in production
+- Configure proper firewall rules
+- Consider using RDS for production database
+- Set up proper backup procedures
+
+TROUBLESHOOTING:
+- Check logs: tail -f /var/log/nginx/error.log
+- Check application logs in the terminal
+- Ensure all ports are open in security groups
+- Verify Python version compatibility
+
+For support, refer to the application documentation or contact the development team.

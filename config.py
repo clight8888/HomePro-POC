@@ -26,7 +26,9 @@ class ProductionConfig(Config):
     DEBUG = False
     
     # Security settings for production
-    SESSION_COOKIE_SECURE = True
+    # Note: SESSION_COOKIE_SECURE set to False for HTTP deployment on EC2
+    # In a real production environment with HTTPS, this should be True
+    SESSION_COOKIE_SECURE = False  # Allow cookies over HTTP for EC2 deployment
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = 'Lax'
 

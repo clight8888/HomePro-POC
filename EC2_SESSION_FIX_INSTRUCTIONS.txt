@@ -1,0 +1,102 @@
+HomePro EC2 Deployment Instructions - Session Cookie Fix
+=========================================================
+
+ISSUE RESOLVED: Login redirection issue caused by SESSION_COOKIE_SECURE=True
+The production configuration was requiring HTTPS for session cookies, but EC2 is running on HTTP.
+
+DEPLOYMENT PACKAGE: homepro_ec2_session_fix.zip (53.7 KB)
+
+WHAT'S FIXED:
+- Added SECRET_KEY to .env file for proper Flask session management
+- Modified ProductionConfig to allow session cookies over HTTP (SESSION_COOKIE_SECURE=False)
+- This enables proper login functionality on EC2 without HTTPS
+
+DEPLOYMENT STEPS:
+================
+
+1. UPLOAD NEW PACKAGE
+   - Upload homepro_ec2_session_fix.zip to your EC2 instance
+   - Replace the previous deployment
+
+2. EXTRACT FILES
+   sudo unzip -o homepro_ec2_session_fix.zip -d /home/ubuntu/homepro/
+
+3. INSTALL DEPENDENCIES (if not already done)
+   cd /home/ubuntu/homepro/
+   sudo pip3 install -r requirements.txt
+
+4. VERIFY ENVIRONMENT CONFIGURATION
+   cat .env
+   # Should show:
+   # FLASK_ENV=production
+   # SECRET_KEY=your-super-secret-key-for-production-change-this-to-something-random
+   # DB_HOST=homepro-db.cluster-xyz.us-east-1.rds.amazonaws.com
+   # DB_PORT=3306
+   # DB_NAME=homepro_db
+   # DB_USERNAME=admin
+   # DB_PASSWORD=your_password
+   # AWS_REGION=us-east-1
+   # AWS_S3_BUCKET=homepro-uploads
+
+5. TEST DATABASE CONNECTION
+   python3 -c "
+   import os
+   from dotenv import load_dotenv
+   import pymysql
+   load_dotenv()
+   try:
+       conn = pymysql.connect(
+           host=os.getenv('DB_HOST'),
+           port=int(os.getenv('DB_PORT', 3306)),
+           user=os.getenv('DB_USERNAME'),
+           password=os.getenv('DB_PASSWORD'),
+           database=os.getenv('DB_NAME')
+       )
+       print('Database connection successful!')
+       conn.close()
+   except Exception as e:
+       print(f'Database connection failed: {e}')
+   "
+
+6. INITIALIZE DATABASE (if needed)
+   python3 -c "from app import init_database; init_database()"
+
+7. RUN APPLICATION
+   sudo python3 app.py
+
+8. CONFIGURE FIREWALL (if not already done)
+   sudo ufw allow 8000
+
+TESTING LOGIN:
+=============
+1. Access: http://your-ec2-ip:8000
+2. Register a new user or use existing credentials
+3. Login should now work properly without redirecting back to login page
+
+TROUBLESHOOTING:
+===============
+- If login still fails, check browser developer tools for cookie errors
+- Verify SECRET_KEY is set in .env file
+- Ensure database connection is working
+- Check that Flask is running in production mode (FLASK_ENV=production)
+
+SECURITY NOTES:
+==============
+- SESSION_COOKIE_SECURE is set to False for HTTP deployment
+- In a real production environment with HTTPS, change this back to True
+- Generate a strong, unique SECRET_KEY for production use
+- Ensure RDS security group allows EC2 access on port 3306
+
+FILES INCLUDED:
+==============
+- app.py (main Flask application)
+- config.py (with HTTP session cookie fix)
+- auth.py (authentication module)
+- requirements.txt (Python dependencies)
+- .env (environment configuration with SECRET_KEY)
+- static/ (CSS, JS, images)
+- templates/ (HTML templates)
+
+ACCESS:
+======
+Application URL: http://your-ec2-public-ip:8000

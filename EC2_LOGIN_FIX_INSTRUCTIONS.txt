@@ -1,0 +1,174 @@
+HomePro Application - EC2 Deployment with Login Fix
+==================================================
+
+DEPLOYMENT PACKAGE: homepro_ec2_fixed_login.zip
+SIZE: 2.4 MB
+INCLUDES: Fixed .env file with SECRET_KEY for proper session management
+
+🔧 LOGIN ISSUE FIXED:
+The previous login issue was caused by missing SECRET_KEY in the .env file.
+Flask sessions require a proper secret key in production mode to maintain user sessions.
+
+PREREQUISITES:
+- Ubuntu/Amazon Linux EC2 instance
+- Python 3.8+ installed
+- pip installed
+- sudo access
+- RDS MySQL instance accessible from EC2
+
+DEPLOYMENT STEPS:
+
+1. UPLOAD AND EXTRACT:
+   # Upload the NEW zip file to your EC2 instance
+   scp homepro_ec2_fixed_login.zip ec2-user@your-ec2-ip:~/
+   
+   # SSH into your EC2 instance
+   ssh ec2-user@your-ec2-ip
+   
+   # Remove old files if they exist
+   rm -rf homepro_ec2_with_env/
+   
+   # Extract the NEW files
+   unzip homepro_ec2_fixed_login.zip
+   cd homepro_ec2_fixed_login/
+
+2. INSTALL DEPENDENCIES:
+   # Update system packages
+   sudo yum update -y  # For Amazon Linux
+   # OR
+   sudo apt update && sudo apt upgrade -y  # For Ubuntu
+   
+   # Install Python and pip if not already installed
+   sudo yum install python3 python3-pip -y  # Amazon Linux
+   # OR
+   sudo apt install python3 python3-pip -y  # Ubuntu
+   
+   # Create virtual environment
+   python3 -m venv venv
+   source venv/bin/activate
+   
+   # Install Python dependencies
+   pip install -r requirements.txt
+
+3. VERIFY ENVIRONMENT CONFIGURATION:
+   # Check that .env file contains the SECRET_KEY
+   cat .env
+   
+   # Should show:
+   # FLASK_ENV=production
+   # SECRET_KEY=your-super-secret-key-for-production-change-this-to-something-random
+   # DB_HOST=homepro-mysql-db.c0zi8ey8usr4.us-east-1.rds.amazonaws.com
+   # DB_PORT=3306
+   # DB_NAME=homeprodb
+   # DB_USERNAME=homeproadmin
+   # DB_PASSWORD=YourSecurePassword123
+   # AWS_REGION=us-east-1
+   # AWS_S3_BUCKET=homepro-uploads
+
+4. TEST DATABASE CONNECTION:
+   # Test if you can connect to RDS from EC2
+   python3 -c "
+   import pymysql
+   import os
+   from dotenv import load_dotenv
+   load_dotenv()
+   try:
+       conn = pymysql.connect(
+           host=os.getenv('DB_HOST'),
+           user=os.getenv('DB_USERNAME'),
+           password=os.getenv('DB_PASSWORD'),
+           db=os.getenv('DB_NAME'),
+           port=int(os.getenv('DB_PORT', 3306))
+       )
+       print('✅ Database connection successful!')
+       conn.close()
+   except Exception as e:
+       print(f'❌ Database connection failed: {e}')
+   "
+
+5. INITIALIZE DATABASE:
+   # Run database migration to create tables
+   python3 migrate_database.py
+
+6. RUN APPLICATION:
+   # Stop any existing application first
+   pkill -f "python.*app.py" || true
+   
+   # For testing (development mode):
+   python3 app.py
+   
+   # For production (recommended):
+   pip install gunicorn
+   gunicorn -w 4 -b 0.0.0.0:8000 application:application
+
+7. CONFIGURE FIREWALL:
+   # Allow HTTP traffic on port 8000
+   sudo ufw allow 8000  # Ubuntu
+   # OR configure security group in AWS Console to allow port 8000
+
+🔍 LOGIN TROUBLESHOOTING:
+
+If login still fails:
+
+1. CHECK SESSION CONFIGURATION:
+   # Verify SECRET_KEY is loaded
+   python3 -c "
+   import os
+   from dotenv import load_dotenv
+   load_dotenv()
+   secret = os.getenv('SECRET_KEY')
+   if secret:
+       print('✅ SECRET_KEY is loaded')
+   else:
+       print('❌ SECRET_KEY is missing')
+   "
+
+2. CHECK APPLICATION LOGS:
+   # Look for any error messages when attempting login
+   tail -f /var/log/messages  # System logs
+   # OR check application output directly
+
+3. VERIFY USER EXISTS IN DATABASE:
+   # Connect to MySQL and check users table
+   mysql -h homepro-mysql-db.c0zi8ey8usr4.us-east-1.rds.amazonaws.com -u homeproadmin -p homeprodb
+   
+   # In MySQL prompt:
+   SELECT email, role FROM users;
+   
+   # If no users exist, register a new account first
+
+4. CLEAR BROWSER CACHE:
+   # Clear browser cookies and cache for the site
+   # Try in incognito/private browsing mode
+
+5. CHECK FLASK ENVIRONMENT:
+   # Ensure FLASK_ENV is set correctly
+   echo $FLASK_ENV
+
+SECURITY NOTES:
+- The SECRET_KEY in .env should be changed to a random string in production
+- Generate a secure secret key: python3 -c "import secrets; print(secrets.token_hex(32))"
+- Ensure proper file permissions: chmod 600 .env
+- Use HTTPS in production
+- Configure proper firewall rules
+
+INCLUDED FILES:
+- app.py (Main Flask application)
+- application.py (WSGI entry point)
+- auth.py (Authentication module)
+- config.py (Configuration settings)
+- migrate_database.py (Database migration script)
+- requirements.txt (Python dependencies including PyMySQL)
+- static/ (CSS, JS, and static files)
+- templates/ (HTML templates)
+- uploads/ (File upload directory)
+- .env (Environment variables with RDS configuration AND SECRET_KEY)
+
+ACCESS YOUR APPLICATION:
+Once running, access your application at:
+- http://your-ec2-public-ip:8000
+- Or http://54.211.78.141:8000
+
+LOGIN SHOULD NOW WORK PROPERLY! 🎉
+
+The login issue was caused by missing SECRET_KEY which is required for Flask sessions in production mode.
