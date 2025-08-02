@@ -3,182 +3,372 @@
 {% block title %}Submit Project - HomePro{% endblock %}
 
 {% block content %}
+<style>
+.step-indicator {
+  color: gray; /* Unfinished */
+}
+.step-indicator.completed {
+  color: green; /* Finished */
+}
+.step-indicator.active {
+  color: #007bff; /* Current */
+}
+.step-indicator .step-number {
+  color: inherit;
+}
+</style>
 <div class="container py-4">
     <div class="row justify-content-center">
         <div class="col-lg-8">
             <!-- Header -->
             <div class="text-center mb-5">
                 <h1 class="h3 fw-bold">Submit Your Project</h1>
-                <p class="text-muted">Describe your home improvement project using voice, video, or text</p>
+                <p class="text-muted">Describe your home improvement project using audio</p>
             </div>
             
-            <!-- Submission Methods -->
-            <div class="card shadow">
-                <div class="card-body p-4">
-                    <form method="POST" enctype="multipart/form-data" id="projectForm">
-                        <!-- Method Selection Cards -->
-                        <div class="mb-4">
-                            <h5 class="mb-3">Choose your submission method:</h5>
-                            <div class="row g-3">
-                                <!-- Text Method -->
-                                <div class="col-md-4">
-                                    <div class="method-card card h-100 border-2 border-primary cursor-pointer selected" data-method="text" id="text_card">
-                                        <div class="card-body text-center p-4">
-                                            <i class="fas fa-keyboard fa-3x text-primary mb-3"></i>
-                                            <h6 class="card-title">Text</h6>
-                                            <p class="card-text small text-muted">Type your description</p>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <!-- Audio Method -->
-                                <div class="col-md-4">
-                                    <div class="method-card card h-100 border-2 cursor-pointer" data-method="audio" id="audio_card">
-                                        <div class="card-body text-center p-4">
-                                            <i class="fas fa-microphone fa-3x text-primary mb-3"></i>
-                                            <h6 class="card-title">Audio</h6>
-                                            <p class="card-text small text-muted">Record your description</p>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <!-- Video Method -->
-                                <div class="col-md-4">
-                                    <div class="method-card card h-100 border-2 cursor-pointer opacity-50" data-method="video" id="video_card">
-                                        <div class="card-body text-center p-4">
-                                            <i class="fas fa-video fa-3x text-muted mb-3"></i>
-                                            <h6 class="card-title text-muted">Video</h6>
-                                            <p class="card-text small text-muted">Coming soon</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- Hidden input for submission method -->
-                            <input type="hidden" name="submission_method" id="submission_method" value="text">
+            <!-- Workflow Steps -->
+            <div class="mb-5">
+                <div class="row text-center">
+                    <div class="col">
+                        <div class="step-indicator active" id="step1">
+                        <div class="step-number">
+                            <i class="fas fa-microphone step-icon"></i>
                         </div>
-                        
-                        <!-- File Upload Section -->
-                        <div id="file_upload_section" style="display: none;">
-                            <div class="mb-4">
-                                <label for="file" class="form-label">Upload File</label>
-                                <div class="upload-area border-2 border-dashed rounded p-4 text-center" id="uploadArea">
-                                    <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
-                                    <h6>Drag and drop your file here</h6>
-                                    <p class="text-muted mb-3">or click to browse</p>
-                                    <input type="file" class="form-control" id="file" name="file" accept=".mp3,.wav,.mp4,.mov" style="display: none;">
-                                    <button type="button" class="btn btn-outline-primary" onclick="document.getElementById('file').click()">
-                                        Choose File
-                                    </button>
-                                </div>
-                                <div class="form-text">
-                                    <strong>Audio:</strong> MP3, WAV (max 10MB) | 
-                                    <strong>Video:</strong> MP4, MOV (max 50MB)
-                                </div>
-                                <div id="file_info" class="mt-2" style="display: none;">
-                                    <div class="alert alert-info">
-                                        <i class="fas fa-file me-2"></i>
-                                        <span id="file_name"></span>
-                                        <span class="float-end">
-                                            <span id="file_size"></span>
-                                            <button type="button" class="btn btn-sm btn-outline-danger ms-2" onclick="removeFile()">
-                                                <i class="fas fa-times"></i>
-                                            </button>
-                                        </span>
-                                    </div>
-                                </div>
-                                
-                                <!-- Progress Bar -->
-                                <div id="upload_progress" class="mt-3" style="display: none;">
-                                    <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <span class="text-muted">Uploading and processing...</span>
-                                        <span id="progress_percentage" class="text-muted">0%</span>
-                                    </div>
-                                    <div class="progress mb-2">
-                                        <div id="progress_bar" class="progress-bar progress-bar-striped progress-bar-animated" 
-                                             role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
-                                    </div>
-                                    <div id="progress_status" class="text-muted small">
-                                        <i class="fas fa-upload me-1"></i>Preparing upload...
-                                    </div>
-                                    <div id="estimated_time" class="text-muted small mt-1" style="display: none;">
-                                        <i class="fas fa-clock me-1"></i>Estimated time remaining: <span id="time_remaining">--</span>
-                                    </div>
-                                </div>
-                            </div>
+                        <div class="step-label">Upload Audio</div>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="step-indicator" id="step2">
+                        <div class="step-number">
+                            <i class="fas fa-file-audio step-icon"></i>
                         </div>
-                        
-                        <!-- Text Description Section -->
-                        <div id="text_description_section" style="display: block;">
-                            <div class="mb-4">
-                                <label for="title" class="form-label">Project Title</label>
-                                <input type="text" class="form-control" id="title" name="title" placeholder="e.g., Kitchen Renovation" required>
-                            </div>
-                            <div class="mb-4">
-                                <label for="project_type" class="form-label">Project Type</label>
-                                <select class="form-select" id="project_type" name="project_type">
-                                    <option value="General">General</option>
-                                    <option value="Plumbing">Plumbing</option>
-                                    <option value="Electrical">Electrical</option>
-                                    <option value="Renovation">Renovation</option>
-                                    <!-- Add more options as needed -->
-                                </select>
-                            </div>
-                            <div class="mb-4">
-                                <label for="location" class="form-label">Location</label>
-                                <input type="text" class="form-control" id="location" name="location" placeholder="e.g., New York, NY">
-                            </div>
-                            <div class="mb-4">
-                                <label for="description" class="form-label">Description</label>
-                                <textarea class="form-control" id="description" name="description" rows="6" placeholder="Describe your project in detail..." required></textarea>
-                            </div>
-                            <div class="row mb-4">
-                                <div class="col-md-6">
-                                    <label for="budget_min" class="form-label">Minimum Budget</label>
-                                    <input type="number" class="form-control" id="budget_min" name="budget_min" placeholder="e.g., 1000">
-                                </div>
-                                <div class="col-md-6">
-                                    <label for="budget_max" class="form-label">Maximum Budget</label>
-                                    <input type="number" class="form-control" id="budget_max" name="budget_max" placeholder="e.g., 5000">
-                                </div>
-                            </div>
-                            <div class="mb-4">
-                                <label for="timeline" class="form-label">Timeline</label>
-                                <input type="text" class="form-control" id="timeline" name="timeline" placeholder="e.g., Within 2 months">
-                            </div>
+                        <div class="step-label">Transcription</div>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="step-indicator" id="step3">
+                        <div class="step-number">
+                            <i class="fas fa-brain step-icon"></i>
                         </div>
-                        
-                        <!-- AI Processing Info -->
-                        <div class="alert alert-info">
-                            <h6><i class="fas fa-robot me-2"></i>AI Processing</h6>
-                            <p class="mb-0">Our AI will analyze your submission to extract project details like type, scope, budget, timeline, and location. You'll be able to review and edit these details before posting your project.</p>
+                        <div class="step-label">AI Analysis</div>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="step-indicator" id="step4">
+                        <div class="step-number">
+                            <i class="fas fa-edit step-icon"></i>
                         </div>
-                        
-                        <!-- Tips Section -->
-                        <div class="card bg-light mb-4">
-                            <div class="card-body">
-                                <h6><i class="fas fa-lightbulb me-2"></i>Tips for Better Results</h6>
-                                <ul class="mb-0 small">
-                                    <li>Be specific about the type of work (plumbing, electrical, renovation, etc.)</li>
-                                    <li>Mention your budget range if you have one in mind</li>
-                                    <li>Include timeline preferences (urgent, flexible, specific dates)</li>
-                                    <li>Describe the current condition and what you want to achieve</li>
-                                    <li>Mention any special requirements or constraints</li>
-                                </ul>
-                            </div>
+                        <div class="step-label">Preview Form</div>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="step-indicator" id="step5">
+                        <div class="step-number">
+                            <i class="fas fa-paper-plane step-icon"></i>
                         </div>
-                        
-                        <div class="d-flex justify-content-between">
-                            <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">
-                                <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
-                            </a>
-                            <button type="submit" class="btn btn-primary" id="submitBtn">
-                                <i class="fas fa-magic me-2"></i>Submit Project
-                            </button>
-                        </div>
-                    </form>
+                        <div class="step-label">Submit</div>
+                    </div>
+                    </div>
                 </div>
             </div>
+            
+            <!-- Step 1: Audio Upload -->
+            <div class="card shadow" id="audioUploadStep">
+                <div class="card-body p-4">
+                    <h5 class="mb-3">
+                        <i class="fas fa-microphone text-primary me-2"></i>
+                        Step 1: Upload Your Audio Description
+                    </h5>
+                    
+                    <!-- File Upload Area -->
+                    <div class="mb-4">
+                        <div class="upload-area border-2 border-dashed rounded p-4 text-center" id="uploadArea">
+                            <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
+                            <h6>Drag and drop your audio file here</h6>
+                            <p class="text-muted mb-3">or click to browse</p>
+                            <input type="file" class="form-control" id="audioFile" accept=".mp3,.wav,.m4a,.aac,.flac,.ogg,.wma,.webm" style="display: none;">
+                            <button type="button" class="btn btn-outline-primary me-2" onclick="document.getElementById('audioFile').click()">
+                                <i class="fas fa-file-upload me-1"></i>Choose File
+                            </button>
+                            <button type="button" class="btn btn-outline-success" id="recordBtn" onclick="toggleRecording()">
+                                <i class="fas fa-microphone me-1"></i>Record Audio
+                            </button>
+                        </div>
+                        <div class="form-text">
+                            <strong>Supported formats:</strong> MP3, WAV, M4A, AAC, FLAC, OGG, WMA, WebM (max 25MB)<br>
+                            <strong>Recording:</strong> Click "Record Audio" to record directly in your browser
+                        </div>
+                        
+                        <!-- Audio Recording Section -->
+                        <div id="recordingSection" class="mt-3" style="display: none;">
+                            <div class="card border-success">
+                                <div class="card-body">
+                                    <div class="d-flex align-items-center justify-content-between">
+                                        <div>
+                                            <h6 class="mb-1">
+                                                <i class="fas fa-microphone text-success me-2"></i>
+                                                <span id="recordingStatus">Ready to record</span>
+                                            </h6>
+                                            <small class="text-muted" id="recordingTime">00:00</small>
+                                        </div>
+                                        <div>
+                                            <button type="button" class="btn btn-success btn-sm me-2" id="startRecordBtn" onclick="startRecording()">
+                                                <i class="fas fa-play"></i> Start
+                                            </button>
+                                            <button type="button" class="btn btn-danger btn-sm me-2" id="stopRecordBtn" onclick="stopRecording()" style="display: none;">
+                                                <i class="fas fa-stop"></i> Stop
+                                            </button>
+                                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="cancelRecording()">
+                                                <i class="fas fa-times"></i> Cancel
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div id="recordingWaveform" class="mt-3" style="display: none;">
+                                        <div class="progress" style="height: 20px;">
+                                            <div class="progress-bar bg-success progress-bar-striped progress-bar-animated" 
+                                                 role="progressbar" style="width: 0%" id="recordingLevel"></div>
+                                        </div>
+                                    </div>
+                                    <audio id="recordedAudio" controls class="w-100 mt-3" style="display: none;"></audio>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- File Info -->
+                        <div id="fileInfo" class="mt-2" style="display: none;">
+                            <div class="alert alert-info">
+                                <i class="fas fa-file-audio me-2"></i>
+                                <span id="fileName"></span>
+                                <span class="float-end">
+                                    <span id="fileSize"></span>
+                                    <button type="button" class="btn btn-sm btn-outline-danger ms-2" onclick="removeFile()">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+                        </a>
+                        <button type="button" class="btn btn-primary" id="processAudioBtn" onclick="processAudio()" disabled>
+                            <i class="fas fa-magic me-2"></i>Process Audio
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Step 2: Processing -->
+            <div class="card shadow" id="processingStep" style="display: none;">
+                <div class="card-body p-4 text-center">
+                    <h5 class="mb-3">
+                        <i class="fas fa-cog fa-spin text-primary me-2"></i>
+                        Step 2: Transcription in Progress
+                    </h5>
+                    
+                    <!-- Progress Bar -->
+                    <div id="processingProgress" class="mt-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="text-muted">Processing your audio...</span>
+                            <span id="progressPercentage" class="text-muted">0%</span>
+                        </div>
+                        <div class="progress mb-2">
+                            <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" 
+                                 role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                        <div id="progressStatus" class="text-muted small">
+                            <i class="fas fa-upload me-1"></i>Uploading audio file...
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Step 3: Transcript Results -->
+            <div class="card shadow" id="transcriptStep" style="display: none;">
+                <div class="card-body p-4">
+                    <h5 class="mb-3">
+                        <i class="fas fa-file-alt text-primary me-2"></i>
+                        Step 3: Review Transcript
+                    </h5>
+                    
+                    <!-- Transcript Content -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">
+                            <i class="fas fa-quote-left me-2"></i>
+                            Transcript Content
+                        </label>
+                        <div class="card border-primary">
+                            <div class="card-body">
+                                <p class="mb-0 lh-lg" id="transcriptContent">Your transcript will appear here...</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Processing Status -->
+                    <div class="mb-4">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Processing Status</label>
+                                <div class="d-flex align-items-center">
+                                    <span class="badge bg-success me-2" id="transcriptStatus">
+                                        <i class="fas fa-check me-1"></i>
+                                        Complete
+                                    </span>
+                                    <small class="text-muted">AWS Transcribe processed successfully</small>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Confidence Level</label>
+                                <div class="progress" style="height: 25px;">
+                                    <div class="progress-bar bg-success" 
+                                        role="progressbar" 
+                                        style="width: 0%"
+                                        id="transcriptConfidenceBar"
+                                        aria-valuenow="0" 
+                                        aria-valuemin="0" 
+                                        aria-valuemax="100">
+                                        0%
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Action Buttons -->
+                    <div class="d-flex justify-content-between">
+                        <button type="button" class="btn btn-outline-secondary" onclick="goBackToUpload()">
+                            <i class="fas fa-arrow-left me-2"></i>
+                            Upload Different Audio
+                        </button>
+                        <div>
+                            <button type="button" class="btn btn-outline-primary me-2" onclick="copyTranscript()">
+                                <i class="fas fa-copy me-2"></i>
+                                Copy Transcript
+                            </button>
+                            <button type="button" class="btn btn-primary" onclick="proceedToAIAnalysis()">
+                                <i class="fas fa-arrow-right me-2"></i>
+                                Proceed to AI Analysis
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Step 4: Preview Form -->
+            <div class="card shadow" id="previewStep" style="display: none;">
+                <div class="card-body p-4">
+                    <h5 class="mb-3">
+                        <i class="fas fa-eye text-primary me-2"></i>
+                        Step 4: Review and Edit Project Details
+                    </h5>
+                    
+                    <!-- AI Analysis Results -->
+                    <div class="alert alert-info mb-4" id="aiResults">
+                        <h6><i class="fas fa-robot me-2"></i>AI Analysis Results</h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <small class="text-muted">Transcribed Text:</small>
+                                <p class="mb-2" id="transcribedText"></p>
+                            </div>
+                            <div class="col-md-6">
+                                <small class="text-muted">Confidence Level:</small>
+                                <div class="progress mt-1" style="height: 20px;">
+                                    <div class="progress-bar" id="confidenceBar" role="progressbar" style="width: 0%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Preview Form -->
+                    <form id="previewForm">
+                        <div class="mb-3">
+                            <label for="previewTitle" class="form-label">Project Title *</label>
+                            <input type="text" class="form-control" id="previewTitle" name="title" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="previewProjectType" class="form-label">Project Type</label>
+                            <select class="form-select" id="previewProjectType" name="project_type">
+                                <option value="General">General</option>
+                                <option value="Plumbing">Plumbing</option>
+                                <option value="Electrical">Electrical</option>
+                                <option value="Renovation">Renovation</option>
+                                <option value="Painting">Painting</option>
+                                <option value="Flooring">Flooring</option>
+                                <option value="Roofing">Roofing</option>
+                                <option value="HVAC">HVAC</option>
+                                <option value="Landscaping">Landscaping</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="previewLocation" class="form-label">Location</label>
+                            <input type="text" class="form-control" id="previewLocation" name="location" placeholder="e.g., New York, NY">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="previewDescription" class="form-label">Description *</label>
+                            <textarea class="form-control" id="previewDescription" name="description" rows="6" required></textarea>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="previewBudgetMin" class="form-label">Minimum Budget</label>
+                                <input type="number" class="form-control" id="previewBudgetMin" name="budget_min" placeholder="e.g., 1000">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="previewBudgetMax" class="form-label">Maximum Budget</label>
+                                <input type="number" class="form-control" id="previewBudgetMax" name="budget_max" placeholder="e.g., 5000">
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="previewTimeline" class="form-label">Timeline</label>
+                            <input type="text" class="form-control" id="previewTimeline" name="timeline" placeholder="e.g., Within 2 months">
+                        </div>
+                        
+                        <!-- Hidden fields for AI data -->
+                        <input type="hidden" id="hiddenTranscribedText" name="transcribed_text">
+                        <input type="hidden" id="hiddenConfidence" name="confidence">
+                        <input type="hidden" id="hiddenExtractionMethod" name="extraction_method">
+                        <input type="hidden" id="hiddenS3Key" name="s3_key">
+                        <input type="hidden" id="hiddenFilename" name="filename">
+                    </form>
+                    
+                    <div class="d-flex justify-content-between">
+                        <button type="button" class="btn btn-outline-secondary" onclick="goBackToUpload()">
+                            <i class="fas fa-arrow-left me-2"></i>Back to Upload
+                        </button>
+                        <button type="button" class="btn btn-primary" id="submitPreviewBtn" onclick="submitPreview()">
+                            <i class="fas fa-check me-2"></i>Submit Project
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Step 4: Success -->
+            <div class="card shadow" id="successStep" style="display: none;">
+                <div class="card-body p-4 text-center">
+                    <h5 class="mb-3 text-success">
+                        <i class="fas fa-check-circle text-success me-2"></i>
+                        Project Submitted Successfully!
+                    </h5>
+                    <p class="text-muted mb-4">Your project has been posted and contractors will start bidding soon.</p>
+                    <div class="d-flex justify-content-center gap-3">
+                        <a href="{{ url_for('dashboard') }}" class="btn btn-primary">
+                            <i class="fas fa-tachometer-alt me-2"></i>Go to Dashboard
+                        </a>
+                        <button type="button" class="btn btn-outline-primary" onclick="submitAnother()">
+                            <i class="fas fa-plus me-2"></i>Submit Another Project
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
             
             <!-- Example Projects -->
             <div class="mt-5">
@@ -205,258 +395,771 @@
         </div>
     </div>
 </div>
+
+<!-- Authentication Modal -->
+<div class="modal fade" id="authModal" tabindex="-1" aria-labelledby="authModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="authModalLabel">
+                    <i class="fas fa-user-lock me-2"></i>Authentication Required
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center">
+                <div class="mb-4">
+                    <i class="fas fa-shield-alt fa-3x text-primary mb-3"></i>
+                    <h6>Please sign in or create an account to submit your project</h6>
+                    <p class="text-muted">Your project details will be saved and you can continue right where you left off after authentication.</p>
+                </div>
+                
+                <div class="d-grid gap-2">
+                    <button type="button" class="btn btn-primary btn-lg" onclick="saveProjectDataAndRedirect('login')">
+                        <i class="fas fa-sign-in-alt me-2"></i>Sign In to Existing Account
+                    </button>
+                    <button type="button" class="btn btn-outline-primary btn-lg" onclick="saveProjectDataAndRedirect('register')">
+                        <i class="fas fa-user-plus me-2"></i>Create New Account
+                    </button>
+                </div>
+                
+                <div class="mt-3">
+                    <small class="text-muted">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Your project data is temporarily saved and will be restored after authentication.
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
+<div aria-live="polite" aria-atomic="true" style="position: relative; min-height: 200px;">
+  <div id="toastContainer" style="position: absolute; top: 0; right: 0;">
+  </div>
+</div>
 <script>
+function showToast(message, type = 'info') {
+  const toastHtml = `
+    <div class="toast align-items-center text-white bg-${type} border-0" role="alert" aria-live="assertive" aria-atomic="true">
+      <div class="d-flex">
+        <div class="toast-body">
+          ${message}
+        </div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+      </div>
+    </div>`;
+  const toastContainer = document.getElementById('toastContainer');
+  toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+  const toastEl = toastContainer.lastElementChild;
+  const toast = new bootstrap.Toast(toastEl);
+  toast.show();
+  setTimeout(() => toastEl.remove(), 5000);
+}
+// Global variables
+let mediaRecorder = null;
+let audioChunks = [];
+let recordingStartTime = null;
+let recordingTimer = null;
+let audioStream = null;
+let recordedBlob = null;
+let aiResults = null;
+let transcriptData = null;
+
 document.addEventListener('DOMContentLoaded', function() {
-    const methodCards = document.querySelectorAll('.method-card');
-    const submissionMethodInput = document.getElementById('submission_method');
-    const fileUploadSection = document.getElementById('file_upload_section');
-    const textFormSection = document.getElementById('text_description_section');
-    const fileInput = document.getElementById('file');
-    const uploadArea = document.getElementById('uploadArea');
-    const submitBtn = document.getElementById('submitBtn');
-    
-    // Method card selection
-    methodCards.forEach(card => {
-        card.addEventListener('click', function() {
-            const method = this.dataset.method;
-            
-            // Skip if video (disabled)
-            if (method === 'video') return;
-            
-            // Remove selected class from all cards
-            methodCards.forEach(c => {
-                c.classList.remove('selected', 'border-primary');
-                c.classList.add('border-2');
-            });
-            
-            // Add selected class to clicked card
-            this.classList.add('selected', 'border-primary');
-            
-            // Update hidden input
-            submissionMethodInput.value = method;
-            
-            // Update form sections
-            updateSubmissionMethod(method);
-        });
+    // Initialize the upload step
+    showStep('audioUploadStep');
+    updateStepIndicator(1);
+});
+
+// Step navigation functions
+function showStep(stepId) {
+    const steps = ['audioUploadStep', 'processingStep', 'transcriptStep', 'previewStep', 'successStep'];
+    steps.forEach(step => {
+        document.getElementById(step).style.display = step === stepId ? 'block' : 'none';
     });
-    
-    function updateSubmissionMethod(method) {
-        if (method === 'audio') {
-            fileUploadSection.style.display = 'block';
-            textFormSection.style.display = 'none';
-            fileInput.accept = '.mp3,.wav';
-            // Remove required from text fields
-            document.getElementById('title').removeAttribute('required');
-            document.getElementById('description').removeAttribute('required');
-        } else if (method === 'video') {
-            fileUploadSection.style.display = 'block';
-            textFormSection.style.display = 'none';
-            fileInput.accept = '.mp4,.mov';
-            // Remove required from text fields
-            document.getElementById('title').removeAttribute('required');
-            document.getElementById('description').removeAttribute('required');
-        } else {
-            fileUploadSection.style.display = 'none';
-            textFormSection.style.display = 'block';
-            // Add required back to text fields
-            document.getElementById('title').setAttribute('required', 'required');
-            document.getElementById('description').setAttribute('required', 'required');
-        }
-    }
-    
-    // File upload handling
-    fileInput.addEventListener('change', function(e) {
-        const file = e.target.files[0];
-        if (file) {
-            displayFileInfo(file);
-        }
-    });
-    
-    // Drag and drop
-    uploadArea.addEventListener('dragover', function(e) {
-        e.preventDefault();
-        uploadArea.classList.add('border-primary');
-    });
-    
-    uploadArea.addEventListener('dragleave', function(e) {
-        e.preventDefault();
-        uploadArea.classList.remove('border-primary');
-    });
-    
-    uploadArea.addEventListener('drop', function(e) {
-        e.preventDefault();
-        uploadArea.classList.remove('border-primary');
-        
-        const files = e.dataTransfer.files;
-        if (files.length > 0) {
-            fileInput.files = files;
-            displayFileInfo(files[0]);
-        }
-    });
-    
-    function displayFileInfo(file) {
-        const fileInfo = document.getElementById('file_info');
-        const fileName = document.getElementById('file_name');
-        const fileSize = document.getElementById('file_size');
-        
-        fileName.textContent = file.name;
-        fileSize.textContent = formatFileSize(file.size);
-        fileInfo.style.display = 'block';
-    }
-    
-    function formatFileSize(bytes) {
-        if (bytes === 0) return '0 Bytes';
-        const k = 1024;
-        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-        const i = Math.floor(Math.log(bytes) / Math.log(k));
-        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-    }
-    
-    // Form validation and submission
-    document.getElementById('projectForm').addEventListener('submit', function(e) {
-        const method = submissionMethodInput.value;
-        const textDescription = document.getElementById('description').value.trim();
-        const file = fileInput.files[0];
-        
-        console.log('Form submission:', { method, hasFile: !!file, textDescription: textDescription.length });
-        
-        if (method === 'text' && !textDescription) {
-            e.preventDefault();
-            alert('Please provide a project description.');
-            return;
-        }
-        
-        if ((method === 'audio' || method === 'video') && !file) {
-            e.preventDefault();
-            alert('Please upload a file.');
-            return;
-        }
-        
-        // For audio/video uploads, use AJAX with progress
-        if ((method === 'audio' || method === 'video') && file) {
-            e.preventDefault();
-            submitWithProgress(this, file);
-            return;
-        }
-        
-        // Show loading state for text submissions
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing...';
-        submitBtn.disabled = true;
-    });
-    
-    function submitWithProgress(form, file) {
-        const formData = new FormData(form);
-        const progressContainer = document.getElementById('upload_progress');
-        const progressBar = document.getElementById('progress_bar');
-        const progressPercentage = document.getElementById('progress_percentage');
-        const progressStatus = document.getElementById('progress_status');
-        const estimatedTime = document.getElementById('estimated_time');
-        const timeRemaining = document.getElementById('time_remaining');
-        
-        // Show progress bar
-        progressContainer.style.display = 'block';
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Uploading...';
-        submitBtn.disabled = true;
-        
-        // Track upload start time and progress
-        let startTime = Date.now();
-        let lastProgressTime = startTime;
-        let lastProgressValue = 0;
-        
-        const xhr = new XMLHttpRequest();
-        
-        // Upload progress handler
-        xhr.upload.addEventListener('progress', function(e) {
-            if (e.lengthComputable) {
-                const percentComplete = Math.round((e.loaded / e.total) * 100);
-                const currentTime = Date.now();
-                
-                // Update progress bar
-                progressBar.style.width = percentComplete + '%';
-                progressBar.setAttribute('aria-valuenow', percentComplete);
-                progressPercentage.textContent = percentComplete + '%';
-                
-                // Update status based on progress
-                if (percentComplete < 50) {
-                    progressStatus.innerHTML = '<i class="fas fa-upload me-1"></i>Uploading file...';
-                } else if (percentComplete < 90) {
-                    progressStatus.innerHTML = '<i class="fas fa-cog fa-spin me-1"></i>Processing audio...';
-                } else {
-                    progressStatus.innerHTML = '<i class="fas fa-magic me-1"></i>Finalizing...';
-                }
-                
-                // Calculate estimated time remaining
-                if (percentComplete > 5 && percentComplete < 95) {
-                    const elapsedTime = currentTime - startTime;
-                    const progressRate = percentComplete / elapsedTime;
-                    const remainingProgress = 100 - percentComplete;
-                    const estimatedRemainingTime = remainingProgress / progressRate;
-                    
-                    if (estimatedRemainingTime > 0) {
-                        const seconds = Math.ceil(estimatedRemainingTime / 1000);
-                        let timeText;
-                        
-                        if (seconds < 60) {
-                            timeText = seconds + ' seconds';
-                        } else {
-                            const minutes = Math.floor(seconds / 60);
-                            const remainingSeconds = seconds % 60;
-                            timeText = minutes + 'm ' + remainingSeconds + 's';
-                        }
-                        
-                        timeRemaining.textContent = timeText;
-                        estimatedTime.style.display = 'block';
-                    }
-                }
-                
-                lastProgressTime = currentTime;
-                lastProgressValue = percentComplete;
-            }
-        });
-        
-        // Handle completion
-        xhr.addEventListener('load', function() {
-            if (xhr.status === 200) {
-                // Success - redirect to review page
-                progressStatus.innerHTML = '<i class="fas fa-check me-1"></i>Upload complete!';
-                progressBar.classList.remove('progress-bar-animated');
-                progressBar.classList.add('bg-success');
-                
-                setTimeout(() => {
-                    window.location.href = '/review_project';
-                }, 500);
-            } else {
-                // Error
-                progressStatus.innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i>Upload failed. Please try again.';
-                progressBar.classList.remove('progress-bar-animated');
-                progressBar.classList.add('bg-danger');
-                submitBtn.innerHTML = '<i class="fas fa-magic me-2"></i>Submit Project';
-                submitBtn.disabled = false;
-            }
-        });
-        
-        // Handle errors
-        xhr.addEventListener('error', function() {
-            progressStatus.innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i>Upload failed. Please check your connection.';
-            progressBar.classList.remove('progress-bar-animated');
-            progressBar.classList.add('bg-danger');
-            submitBtn.innerHTML = '<i class="fas fa-magic me-2"></i>Submit Project';
-            submitBtn.disabled = false;
-        });
-        
-        // Send the request
-        xhr.open('POST', form.action);
-        xhr.send(formData);
+}
+
+// File upload handling
+document.getElementById('audioFile').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        displayFileInfo(file);
+        hideRecordingSection();
     }
 });
 
-function removeFile() {
-    document.getElementById('file').value = '';
-    document.getElementById('file_info').style.display = 'none';
+// Drag and drop
+const uploadArea = document.getElementById('uploadArea');
+uploadArea.addEventListener('dragover', function(e) {
+    e.preventDefault();
+    uploadArea.classList.add('border-primary');
+});
+
+uploadArea.addEventListener('dragleave', function(e) {
+    e.preventDefault();
+    uploadArea.classList.remove('border-primary');
+});
+
+uploadArea.addEventListener('drop', function(e) {
+    e.preventDefault();
+    uploadArea.classList.remove('border-primary');
+    
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+        document.getElementById('audioFile').files = files;
+        displayFileInfo(files[0]);
+        hideRecordingSection();
+    }
+});
+
+function displayFileInfo(file) {
+    const fileInfo = document.getElementById('fileInfo');
+    const fileName = document.getElementById('fileName');
+    const fileSize = document.getElementById('fileSize');
+    
+    fileName.textContent = file.name;
+    fileSize.textContent = formatFileSize(file.size);
+    fileInfo.style.display = 'block';
+    
+    // Enable the process button
+    document.getElementById('processAudioBtn').disabled = false;
 }
+
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+// Audio Recording Functions
+function toggleRecording() {
+    const recordingSection = document.getElementById('recordingSection');
+    if (recordingSection.style.display === 'none') {
+        showRecordingSection();
+    } else {
+        hideRecordingSection();
+    }
+}
+
+function showRecordingSection() {
+    document.getElementById('recordingSection').style.display = 'block';
+    document.getElementById('fileInfo').style.display = 'none';
+    document.getElementById('audioFile').value = '';
+    recordedBlob = null;
+}
+
+function hideRecordingSection() {
+    document.getElementById('recordingSection').style.display = 'none';
+    if (mediaRecorder && mediaRecorder.state === 'recording') {
+        stopRecording();
+    }
+}
+
+async function startRecording() {
+    try {
+        audioStream = await navigator.mediaDevices.getUserMedia({ 
+            audio: {
+                echoCancellation: true,
+                noiseSuppression: true,
+                sampleRate: 44100
+            } 
+        });
+        
+        const options = {
+            mimeType: 'audio/webm;codecs=opus'
+        };
+        
+        if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+            options.mimeType = 'audio/webm';
+            if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+                options.mimeType = 'audio/mp4';
+                if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+                    options.mimeType = '';
+                }
+            }
+        }
+        
+        mediaRecorder = new MediaRecorder(audioStream, options);
+        audioChunks = [];
+        
+        mediaRecorder.ondataavailable = function(event) {
+            if (event.data.size > 0) {
+                audioChunks.push(event.data);
+            }
+        };
+        
+        mediaRecorder.onstop = function() {
+            recordedBlob = new Blob(audioChunks, { type: mediaRecorder.mimeType });
+            const audioUrl = URL.createObjectURL(recordedBlob);
+            const audioElement = document.getElementById('recordedAudio');
+            audioElement.src = audioUrl;
+            audioElement.style.display = 'block';
+            
+            const recordedFile = new File([recordedBlob], 'recorded_audio.webm', {
+                type: recordedBlob.type,
+                lastModified: Date.now()
+            });
+            
+            const dataTransfer = new DataTransfer();
+            dataTransfer.items.add(recordedFile);
+            document.getElementById('audioFile').files = dataTransfer.files;
+            
+            displayFileInfo(recordedFile);
+            
+            if (audioStream) {
+                audioStream.getTracks().forEach(track => track.stop());
+            }
+        };
+        
+        mediaRecorder.start(1000);
+        recordingStartTime = Date.now();
+        
+        document.getElementById('recordingStatus').textContent = 'Recording...';
+        document.getElementById('startRecordBtn').style.display = 'none';
+        document.getElementById('stopRecordBtn').style.display = 'inline-block';
+        document.getElementById('recordingWaveform').style.display = 'block';
+        
+        recordingTimer = setInterval(updateRecordingTime, 1000);
+        startAudioVisualization();
+        
+    } catch (error) {
+        console.error('Error starting recording:', error);
+        showToast('Could not access microphone. Please check your browser permissions.', 'danger');
+    }
+}
+
+function stopRecording() {
+    if (mediaRecorder && mediaRecorder.state === 'recording') {
+        mediaRecorder.stop();
+        
+        document.getElementById('recordingStatus').textContent = 'Recording complete';
+        document.getElementById('startRecordBtn').style.display = 'inline-block';
+        document.getElementById('stopRecordBtn').style.display = 'none';
+        document.getElementById('recordingWaveform').style.display = 'none';
+        
+        if (recordingTimer) {
+            clearInterval(recordingTimer);
+            recordingTimer = null;
+        }
+    }
+}
+
+function cancelRecording() {
+    if (mediaRecorder && mediaRecorder.state === 'recording') {
+        mediaRecorder.stop();
+    }
+    
+    hideRecordingSection();
+    
+    if (audioStream) {
+        audioStream.getTracks().forEach(track => track.stop());
+        audioStream = null;
+    }
+    
+    if (recordingTimer) {
+        clearInterval(recordingTimer);
+        recordingTimer = null;
+    }
+    
+    document.getElementById('recordingStatus').textContent = 'Ready to record';
+    document.getElementById('recordingTime').textContent = '00:00';
+    document.getElementById('startRecordBtn').style.display = 'inline-block';
+    document.getElementById('stopRecordBtn').style.display = 'none';
+    document.getElementById('recordedAudio').style.display = 'none';
+    
+    recordedBlob = null;
+}
+
+function updateRecordingTime() {
+    if (recordingStartTime) {
+        const elapsed = Math.floor((Date.now() - recordingStartTime) / 1000);
+        const minutes = Math.floor(elapsed / 60);
+        const seconds = elapsed % 60;
+        document.getElementById('recordingTime').textContent = 
+            `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    }
+}
+
+function startAudioVisualization() {
+    if (!audioStream) return;
+    
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const analyser = audioContext.createAnalyser();
+    const microphone = audioContext.createMediaStreamSource(audioStream);
+    const dataArray = new Uint8Array(analyser.frequencyBinCount);
+    
+    microphone.connect(analyser);
+    analyser.fftSize = 256;
+    
+    function updateLevel() {
+        if (mediaRecorder && mediaRecorder.state === 'recording') {
+            analyser.getByteFrequencyData(dataArray);
+            const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
+            const percentage = (average / 255) * 100;
+            
+            document.getElementById('recordingLevel').style.width = percentage + '%';
+            requestAnimationFrame(updateLevel);
+        }
+    }
+    
+    updateLevel();
+}
+
+function removeFile() {
+    document.getElementById('audioFile').value = '';
+    document.getElementById('fileInfo').style.display = 'none';
+    
+    // Disable the process button
+    document.getElementById('processAudioBtn').disabled = true;
+}
+
+// Process audio (Step 2)
+function processAudio() {
+    const file = document.getElementById('audioFile').files[0];
+    if (!file) {
+        showToast('Please upload an audio file or record audio first.', 'warning');
+        return;
+    }
+    
+    // Show processing step
+    showStep('processingStep');
+    updateStepIndicator(2);
+    
+    // Start progress animation
+    let progress = 0;
+    const progressBar = document.getElementById('progressBar');
+    const progressText = document.getElementById('progressPercentage');
+    const statusText = document.getElementById('progressStatus');
+    
+    const progressInterval = setInterval(() => {
+        progress += Math.random() * 15;
+        if (progress > 90) progress = 90;
+        
+        progressBar.style.width = progress + '%';
+        progressText.textContent = Math.round(progress) + '%';
+        
+        if (progress < 50) {
+            statusText.innerHTML = '<i class="fas fa-upload me-1"></i>Uploading audio file...';
+        } else {
+            statusText.innerHTML = '<i class="fas fa-microphone me-1"></i>Transcribing audio...';
+        }
+    }, 500);
+    
+    // Create form data and send to server
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    fetch('/process_audio_transcript', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        clearInterval(progressInterval);
+        
+        if (data.success) {
+            // Complete progress
+            progressBar.style.width = '100%';
+            progressText.textContent = '100%';
+            statusText.innerHTML = '<i class="fas fa-check me-1"></i>Transcription complete!';
+            
+            // Store transcript results - use the data.data structure
+            transcriptResults = data.data;
+            
+            // Show transcript step after a short delay
+            setTimeout(() => {
+                showTranscriptResults(data.data);
+            }, 1000);
+        } else {
+            showToast('Error processing audio: ' + (data.error || 'Unknown error'), 'danger');
+            showStep('audioUploadStep');
+            updateStepIndicator(1);
+        }
+    })
+    .catch(error => {
+        clearInterval(progressInterval);
+        console.error('Error:', error);
+        showToast('Error processing audio. Please try again.', 'danger');
+        showStep('audioUploadStep');
+        updateStepIndicator(1);
+    });
+}
+
+// Show transcript results (Step 3)
+function showTranscriptResults(data) {
+    console.log('showTranscriptResults called with data:', data);
+    
+    showStep('transcriptStep');
+    updateStepIndicator(3);
+    
+    // Populate transcript content
+    if (data.transcript) {
+        console.log('Setting transcript content:', data.transcript);
+        document.getElementById('transcriptContent').textContent = data.transcript;
+    } else {
+        console.warn('No transcript found in data:', data);
+    }
+    
+    // Update confidence level
+    if (data.confidence) {
+        const confidence = Math.round(data.confidence * 100);
+        const confidenceBar = document.getElementById('transcriptConfidenceBar');
+        confidenceBar.style.width = confidence + '%';
+        confidenceBar.textContent = confidence + '%';
+        confidenceBar.setAttribute('aria-valuenow', confidence);
+        
+        // Update color based on confidence level
+        confidenceBar.className = 'progress-bar';
+        if (confidence >= 80) {
+            confidenceBar.classList.add('bg-success');
+        } else if (confidence >= 60) {
+            confidenceBar.classList.add('bg-warning');
+        } else {
+            confidenceBar.classList.add('bg-danger');
+        }
+    }
+}
+
+// Proceed to AI Analysis (Step 4)
+function proceedToAIAnalysis() {
+    if (!transcriptResults) {
+        showToast('No transcript data available.', 'warning');
+        return;
+    }
+    
+    // Show processing for AI analysis
+    showStep('processingStep');
+    updateStepIndicator(4);
+    
+    // Update processing text for AI analysis
+    document.getElementById('progressStatus').innerHTML = '<i class="fas fa-brain me-1"></i>Analyzing with AI...';
+    
+    // Start progress animation for AI analysis
+    let progress = 0;
+    const progressBar = document.getElementById('progressBar');
+    const progressText = document.getElementById('progressPercentage');
+    
+    progressBar.style.width = '0%';
+    progressText.textContent = '0%';
+    
+    const progressInterval = setInterval(() => {
+        progress += Math.random() * 15;
+        if (progress > 90) progress = 90;
+        
+        progressBar.style.width = progress + '%';
+        progressText.textContent = Math.round(progress) + '%';
+    }, 500);
+    
+    // Send transcript to AI analysis
+    const requestData = {
+        transcript: transcriptResults.transcript,
+        filename: transcriptResults.filename || '',
+        s3_key: transcriptResults.s3_key || ''
+    };
+    
+    fetch('/process_transcript_ai', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        clearInterval(progressInterval);
+        
+        if (data.success) {
+            // Complete progress
+            progressBar.style.width = '100%';
+            progressText.textContent = '100%';
+            document.getElementById('progressStatus').innerHTML = '<i class="fas fa-check me-1"></i>AI Analysis complete!';
+            
+            // Store AI results
+            aiResults = data.data;
+            
+            // Show preview step after a short delay
+            setTimeout(() => {
+                showPreviewForm(data.data);
+            }, 1000);
+        } else {
+            showToast('Error analyzing transcript: ' + (data.error || 'Unknown error'), 'danger');
+            showStep('transcriptStep');
+            updateStepIndicator(3);
+        }
+    })
+    .catch(error => {
+        clearInterval(progressInterval);
+        console.error('Error:', error);
+        showToast('Error analyzing transcript. Please try again.', 'danger');
+        showStep('transcriptStep');
+        updateStepIndicator(3);
+    });
+}
+
+// Show preview form (Step 5)
+function showPreviewForm(data) {
+    showStep('previewStep');
+    updateStepIndicator(5);
+    
+    // Populate form with AI results
+    document.getElementById('previewTitle').value = data.title || '';
+    document.getElementById('previewProjectType').value = data.project_type || 'General';
+    document.getElementById('previewLocation').value = data.location || '';
+    document.getElementById('previewDescription').value = data.description || '';
+    document.getElementById('previewBudgetMin').value = data.budget_min || '';
+    document.getElementById('previewBudgetMax').value = data.budget_max || '';
+    document.getElementById('previewTimeline').value = data.timeline || '';
+    
+    // Set hidden fields
+    document.getElementById('hiddenTranscribedText').value = data.transcribed_text || data.transcript || '';
+    document.getElementById('hiddenConfidence').value = data.confidence || transcriptResults.confidence || '';
+    document.getElementById('hiddenExtractionMethod').value = data.extraction_method || '';
+    document.getElementById('hiddenS3Key').value = data.s3_key || '';
+    document.getElementById('hiddenFilename').value = data.filename || '';
+    
+    // Show transcribed text
+    if (data.transcribed_text || data.transcript) {
+        document.getElementById('transcribedText').textContent = data.transcribed_text || data.transcript;
+    }
+    
+    // Update confidence bar
+    const confidence = data.confidence || transcriptResults.confidence || 0;
+    if (confidence) {
+        const confidencePercent = Math.round(confidence * 100);
+        const confidenceBar = document.getElementById('confidenceBar');
+        confidenceBar.style.width = confidencePercent + '%';
+        confidenceBar.textContent = confidencePercent + '%';
+    }
+}
+
+// Copy transcript to clipboard
+function copyTranscript() {
+    const transcriptContent = document.getElementById('transcriptContent').textContent;
+    if (transcriptContent && transcriptContent !== 'Your transcript will appear here...') {
+        navigator.clipboard.writeText(transcriptContent).then(() => {
+            // Show temporary success message
+            const button = event.target;
+            const originalText = button.innerHTML;
+            button.innerHTML = '<i class="fas fa-check me-2"></i>Copied!';
+            button.classList.remove('btn-outline-primary');
+            button.classList.add('btn-success');
+            
+            setTimeout(() => {
+                button.innerHTML = originalText;
+                button.classList.remove('btn-success');
+                button.classList.add('btn-outline-primary');
+            }, 2000);
+        }).catch(err => {
+            console.error('Failed to copy transcript: ', err);
+            showToast('Failed to copy transcript to clipboard', 'danger');
+        });
+    } else {
+        showToast('No transcript content to copy', 'warning');
+    }
+}
+
+// Update step indicator
+function updateStepIndicator(currentStep) {
+    // Define step icons
+    const stepIcons = {
+        1: 'fas fa-microphone',
+        2: 'fas fa-file-audio', 
+        3: 'fas fa-brain',
+        4: 'fas fa-edit',
+        5: 'fas fa-paper-plane'
+    };
+    
+    // Reset all steps
+    for (let i = 1; i <= 5; i++) {
+        const stepElement = document.getElementById('step' + i);
+        if (stepElement) {
+            stepElement.classList.remove('active', 'completed');
+            
+            // Reset icon to original
+            const iconElement = stepElement.querySelector('.step-icon');
+            if (iconElement) {
+                iconElement.className = stepIcons[i] + ' step-icon';
+            }
+        }
+    }
+    
+    // Mark completed steps
+    for (let i = 1; i < currentStep; i++) {
+        const stepElement = document.getElementById('step' + i);
+        if (stepElement) {
+            stepElement.classList.add('completed');
+            
+            // Change icon to checkmark for completed steps
+            const iconElement = stepElement.querySelector('.step-icon');
+            if (iconElement) {
+                iconElement.className = 'fas fa-check step-icon';
+            }
+        }
+    }
+    
+    // Mark current step as active
+    const currentStepElement = document.getElementById('step' + currentStep);
+    if (currentStepElement) {
+        currentStepElement.classList.add('active');
+        
+        // Keep original icon for active step
+        const iconElement = currentStepElement.querySelector('.step-icon');
+        if (iconElement && !currentStepElement.classList.contains('completed')) {
+            iconElement.className = stepIcons[currentStep] + ' step-icon';
+        }
+    }
+}
+
+// Submit preview form (Step 5)
+function submitPreview() {
+    // Check if user is authenticated
+    {% if not user %}
+        // User is not logged in - show authentication modal
+        showAuthModal();
+        return;
+    {% endif %}
+    
+    const form = document.getElementById('previewForm');
+    const formData = new FormData(form);
+    
+    // Disable submit button
+    const submitBtn = document.getElementById('submitPreviewBtn');
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Submitting...';
+    submitBtn.disabled = true;
+    
+    fetch('/submit_preview', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data && data.success) {
+            // Show success message and redirect to dashboard
+            showToast('Project submitted successfully!', 'success');
+            window.location.href = '/dashboard';
+        } else if (data) {
+            showToast('Error submitting project: ' + (data.error || 'Unknown error'), 'danger');
+            submitBtn.innerHTML = '<i class="fas fa-check me-2"></i>Submit Project';
+            submitBtn.disabled = false;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('Error submitting project. Please try again.', 'danger');
+        submitBtn.innerHTML = '<i class="fas fa-check me-2"></i>Submit Project';
+        submitBtn.disabled = false;
+    });
+}
+
+// Show authentication modal
+function showAuthModal() {
+    const modal = new bootstrap.Modal(document.getElementById('authModal'));
+    modal.show();
+}
+
+// Save project data to session storage before redirecting to auth
+function saveProjectDataAndRedirect(authType) {
+    // Save current form data to session storage
+    const projectData = {
+        title: document.getElementById('previewTitle').value,
+        projectType: document.getElementById('previewProjectType').value,
+        location: document.getElementById('previewLocation').value,
+        description: document.getElementById('previewDescription').value,
+        budgetMin: document.getElementById('previewBudgetMin').value,
+        budgetMax: document.getElementById('previewBudgetMax').value,
+        timeline: document.getElementById('previewTimeline').value,
+        transcribedText: document.getElementById('hiddenTranscribedText').value,
+        confidence: document.getElementById('hiddenConfidence').value,
+        extractionMethod: document.getElementById('hiddenExtractionMethod').value,
+        s3Key: document.getElementById('hiddenS3Key').value,
+        filename: document.getElementById('hiddenFilename').value
+    };
+    
+    sessionStorage.setItem('pendingProjectData', JSON.stringify(projectData));
+    
+    // Redirect to login or register
+    if (authType === 'login') {
+        window.location.href = '/login?return_to=submit_project';
+    } else {
+        window.location.href = '/register?return_to=submit_project';
+    }
+}
+
+// Check for saved project data on page load
+function checkForSavedProjectData() {
+    const savedData = sessionStorage.getItem('pendingProjectData');
+    if (savedData) {
+        try {
+            const projectData = JSON.parse(savedData);
+            
+            // Restore the form data
+            document.getElementById('previewTitle').value = projectData.title || '';
+            document.getElementById('previewProjectType').value = projectData.projectType || 'General';
+            document.getElementById('previewLocation').value = projectData.location || '';
+            document.getElementById('previewDescription').value = projectData.description || '';
+            document.getElementById('previewBudgetMin').value = projectData.budgetMin || '';
+            document.getElementById('previewBudgetMax').value = projectData.budgetMax || '';
+            document.getElementById('previewTimeline').value = projectData.timeline || '';
+            document.getElementById('hiddenTranscribedText').value = projectData.transcribedText || '';
+            document.getElementById('hiddenConfidence').value = projectData.confidence || '';
+            document.getElementById('hiddenExtractionMethod').value = projectData.extractionMethod || '';
+            document.getElementById('hiddenS3Key').value = projectData.s3Key || '';
+            document.getElementById('hiddenFilename').value = projectData.filename || '';
+            
+            // Show transcribed text if available
+            if (projectData.transcribedText) {
+                document.getElementById('transcribedText').textContent = projectData.transcribedText;
+            }
+            
+            // Update confidence bar if available
+            if (projectData.confidence) {
+                const confidence = parseFloat(projectData.confidence);
+                const confidencePercent = Math.round(confidence * 100);
+                const confidenceBar = document.getElementById('confidenceBar');
+                confidenceBar.style.width = confidencePercent + '%';
+                confidenceBar.textContent = confidencePercent + '%';
+            }
+            
+            // Show the preview step directly
+            showStep('previewStep');
+            updateStepIndicator(5);
+            
+            // Clear the saved data
+            sessionStorage.removeItem('pendingProjectData');
+            
+            // Show a success message
+            showToast('Welcome back! Your project details have been restored. You can now submit your project.', 'success');
+            
+        } catch (error) {
+            console.error('Error restoring project data:', error);
+            sessionStorage.removeItem('pendingProjectData');
+        }
+    }
+}
+
+// Navigation functions
+function goBackToUpload() {
+    showStep('audioUploadStep');
+}
+
+function submitAnother() {
+    // Reset form and go back to upload
+    document.getElementById('audioFile').value = '';
+    document.getElementById('fileInfo').style.display = 'none';
+    hideRecordingSection();
+    aiResults = null;
+    showStep('audioUploadStep');
+}
+
+// Initialize page
+document.addEventListener('DOMContentLoaded', function() {
+    // Check for saved project data when page loads
+    checkForSavedProjectData();
+});
 </script>
 
 <style>
