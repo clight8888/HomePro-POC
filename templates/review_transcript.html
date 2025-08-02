@@ -1,0 +1,270 @@
+{% extends "base.html" %}
+
+{% block title %}Review Transcript - HomePro{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- Header -->
+            <div class="text-center mb-5">
+                <h1 class="h3 fw-bold">Audio Transcript Review</h1>
+                <p class="text-muted">Review your audio transcript before proceeding</p>
+            </div>
+            
+            <!-- Workflow Steps -->
+            <div class="mb-4">
+                <div class="row text-center">
+                    <div class="col-4">
+                        <div class="step-indicator completed">
+                            <div class="step-number">✓</div>
+                            <div class="step-label">Upload Audio</div>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="step-indicator active">
+                            <div class="step-number">2</div>
+                            <div class="step-label">Review Transcript</div>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="step-indicator">
+                            <div class="step-number">3</div>
+                            <div class="step-label">Next Steps</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Transcript Results -->
+            <div class="card shadow">
+                <div class="card-body p-4">
+                    <h5 class="mb-3">
+                        <i class="fas fa-file-alt text-primary me-2"></i>
+                        Transcription Results
+                    </h5>
+                    
+                    <!-- File Information -->
+                    {% if file_path %}
+                    <div class="alert alert-info mb-4">
+                        <div class="row align-items-center">
+                            <div class="col-md-8">
+                                <h6 class="mb-1">
+                                    <i class="fas fa-file-audio me-2"></i>
+                                    Audio File: {{ file_path }}
+                                </h6>
+                                <small class="text-muted">Successfully processed and transcribed</small>
+                            </div>
+                            <div class="col-md-4 text-end">
+                                <span class="badge bg-success">
+                                    <i class="fas fa-check me-1"></i>
+                                    Transcription Complete
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Transcript Content -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">
+                            <i class="fas fa-quote-left me-2"></i>
+                            Transcript Content
+                        </label>
+                        <div class="card border-primary">
+                            <div class="card-body">
+                                {% if transcript_data and transcript_data.transcript %}
+                                    <p class="mb-0 lh-lg">{{ transcript_data.transcript }}</p>
+                                {% else %}
+                                    <p class="text-muted mb-0">No transcript available</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Processing Status -->
+                    <div class="mb-4">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Processing Status</label>
+                                <div class="d-flex align-items-center">
+                                    {% if transcript_data and transcript_data.processing_status == 'transcription_complete' %}
+                                        <span class="badge bg-success me-2">
+                                            <i class="fas fa-check me-1"></i>
+                                            Complete
+                                        </span>
+                                        <small class="text-muted">AWS Transcribe processed successfully</small>
+                                    {% else %}
+                                        <span class="badge bg-warning me-2">
+                                            <i class="fas fa-exclamation-triangle me-1"></i>
+                                            {{ transcript_data.processing_status if transcript_data else 'Unknown' }}
+                                        </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Confidence Level</label>
+                                <div class="progress" style="height: 25px;">
+                                    {% set confidence = (transcript_data.confidence * 100) if transcript_data and transcript_data.confidence else 0 %}
+                                    <div class="progress-bar 
+                                        {% if confidence >= 80 %}bg-success
+                                        {% elif confidence >= 60 %}bg-warning
+                                        {% else %}bg-danger{% endif %}" 
+                                        role="progressbar" 
+                                        style="width: {{ confidence }}%"
+                                        aria-valuenow="{{ confidence }}" 
+                                        aria-valuemin="0" 
+                                        aria-valuemax="100">
+                                        {{ "%.0f"|format(confidence) }}%
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Error Display -->
+                    {% if transcript_data and transcript_data.error %}
+                    <div class="alert alert-danger mb-4">
+                        <h6><i class="fas fa-exclamation-triangle me-2"></i>Processing Error</h6>
+                        <p class="mb-0">{{ transcript_data.error }}</p>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Technical Details (Collapsible) -->
+                    <div class="mb-4">
+                        <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#technicalDetails" aria-expanded="false">
+                            <i class="fas fa-cog me-1"></i>
+                            Show Technical Details
+                        </button>
+                        <div class="collapse mt-3" id="technicalDetails">
+                            <div class="card border-secondary">
+                                <div class="card-body">
+                                    <h6>Processing Information</h6>
+                                    <ul class="list-unstyled mb-0">
+                                        {% if transcript_data %}
+                                            {% if transcript_data.s3_uri %}
+                                            <li><strong>S3 URI:</strong> <code>{{ transcript_data.s3_uri }}</code></li>
+                                            {% endif %}
+                                            {% if transcript_data.s3_key %}
+                                            <li><strong>S3 Key:</strong> <code>{{ transcript_data.s3_key }}</code></li>
+                                            {% endif %}
+                                            <li><strong>Processing Status:</strong> {{ transcript_data.processing_status }}</li>
+                                            <li><strong>Confidence:</strong> {{ transcript_data.confidence }}</li>
+                                        {% endif %}
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Action Buttons -->
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('submit_project') }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>
+                            Upload Different Audio
+                        </a>
+                        <div>
+                            <button type="button" class="btn btn-outline-primary me-2" onclick="copyTranscript()">
+                                <i class="fas fa-copy me-2"></i>
+                                Copy Transcript
+                            </button>
+                            <a href="{{ url_for('dashboard') }}" class="btn btn-success">
+                                <i class="fas fa-check me-2"></i>
+                                Done - Return to Dashboard
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Information Card -->
+            <div class="card border-info mt-4">
+                <div class="card-body">
+                    <h6 class="card-title">
+                        <i class="fas fa-info-circle text-info me-2"></i>
+                        What's Next?
+                    </h6>
+                    <p class="card-text mb-0">
+                        Your audio has been successfully transcribed using AWS Transcribe. 
+                        You can now copy this transcript and use it to manually create a project, 
+                        or upload a different audio file if needed.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.step-indicator {
+    text-align: center;
+    margin-bottom: 1rem;
+}
+
+.step-number {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: #e9ecef;
+    color: #6c757d;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 0.5rem;
+    font-weight: bold;
+}
+
+.step-indicator.active .step-number {
+    background-color: #0d6efd;
+    color: white;
+}
+
+.step-indicator.completed .step-number {
+    background-color: #198754;
+    color: white;
+}
+
+.step-label {
+    font-size: 0.875rem;
+    color: #6c757d;
+}
+
+.step-indicator.active .step-label {
+    color: #0d6efd;
+    font-weight: 600;
+}
+
+.step-indicator.completed .step-label {
+    color: #198754;
+    font-weight: 600;
+}
+</style>
+
+<script>
+function copyTranscript() {
+    const transcriptText = `{{ transcript_data.transcript if transcript_data and transcript_data.transcript else '' }}`;
+    
+    if (transcriptText) {
+        navigator.clipboard.writeText(transcriptText).then(function() {
+            // Show success message
+            const btn = event.target.closest('button');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-check me-2"></i>Copied!';
+            btn.classList.remove('btn-outline-primary');
+            btn.classList.add('btn-success');
+            
+            setTimeout(function() {
+                btn.innerHTML = originalText;
+                btn.classList.remove('btn-success');
+                btn.classList.add('btn-outline-primary');
+            }, 2000);
+        }).catch(function(err) {
+            console.error('Could not copy text: ', err);
+            alert('Failed to copy transcript. Please select and copy manually.');
+        });
+    } else {
+        alert('No transcript available to copy.');
+    }
+}
+</script>
+{% endblock %}

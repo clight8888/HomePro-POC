@@ -6,10 +6,25 @@ let csrfToken = null;
 
 // Initialize application
 document.addEventListener('DOMContentLoaded', function() {
+    preventAutoTooltips();
     initializeApp();
     setupEventListeners();
     setupFormValidation();
 });
+
+function preventAutoTooltips() {
+    // Prevent automatic tooltip creation from title attributes
+    // Only allow tooltips that are explicitly defined with data-bs-toggle="tooltip"
+    const elementsWithTitle = document.querySelectorAll('[title]:not([data-bs-toggle="tooltip"])');
+    elementsWithTitle.forEach(function(element) {
+        // Store the title in a data attribute and remove the title to prevent auto-tooltips
+        const title = element.getAttribute('title');
+        if (title && title.trim()) {
+            element.setAttribute('data-original-title', title);
+            element.removeAttribute('title');
+        }
+    });
+}
 
 function initializeApp() {
     // Get CSRF token if available
@@ -18,24 +33,42 @@ function initializeApp() {
         csrfToken = csrfMeta.getAttribute('content');
     }
     
-    // Initialize tooltips
+    // Initialize tooltips only for elements that explicitly have data-bs-toggle="tooltip"
     const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
     tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl);
+        try {
+            return new bootstrap.Tooltip(tooltipTriggerEl, {
+                boundary: 'viewport',
+                placement: 'auto'
+            });
+        } catch (error) {
+            console.warn('Failed to initialize tooltip:', error, tooltipTriggerEl);
+        }
     });
     
-    // Initialize popovers
+    // Initialize popovers only for elements that explicitly have data-bs-toggle="popover"
     const popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'));
     popoverTriggerList.map(function (popoverTriggerEl) {
-        return new bootstrap.Popover(popoverTriggerEl);
+        try {
+            return new bootstrap.Popover(popoverTriggerEl, {
+                boundary: 'viewport',
+                placement: 'auto'
+            });
+        } catch (error) {
+            console.warn('Failed to initialize popover:', error, popoverTriggerEl);
+        }
     });
     
     // Auto-hide alerts after 5 seconds
     setTimeout(function() {
         const alerts = document.querySelectorAll('.alert:not(.alert-permanent)');
         alerts.forEach(function(alert) {
-            const bsAlert = new bootstrap.Alert(alert);
-            bsAlert.close();
+            try {
+                const bsAlert = new bootstrap.Alert(alert);
+                bsAlert.close();
+            } catch (error) {
+                console.warn('Failed to close alert:', error);
+            }
         });
     }, 5000);
 }

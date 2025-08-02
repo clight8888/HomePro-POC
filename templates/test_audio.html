@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Player Test</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container" style="max-width: 800px; margin: 50px auto; padding: 20px;">
+        <h1>Audio Player Test</h1>
+        <p>Testing the custom audio player with progress bar functionality.</p>
+        
+        <!-- Custom Audio Player -->
+        <div class="custom-audio-player">
+            <audio id="audioPlayer" preload="metadata">
+                <source src="{{ url_for('uploaded_file', filename='sample_audio.mp3') }}" type="audio/mpeg">
+                Your browser does not support the audio element.
+            </audio>
+            
+            <div class="audio-controls">
+                <button id="playPauseBtn" class="play-pause-btn">
+                    <span class="play-icon">▶</span>
+                    <span class="pause-icon" style="display: none;">⏸</span>
+                </button>
+                
+                <div class="progress-container">
+                    <div class="progress-bar">
+                        <div class="progress-fill"></div>
+                        <div class="progress-handle"></div>
+                    </div>
+                </div>
+                
+                <div class="time-display">
+                    <span class="current-time">0:00</span>
+                    <span class="duration">0:00</span>
+                </div>
+                
+                <div class="volume-container">
+                    <span class="volume-icon">🔊</span>
+                    <input type="range" class="volume-slider" min="0" max="1" step="0.1" value="1">
+                </div>
+            </div>
+        </div>
+        
+        <div style="margin-top: 30px;">
+            <h3>Debug Information:</h3>
+            <div id="debugInfo">
+                <p>Audio source: {{ url_for('uploaded_file', filename='sample_audio.mp3') }}</p>
+                <p>Player ready: <span id="playerReady">No</span></p>
+                <p>Audio duration: <span id="audioDuration">Unknown</span></p>
+                <p>Current time: <span id="currentTimeDebug">0</span></p>
+                <p>Progress: <span id="progressDebug">0%</span></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const audio = document.getElementById('audioPlayer');
+            const playPauseBtn = document.getElementById('playPauseBtn');
+            const playIcon = playPauseBtn.querySelector('.play-icon');
+            const pauseIcon = playPauseBtn.querySelector('.pause-icon');
+            const progressBar = document.querySelector('.progress-bar');
+            const progressFill = document.querySelector('.progress-fill');
+            const progressHandle = document.querySelector('.progress-handle');
+            const currentTimeSpan = document.querySelector('.current-time');
+            const durationSpan = document.querySelector('.duration');
+            const volumeSlider = document.querySelector('.volume-slider');
+            
+            // Debug elements
+            const playerReady = document.getElementById('playerReady');
+            const audioDuration = document.getElementById('audioDuration');
+            const currentTimeDebug = document.getElementById('currentTimeDebug');
+            const progressDebug = document.getElementById('progressDebug');
+            
+            console.log('Audio player script loaded');
+            
+            // Format time helper
+            function formatTime(seconds) {
+                if (isNaN(seconds)) return '0:00';
+                const minutes = Math.floor(seconds / 60);
+                const remainingSeconds = Math.floor(seconds % 60);
+                return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+            }
+            
+            // Update progress bar
+            function updateProgress() {
+                if (audio.duration) {
+                    const progress = (audio.currentTime / audio.duration) * 100;
+                    progressFill.style.width = progress + '%';
+                    progressHandle.style.left = progress + '%';
+                    
+                    // Update debug info
+                    currentTimeDebug.textContent = audio.currentTime.toFixed(2);
+                    progressDebug.textContent = progress.toFixed(1) + '%';
+                }
+            }
+            
+            // Audio event listeners
+            audio.addEventListener('loadedmetadata', function() {
+                console.log('Audio metadata loaded');
+                durationSpan.textContent = formatTime(audio.duration);
+                audioDuration.textContent = formatTime(audio.duration);
+                playerReady.textContent = 'Yes';
+            });
+            
+            audio.addEventListener('timeupdate', function() {
+                updateProgress();
+                currentTimeSpan.textContent = formatTime(audio.currentTime);
+            });
+            
+            audio.addEventListener('ended', function() {
+                playIcon.style.display = 'inline';
+                pauseIcon.style.display = 'none';
+            });
+            
+            audio.addEventListener('error', function(e) {
+                console.error('Audio error:', e);
+                playerReady.textContent = 'Error: ' + (audio.error ? audio.error.message : 'Unknown error');
+            });
+            
+            // Play/pause button
+            playPauseBtn.addEventListener('click', function() {
+                if (audio.paused) {
+                    audio.play().then(() => {
+                        playIcon.style.display = 'none';
+                        pauseIcon.style.display = 'inline';
+                    }).catch(e => {
+                        console.error('Play failed:', e);
+                    });
+                } else {
+                    audio.pause();
+                    playIcon.style.display = 'inline';
+                    pauseIcon.style.display = 'none';
+                }
+            });
+            
+            // Progress bar click
+            progressBar.addEventListener('click', function(e) {
+                if (audio.duration) {
+                    const rect = progressBar.getBoundingClientRect();
+                    const clickX = e.clientX - rect.left;
+                    const width = rect.width;
+                    const clickTime = (clickX / width) * audio.duration;
+                    audio.currentTime = clickTime;
+                }
+            });
+            
+            // Volume control
+            volumeSlider.addEventListener('input', function() {
+                audio.volume = this.value;
+            });
+            
+            console.log('Audio player initialized');
+        });
+    </script>
+</body>
+</html>

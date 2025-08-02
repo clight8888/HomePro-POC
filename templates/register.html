@@ -14,6 +14,11 @@
                     </div>
                     
                     <form method="POST">
+                        <!-- Hidden field for redirect context -->
+                        {% if request.args.get('return_to') == 'submit_project' %}
+                            <input type="hidden" name="redirect_to_project" value="true">
+                        {% endif %}
+                        
                         <!-- User Type Selection -->
                         <div class="mb-4">
                             <label class="form-label fw-bold">I am a:</label>

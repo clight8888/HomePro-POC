@@ -1,38 +1,80 @@
 #!/usr/bin/env python3
+"""
+Test script to directly test the audio upload flow
+"""
 
+import requests
 import os
-import sys
 
-# Add the current directory to the Python path
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-
-# Import the function from app.py
-from app import process_ai_submission
-
-def test_direct_audio_processing():
-    """Test the process_ai_submission function directly"""
-    print("=== DIRECT AUDIO PROCESSING TEST ===")
+def test_direct_upload():
+    """Test direct audio upload to the running server"""
+    base_url = "http://127.0.0.1:8000"
     
-    # Create a dummy audio file path (doesn't need to exist for mock processing)
-    test_file_path = "test_audio.mp3"
+    print("=== Testing Direct Audio Upload ===")
     
-    print(f"Testing with file_path: {test_file_path}")
-    print(f"Testing with file_type: audio")
+    # Check if test audio file exists
+    test_audio_path = "test_audio.mp3"
+    if not os.path.exists(test_audio_path):
+        print(f"Test audio file {test_audio_path} not found!")
+        return False
     
-    # Call the function directly
-    result = process_ai_submission(test_file_path, 'audio')
-    
-    print(f"Result: {result}")
-    
-    if result:
-        print("✓ Audio processing succeeded")
-        print(f"Title: {result.get('title')}")
-        print(f"Project Type: {result.get('project_type')}")
-        print(f"Description: {result.get('description')}")
-        print(f"Budget: ${result.get('budget_min')} - ${result.get('budget_max')}")
-        print(f"Timeline: {result.get('timeline')}")
-    else:
-        print("✗ Audio processing failed")
+    try:
+        # Create a session to maintain cookies
+        session = requests.Session()
+        
+        # First, get the submit page to establish session
+        print("1. Getting submit page...")
+        response = session.get(f"{base_url}/submit_project")
+        print(f"   Status: {response.status_code}")
+        
+        if response.status_code != 200:
+            print(f"   Error: {response.text}")
+            return False
+        
+        # Upload the audio file
+        print("2. Uploading audio file...")
+        with open(test_audio_path, 'rb') as audio_file:
+            files = {
+                'file': ('test_audio.mp3', audio_file, 'audio/mpeg')
+            }
+            data = {
+                'submission_method': 'audio'
+            }
+            
+            response = session.post(f"{base_url}/submit_project", files=files, data=data)
+            print(f"   Status: {response.status_code}")
+            print(f"   URL: {response.url}")
+            
+            # Check if we were redirected to review page
+            if "review_project" in response.url:
+                print("   ✓ Successfully redirected to review page!")
+                
+                # Try to access the review page
+                print("3. Accessing review page...")
+                review_response = session.get(f"{base_url}/review_project")
+                print(f"   Status: {review_response.status_code}")
+                
+                if "No project data found" in review_response.text:
+                    print("   ✗ Error: No project data found on review page!")
+                    return False
+                elif review_response.status_code == 200:
+                    print("   ✓ Review page loaded successfully!")
+                    return True
+                else:
+                    print(f"   ✗ Review page error: {review_response.status_code}")
+                    return False
+            else:
+                print(f"   ✗ Not redirected to review page. Response content:")
+                print(f"   {response.text[:500]}...")
+                return False
+                
+    except Exception as e:
+        print(f"   ✗ Error during upload: {e}")
+        return False
 
 if __name__ == "__main__":
-    test_direct_audio_processing()
+    success = test_direct_upload()
+    if success:
+        print("\n✓ Direct upload test passed!")
+    else:
+        print("\n✗ Direct upload test failed!")

@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Audio Test</title>
+</head>
+<body>
+    <div style="max-width: 800px; margin: 50px auto; padding: 20px;">
+        <h1>Simple Audio Test</h1>
+        <p>Testing basic HTML5 audio functionality.</p>
+        
+        <!-- Standard HTML5 Audio Player -->
+        <audio controls preload="metadata" style="width: 100%; margin: 20px 0;">
+            <source src="{{ url_for('uploaded_file', filename='sample_audio.mp3') }}" type="audio/mpeg">
+            Your browser does not support the audio element.
+        </audio>
+        
+        <div style="margin-top: 20px;">
+            <h3>Debug Information:</h3>
+            <p>Audio source: {{ url_for('uploaded_file', filename='sample_audio.mp3') }}</p>
+            <p>Direct link: <a href="{{ url_for('uploaded_file', filename='sample_audio.mp3') }}" target="_blank">{{ url_for('uploaded_file', filename='sample_audio.mp3') }}</a></p>
+        </div>
+        
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                const audio = document.querySelector('audio');
+                
+                audio.addEventListener('loadstart', function() {
+                    console.log('Audio load started');
+                });
+                
+                audio.addEventListener('loadedmetadata', function() {
+                    console.log('Audio metadata loaded, duration:', audio.duration);
+                });
+                
+                audio.addEventListener('canplay', function() {
+                    console.log('Audio can start playing');
+                });
+                
+                audio.addEventListener('error', function(e) {
+                    console.error('Audio error:', e);
+                    console.error('Audio error details:', audio.error);
+                });
+                
+                console.log('Simple audio test initialized');
+            });
+        </script>
+    </div>
+</body>
+</html>

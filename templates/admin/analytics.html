@@ -1,0 +1,332 @@
+{% extends "base.html" %}
+
+{% block title %}Analytics Dashboard - Admin Portal{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h1 class="h3 mb-0">Business Intelligence & Analytics</h1>
+                <div class="d-flex align-items-center">
+                    <a href="/admin" class="btn btn-outline-secondary btn-sm">
+                        <i class="fas fa-arrow-left me-1"></i>Back to Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- User Growth Analytics -->
+    <div class="row mb-4">
+        <div class="col-lg-8">
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">User Growth (Last 30 Days)</h6>
+                </div>
+                <div class="card-body">
+                    <canvas id="userGrowthChart" width="400" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Project Status Distribution</h6>
+                </div>
+                <div class="card-body">
+                    <canvas id="projectStatusChart" width="400" height="200"></canvas>
+                    <div class="mt-3">
+                        {% for status in project_status_distribution %}
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>{{ status.status }}</span>
+                            <span class="fw-bold">{{ status.count }} ({{ status.percentage }}%)</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Revenue Analytics -->
+    <div class="row mb-4">
+        <div class="col-lg-8">
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Revenue Trends (Last 12 Months)</h6>
+                </div>
+                <div class="card-body">
+                    <canvas id="revenueChart" width="400" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Revenue Summary</h6>
+                </div>
+                <div class="card-body">
+                    {% set total_revenue = revenue_trends | sum(attribute='revenue') %}
+                    {% set total_projects = revenue_trends | sum(attribute='completed_projects') %}
+                    <div class="text-center mb-3">
+                        <div class="h4 text-success">${{ "{:,.2f}".format(total_revenue) }}</div>
+                        <div class="text-muted">Total Revenue (12 months)</div>
+                    </div>
+                    <div class="text-center mb-3">
+                        <div class="h5">{{ total_projects }}</div>
+                        <div class="text-muted">Completed Projects</div>
+                    </div>
+                    {% if total_projects > 0 %}
+                    <div class="text-center">
+                        <div class="h6">${{ "{:,.2f}".format(total_revenue / total_projects) }}</div>
+                        <div class="text-muted">Average Project Value</div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Contractor Performance -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Top Contractor Performance</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Contractor</th>
+                                    <th>Company</th>
+                                    <th>Total Bids</th>
+                                    <th>Accepted Bids</th>
+                                    <th>Success Rate</th>
+                                    <th>Avg Bid Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for contractor in contractor_performance %}
+                                <tr>
+                                    <td class="fw-bold">{{ contractor.contractor_name }}</td>
+                                    <td>{{ contractor.company or 'N/A' }}</td>
+                                    <td>{{ contractor.total_bids }}</td>
+                                    <td>{{ contractor.accepted_bids }}</td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="progress flex-grow-1 me-2" style="height: 20px;">
+                                                <div class="progress-bar bg-success" role="progressbar" 
+                                                     style="width: {{ contractor.success_rate }}%">
+                                                </div>
+                                            </div>
+                                            <span class="fw-bold">{{ contractor.success_rate }}%</span>
+                                        </div>
+                                    </td>
+                                    <td>${{ "{:,.2f}".format(contractor.avg_bid_amount) }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Geographic Distribution -->
+    <div class="row mb-4">
+        <div class="col-lg-6">
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Homeowner Distribution by Location</h6>
+                </div>
+                <div class="card-body">
+                    <canvas id="homeownerLocationChart" width="400" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Contractor Distribution by Location</h6>
+                </div>
+                <div class="card-body">
+                    <canvas id="contractorLocationChart" width="400" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Include Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+// User Growth Chart
+const userGrowthCtx = document.getElementById('userGrowthChart').getContext('2d');
+const userGrowthData = {{ user_growth | tojson }};
+
+new Chart(userGrowthCtx, {
+    type: 'line',
+    data: {
+        labels: userGrowthData.map(item => item.date),
+        datasets: [{
+            label: 'New Users',
+            data: userGrowthData.map(item => item.new_users),
+            borderColor: 'rgb(75, 192, 192)',
+            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+            tension: 0.1
+        }]
+    },
+    options: {
+        responsive: true,
+        scales: {
+            y: {
+                beginAtZero: true
+            }
+        }
+    }
+});
+
+// Project Status Chart
+const projectStatusCtx = document.getElementById('projectStatusChart').getContext('2d');
+const projectStatusData = {{ project_status_distribution | tojson }};
+
+new Chart(projectStatusCtx, {
+    type: 'doughnut',
+    data: {
+        labels: projectStatusData.map(item => item.status),
+        datasets: [{
+            data: projectStatusData.map(item => item.count),
+            backgroundColor: [
+                '#28a745',
+                '#007bff',
+                '#dc3545',
+                '#ffc107',
+                '#6c757d'
+            ]
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            }
+        }
+    }
+});
+
+// Revenue Chart
+const revenueCtx = document.getElementById('revenueChart').getContext('2d');
+const revenueData = {{ revenue_trends | tojson }};
+
+new Chart(revenueCtx, {
+    type: 'bar',
+    data: {
+        labels: revenueData.map(item => item.month),
+        datasets: [{
+            label: 'Revenue',
+            data: revenueData.map(item => item.revenue),
+            backgroundColor: 'rgba(54, 162, 235, 0.8)',
+            borderColor: 'rgba(54, 162, 235, 1)',
+            borderWidth: 1
+        }]
+    },
+    options: {
+        responsive: true,
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    callback: function(value) {
+                        return '$' + value.toLocaleString();
+                    }
+                }
+            }
+        },
+        plugins: {
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        return 'Revenue: $' + context.parsed.y.toLocaleString();
+                    }
+                }
+            }
+        }
+    }
+});
+
+// Homeowner Location Chart
+const homeownerLocationCtx = document.getElementById('homeownerLocationChart').getContext('2d');
+const homeownerLocationData = {{ homeowner_distribution | tojson }};
+
+new Chart(homeownerLocationCtx, {
+    type: 'pie',
+    data: {
+        labels: homeownerLocationData.map(item => item.location),
+        datasets: [{
+            data: homeownerLocationData.map(item => item.homeowner_count),
+            backgroundColor: [
+                '#FF6384',
+                '#36A2EB',
+                '#FFCE56',
+                '#4BC0C0',
+                '#9966FF',
+                '#FF9F40',
+                '#FF6384',
+                '#C9CBCF',
+                '#4BC0C0',
+                '#FF6384'
+            ]
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            }
+        }
+    }
+});
+
+// Contractor Location Chart
+const contractorLocationCtx = document.getElementById('contractorLocationChart').getContext('2d');
+const contractorLocationData = {{ contractor_distribution | tojson }};
+
+new Chart(contractorLocationCtx, {
+    type: 'pie',
+    data: {
+        labels: contractorLocationData.map(item => item.location),
+        datasets: [{
+            data: contractorLocationData.map(item => item.contractor_count),
+            backgroundColor: [
+                '#36A2EB',
+                '#FF6384',
+                '#4BC0C0',
+                '#FFCE56',
+                '#FF9F40',
+                '#9966FF',
+                '#C9CBCF',
+                '#FF6384',
+                '#4BC0C0',
+                '#36A2EB'
+            ]
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            }
+        }
+    }
+});
+</script>
+{% endblock %}

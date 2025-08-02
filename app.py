@@ -65,90 +65,97 @@ else:
 # Helper functions
 def allowed_file(filename, file_type):
     if file_type == 'audio':
-        return '.' in filename and filename.rsplit('.', 1)[1].lower() in ['mp3', 'wav']
+        return '.' in filename and filename.rsplit('.', 1)[1].lower() in ['mp3', 'wav', 'm4a', 'aac', 'flac', 'ogg', 'wma', 'webm']
     elif file_type == 'video':
-        return '.' in filename and filename.rsplit('.', 1)[1].lower() in ['mp4', 'mov']
+        return '.' in filename and filename.rsplit('.', 1)[1].lower() in ['mp4', 'mov', 'avi', 'mkv']
     return False
 
-def process_ai_submission(file_path, file_type, text_content=None):
+def process_ai_submission(file_path, file_type, text_content=None, progress_callback=None):
     """
-    Process uploaded file or text using AWS AI services
+    Enhanced process uploaded file or text using AWS AI services with Bedrock integration
     """
+    import logging
+    logger = logging.getLogger(__name__)
+    
     try:
-        print(f"Processing AI submission: file_path={file_path}, file_type={file_type}, AWS_AVAILABLE={AWS_AVAILABLE}")
-        transcribed_text = ""
+        logger.info(f"🎯 Starting AI processing: file_path={file_path}, file_type={file_type}")
         
         if text_content:
-            transcribed_text = text_content
-        elif file_type in ['audio', 'video'] and AWS_AVAILABLE:
-            # Upload audio files to S3 only (skip transcription for now)
-            if file_type == 'audio':
-                s3_bucket = 'homepro0723'
-                s3_key = f"projects/audios/new/{datetime.now().strftime('%Y%m%d_%H%M%S')}_{os.path.basename(file_path)}"
+            # For text submissions, use Bedrock for analysis
+            logger.info("📝 Processing text submission")
+            if progress_callback:
+                progress_callback("Analyzing text with AI...", 50)
+            
+            from audio_processor import AudioProcessor
+            processor = AudioProcessor()
+            
+            # Log AWS credential status
+            if processor.aws_available:
+                logger.info("☁️ AWS credentials available - will use Bedrock for text analysis")
             else:
-                s3_bucket = app.config.get('AWS_S3_BUCKET', 'default-bucket')
-                s3_key = f"uploads/{datetime.now().strftime('%Y%m%d_%H%M%S')}_{os.path.basename(file_path)}"
+                logger.warning("🚫 AWS credentials not available - using fallback text analysis")
             
-            try:
-                s3_client.upload_file(file_path, s3_bucket, s3_key)
-                print(f"File uploaded to S3 bucket: {s3_bucket}, key: {s3_key}")
-            except Exception as e:
-                print(f"S3 upload failed: {e}")
-                s3_key = None
+            project_data = processor.extract_project_details_with_bedrock(text_content)
             
-            # Skip AWS Transcribe for now - use mock transcription data
-            print("Skipping AWS Transcribe - using mock transcription data")
-            transcribed_text = "Mock transcribed text: I need to fix my kitchen sink. It's been leaking for a week and I think it needs a new faucet. My budget is around $200-500 and I'd like it done within 2 weeks."
-        elif file_type in ['audio', 'video'] and not AWS_AVAILABLE:
-            # Mock transcription for development
-            print("Using mock transcription for development")
-            transcribed_text = "Mock transcribed text: I need to fix my kitchen sink. It's been leaking for a week and I think it needs a new faucet. My budget is around $200-500 and I'd like it done within 2 weeks."
-        
-        print(f"Transcribed text: {transcribed_text}")
-        
-        # Skip AWS Comprehend to avoid permission issues - use mock analysis
-        if transcribed_text:
-            print("Skipping AWS Comprehend - using mock entity and key phrase analysis")
-            # Mock responses for development and to avoid AWS permission issues
-            entities_response = {
-                'Entities': [
-                    {'Type': 'LOCATION', 'Text': 'kitchen'},
-                    {'Type': 'OTHER', 'Text': 'sink'},
-                    {'Type': 'OTHER', 'Text': 'faucet'}
-                ]
-            }
-            key_phrases_response = {
-                'KeyPhrases': [
-                    {'Text': 'kitchen sink', 'Score': 0.9},
-                    {'Text': 'new faucet', 'Score': 0.8},
-                    {'Text': 'budget', 'Score': 0.7}
-                ]
-            }
+            if progress_callback:
+                progress_callback("Text analysis complete!", 100)
             
-            # Extract project details (simplified logic)
-            project_data = {
-                'transcribed_text': transcribed_text,
-                'title': extract_project_title(transcribed_text),
-                'project_type': extract_project_type(transcribed_text, entities_response),
-                'location': extract_location(entities_response),
-                'description': transcribed_text,
-                'budget_min': extract_budget_range(transcribed_text)[0],
-                'budget_max': extract_budget_range(transcribed_text)[1],
-                'timeline': extract_timeline(transcribed_text),
-                'confidence': 0.85 if AWS_AVAILABLE else 0.75,  # Lower confidence for mock data
-                's3_key': s3_key if 's3_key' in locals() else None
-            }
-            
-            print(f"Generated project data: {project_data}")
+            logger.info("✅ Text processing completed successfully")
             return project_data
-        else:
-            print("No transcribed text available")
-            return None
+            
+        elif file_type == 'audio':
+            # Use the enhanced AudioProcessor for audio files
+            logger.info("🎵 Processing audio file")
+            from audio_processor import AudioProcessor
+            processor = AudioProcessor()
+            
+            # Log AWS credential status
+            if processor.aws_available:
+                logger.info("☁️ AWS credentials available - will use AWS Transcribe and Bedrock")
+            else:
+                logger.warning("🚫 AWS credentials not available - using filename-based mock processing")
+            
+            project_data = processor.process_audio_file(file_path, progress_callback)
+            logger.info("✅ Audio processing completed successfully")
+            return project_data
+            
+        elif file_type == 'video':
+            # For video files, extract audio and process
+            logger.info("📹 Processing video file")
+            from audio_processor import AudioProcessor
+            processor = AudioProcessor()
+            
+            # Log AWS credential status
+            if processor.aws_available:
+                logger.info("☁️ AWS credentials available - will use AWS services for video processing")
+            else:
+                logger.warning("🚫 AWS credentials not available - using filename-based mock processing")
+            
+            if progress_callback:
+                progress_callback("Processing video file...", 30)
+            
+            # TODO: Extract audio from video file
+            # For now, use filename-based mock data
+            logger.info("📹 Video processing not yet implemented - using filename-based mock data")
+            mock_transcript = processor._mock_transcription(file_path)
+            project_data = processor.extract_project_details_with_bedrock(mock_transcript)
+            
+            if progress_callback:
+                progress_callback("Video processing complete!", 100)
+            
+            logger.info("✅ Video processing completed successfully")
+            return project_data
+        
+        return None
     
     except Exception as e:
-        print(f"AI processing error: {e}")
+        logger.error(f"❌ AI processing error: {e}")
         import traceback
-        traceback.print_exc()
+        logger.error(f"🔍 Stack trace: {traceback.format_exc()}")
+        
+        if progress_callback:
+            progress_callback(f"Error: {str(e)}", -1)
+        
         return None
 
 # Helper functions for AI text analysis
@@ -341,6 +348,10 @@ def index():
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
+    # If there's a guest project in session, redirect to guest registration
+    if session.get('guest_project_id'):
+        return redirect(url_for('guest_register'))
+    
     if request.method == 'POST':
         email = request.form['email']
         password = request.form['password']
@@ -402,8 +413,21 @@ def register():
             cursor.close()
             conn.close()
             
-            flash('Registration successful! You can now log in.')
-            return redirect(url_for('login'))
+            # Check if we need to redirect to project submission
+            if request.form.get('redirect_to_project') == 'true':
+                # Log the user in automatically and redirect to submit_project
+                session['user'] = {
+                    'id': user_id,
+                    'email': email,
+                    'first_name': first_name,
+                    'last_name': last_name,
+                    'role': user_type
+                }
+                flash('Registration successful! You can now submit your project.')
+                return redirect(url_for('submit_project'))
+            else:
+                flash('Registration successful! You can now log in.')
+                return redirect(url_for('login'))
         except Exception as e:
             flash(f'Registration failed: {str(e)}')
             return redirect(url_for('register'))
@@ -415,10 +439,85 @@ def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if 'user' not in session:
-            flash('Please log in to access this page')
-            return redirect(url_for('login', next=request.url))
+            # Check if this is an AJAX request
+            if request.is_json or request.headers.get('Content-Type', '').startswith('application/json') or 'XMLHttpRequest' in request.headers.get('X-Requested-With', ''):
+                return jsonify({'success': False, 'error': 'Please log in to access this feature', 'redirect': url_for('login')}), 401
+            else:
+                flash('Please log in to access this page')
+                return redirect(url_for('login', next=request.url))
         return f(*args, **kwargs)
     return decorated_function
+
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user' not in session:
+            flash('Please log in to access this page')
+            return redirect(url_for('login', next=request.url))
+        
+        # Check if user is admin
+        if not is_admin_user(session['user']['id']):
+            flash('Access denied. Admin privileges required.')
+            return redirect(url_for('dashboard'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+def is_admin_user(user_id):
+    """Check if user has admin privileges"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT admin_level, is_active FROM admin_users 
+            WHERE user_id = %s AND is_active = TRUE
+        ''', (user_id,))
+        admin = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        return admin is not None
+    except Exception as e:
+        print(f"Error checking admin status: {e}")
+        return False
+
+def get_admin_level(user_id):
+    """Get admin level for user"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT admin_level FROM admin_users 
+            WHERE user_id = %s AND is_active = TRUE
+        ''', (user_id,))
+        admin = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        return admin['admin_level'] if admin else None
+    except Exception as e:
+        print(f"Error getting admin level: {e}")
+        return None
+
+def log_admin_activity(admin_user_id, action, target_type, target_id=None, details=None):
+    """Log admin activity for audit trail"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        ip_address = request.environ.get('HTTP_X_FORWARDED_FOR', request.environ.get('REMOTE_ADDR'))
+        user_agent = request.environ.get('HTTP_USER_AGENT', '')
+        
+        cursor.execute('''
+            INSERT INTO admin_activity_logs 
+            (admin_user_id, action, target_type, target_id, details, ip_address, user_agent)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+        ''', (admin_user_id, action, target_type, target_id, json.dumps(details) if details else None, ip_address, user_agent))
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        return True
+    except Exception as e:
+        print(f"Error logging admin activity: {e}")
+        return False
 
 @app.route('/logout')
 def logout():
@@ -430,18 +529,182 @@ def inject_user():
     return dict(user=session.get('user'))
 
 
+@app.route('/guest_register', methods=['GET', 'POST'])
+def guest_register():
+    """Handle guest user registration and project claiming"""
+    guest_project_id = session.get('guest_project_id')
+    guest_project = None
+    
+    # Get guest project details if available
+    if guest_project_id:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM guest_projects WHERE id = %s AND status = "Pending"', (guest_project_id,))
+        guest_project = cursor.fetchone()
+        cursor.close()
+        conn.close()
+    
+    if request.method == 'POST':
+        # Get form data
+        first_name = request.form.get('first_name', '').strip()
+        last_name = request.form.get('last_name', '').strip()
+        email = request.form.get('email', '').strip().lower()
+        phone = request.form.get('phone', '').strip()
+        location = request.form.get('location', '').strip()
+        password = request.form.get('password', '')
+        confirm_password = request.form.get('confirm_password', '')
+        
+        # Validation
+        if not all([first_name, last_name, email, password, confirm_password]):
+            flash('Please fill in all required fields.')
+            return render_template('guest_register.html', guest_project=guest_project)
+        
+        if password != confirm_password:
+            flash('Passwords do not match.')
+            return render_template('guest_register.html', guest_project=guest_project)
+        
+        if len(password) < 8:
+            flash('Password must be at least 8 characters long.')
+            return render_template('guest_register.html', guest_project=guest_project)
+        
+        try:
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            
+            # Check if email already exists
+            cursor.execute('SELECT id FROM users WHERE email = %s', (email,))
+            existing_user = cursor.fetchone()
+            if existing_user:
+                flash('An account with this email already exists. Please sign in instead.')
+                cursor.close()
+                conn.close()
+                return render_template('guest_register.html', guest_project=guest_project)
+            
+            # Create new user
+            password_hash = generate_password_hash(password)
+            cursor.execute('''
+                INSERT INTO users (email, password_hash, first_name, last_name, role)
+                VALUES (%s, %s, %s, %s, %s)
+            ''', (email, password_hash, first_name, last_name, 'homeowner'))
+            
+            user_id = cursor.lastrowid
+            
+            # Create homeowner record
+            cursor.execute('''
+                INSERT INTO homeowners (user_id, location)
+                VALUES (%s, %s)
+            ''', (user_id, location))
+            
+            homeowner_id = cursor.lastrowid
+            
+            # If there's a guest project, claim it
+            if guest_project:
+                # Move guest project to regular projects table
+                cursor.execute('''
+                    INSERT INTO projects (title, description, project_type, location, budget_min, budget_max, 
+                                        timeline, original_file_path, ai_processed_text, homeowner_id, created_at)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                ''', (guest_project['title'], guest_project['description'], guest_project['project_type'],
+                      guest_project['location'] or location, guest_project['budget_min'], guest_project['budget_max'],
+                      guest_project['timeline'], guest_project['original_file_path'], guest_project['ai_processed_text'],
+                      homeowner_id, guest_project['created_at']))
+                
+                project_id = cursor.lastrowid
+                
+                # Mark guest project as claimed
+                cursor.execute('''
+                    UPDATE guest_projects SET status = 'Claimed' WHERE id = %s
+                ''', (guest_project_id,))
+                
+                # Clear guest project from session
+                session.pop('guest_project_id', None)
+                
+                flash(f'Registration successful! Your project "{guest_project["title"]}" has been added to your account.')
+            else:
+                flash('Registration successful! You can now submit projects and receive contractor bids.')
+            
+            conn.commit()
+            
+            # Log the user in
+            session['user'] = {
+                'id': user_id,
+                'email': email,
+                'first_name': first_name,
+                'last_name': last_name,
+                'role': 'homeowner'
+            }
+            
+            cursor.close()
+            conn.close()
+            
+            return redirect(url_for('dashboard'))
+            
+        except Exception as e:
+            flash(f'Registration failed: {str(e)}')
+            return render_template('guest_register.html', guest_project=guest_project)
+    
+    return render_template('guest_register.html', guest_project=guest_project)
+
+@app.route('/complete-registration')
+def complete_registration():
+    """Redirect to guest registration page"""
+    return redirect(url_for('guest_register'))
+
+@app.route('/guest_login')
+def guest_login():
+    """Redirect guest users to login with option to claim their project"""
+    guest_project_id = session.get('guest_project_id')
+    if guest_project_id:
+        flash('Please sign in to your existing account to claim your submitted project, or create a new account.')
+    return redirect(url_for('login'))
+
+def cleanup_expired_guest_projects():
+    """Clean up expired guest projects (called periodically)"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Mark expired projects
+        cursor.execute('''
+            UPDATE guest_projects 
+            SET status = 'Expired' 
+            WHERE status = 'Pending' AND expires_at < NOW()
+        ''')
+        
+        expired_count = cursor.rowcount
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        return expired_count
+    except Exception as e:
+        print(f"Error cleaning up expired guest projects: {e}")
+        return 0
+
 # def create_demo_users():
 #     """Adapted for Cognito - run manually or via script"""
 
 def get_db_connection():
-    return pymysql.connect(
-        host=os.getenv('DB_HOST'),
-        user=os.getenv('DB_USERNAME'),
-        password=os.getenv('DB_PASSWORD'),
-        db=os.getenv('DB_NAME'),
-        port=int(os.getenv('DB_PORT', 3306)),
-        cursorclass=pymysql.cursors.DictCursor
-    )
+    # Try MySQL first (for production)
+    try:
+        if os.getenv('DB_HOST'):
+            return pymysql.connect(
+                host=os.getenv('DB_HOST'),
+                user=os.getenv('DB_USERNAME'),
+                password=os.getenv('DB_PASSWORD'),
+                db=os.getenv('DB_NAME'),
+                port=int(os.getenv('DB_PORT', 3306)),
+                cursorclass=pymysql.cursors.DictCursor
+            )
+    except Exception as e:
+        print(f"MySQL connection failed: {e}")
+        print("Falling back to SQLite for local development...")
+    
+    # Fallback to SQLite for local development
+    import sqlite3
+    conn = sqlite3.connect('homepro.db')
+    conn.row_factory = sqlite3.Row  # This makes it return dict-like objects
+    return conn
 
 def init_database():
     """Initialize database tables if they don't exist"""
@@ -449,20 +712,37 @@ def init_database():
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        # Create users table (base table for authentication)
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS users (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                email VARCHAR(255) UNIQUE NOT NULL,
-                password_hash VARCHAR(255) NOT NULL,
-                first_name VARCHAR(100) NOT NULL,
-                last_name VARCHAR(100) NOT NULL,
-                role ENUM('homeowner', 'contractor') NOT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                INDEX idx_email (email),
-                INDEX idx_role (role)
-            )
-        ''')
+        # Detect database type
+        is_sqlite = hasattr(conn, 'row_factory')
+        
+        if is_sqlite:
+            # SQLite version
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS users (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    email TEXT UNIQUE NOT NULL,
+                    password_hash TEXT NOT NULL,
+                    first_name TEXT NOT NULL,
+                    last_name TEXT NOT NULL,
+                    role TEXT NOT NULL CHECK (role IN ('homeowner', 'contractor')),
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+        else:
+            # MySQL version
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS users (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    email VARCHAR(255) UNIQUE NOT NULL,
+                    password_hash VARCHAR(255) NOT NULL,
+                    first_name VARCHAR(100) NOT NULL,
+                    last_name VARCHAR(100) NOT NULL,
+                    role ENUM('homeowner', 'contractor') NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    INDEX idx_email (email),
+                    INDEX idx_role (role)
+                )
+            ''')
         
         # Create homeowners table
         cursor.execute('''
@@ -514,6 +794,34 @@ def init_database():
             )
         ''')
         
+        # Create guest_projects table for unregistered users
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS guest_projects (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                title VARCHAR(255) NOT NULL,
+                description TEXT NOT NULL,
+                project_type VARCHAR(100) NOT NULL,
+                location VARCHAR(255),
+                budget_min DECIMAL(10,2),
+                budget_max DECIMAL(10,2),
+                timeline VARCHAR(255),
+                status ENUM('Pending', 'Claimed', 'Expired') DEFAULT 'Pending',
+                original_file_path VARCHAR(500),
+                ai_processed_text TEXT,
+                guest_email VARCHAR(255),
+                guest_phone VARCHAR(20),
+                guest_name VARCHAR(255),
+                session_id VARCHAR(255),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                expires_at TIMESTAMP DEFAULT (CURRENT_TIMESTAMP + INTERVAL 7 DAY),
+                INDEX idx_status (status),
+                INDEX idx_session (session_id),
+                INDEX idx_guest_email (guest_email),
+                INDEX idx_created (created_at),
+                INDEX idx_expires (expires_at)
+            )
+        ''')
+        
         # Create bids table
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS bids (
@@ -558,6 +866,102 @@ def init_database():
             )
         ''')
         
+        # Create admin_users table for admin access control
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS admin_users (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                admin_level ENUM('super_admin', 'admin', 'moderator') DEFAULT 'admin',
+                permissions JSON,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                created_by INT,
+                is_active BOOLEAN DEFAULT TRUE,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+                INDEX idx_user_id (user_id),
+                INDEX idx_admin_level (admin_level),
+                INDEX idx_active (is_active)
+            )
+        ''')
+        
+        # Create admin_activity_logs table for audit trail
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS admin_activity_logs (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                admin_user_id INT NOT NULL,
+                action VARCHAR(255) NOT NULL,
+                target_type ENUM('user', 'project', 'bid', 'contractor', 'system') NOT NULL,
+                target_id INT,
+                details JSON,
+                ip_address VARCHAR(45),
+                user_agent TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (admin_user_id) REFERENCES admin_users(id) ON DELETE CASCADE,
+                INDEX idx_admin_user (admin_user_id),
+                INDEX idx_action (action),
+                INDEX idx_target (target_type, target_id),
+                INDEX idx_created (created_at)
+            )
+        ''')
+        
+        # Create system_metrics table for platform statistics
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS system_metrics (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                metric_name VARCHAR(100) NOT NULL,
+                metric_value DECIMAL(15,2) NOT NULL,
+                metric_type ENUM('count', 'amount', 'percentage', 'duration') DEFAULT 'count',
+                category VARCHAR(50) NOT NULL,
+                recorded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                metadata JSON,
+                INDEX idx_metric_name (metric_name),
+                INDEX idx_category (category),
+                INDEX idx_recorded (recorded_at)
+            )
+        ''')
+        
+        # Create user_verification table for verification workflow
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS user_verification (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                verification_type ENUM('email', 'phone', 'identity', 'business') NOT NULL,
+                status ENUM('pending', 'approved', 'rejected', 'expired') DEFAULT 'pending',
+                verification_data JSON,
+                submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                reviewed_at TIMESTAMP NULL,
+                reviewed_by INT NULL,
+                notes TEXT,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                FOREIGN KEY (reviewed_by) REFERENCES admin_users(id) ON DELETE SET NULL,
+                INDEX idx_user_id (user_id),
+                INDEX idx_type (verification_type),
+                INDEX idx_status (status),
+                INDEX idx_submitted (submitted_at)
+            )
+        ''')
+        
+        # Create content_moderation table for content review
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS content_moderation (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                content_type ENUM('project', 'contractor_profile', 'bid', 'user_message') NOT NULL,
+                content_id INT NOT NULL,
+                status ENUM('pending', 'approved', 'rejected', 'flagged') DEFAULT 'pending',
+                flagged_reason VARCHAR(255),
+                reviewed_by INT NULL,
+                reviewed_at TIMESTAMP NULL,
+                auto_flagged BOOLEAN DEFAULT FALSE,
+                flag_score DECIMAL(3,2) DEFAULT 0.00,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (reviewed_by) REFERENCES admin_users(id) ON DELETE SET NULL,
+                INDEX idx_content (content_type, content_id),
+                INDEX idx_status (status),
+                INDEX idx_auto_flagged (auto_flagged),
+                INDEX idx_created (created_at)
+            )
+        ''')
+        
         conn.commit()
         cursor.close()
         conn.close()
@@ -595,7 +999,59 @@ def login():
                     'last_name': user['last_name'],
                     'role': user['role']
                 }
-                flash('Login successful!')
+                
+                # Check for guest project to claim
+                guest_project_id = session.get('guest_project_id')
+                if guest_project_id and user['role'] == 'homeowner':
+                    try:
+                        # Get guest project details
+                        cursor.execute('SELECT * FROM guest_projects WHERE id = %s AND status = "Pending"', (guest_project_id,))
+                        guest_project = cursor.fetchone()
+                        
+                        if guest_project:
+                            # Get homeowner ID
+                            cursor.execute('SELECT id FROM homeowners WHERE user_id = %s', (user['id'],))
+                            homeowner_result = cursor.fetchone()
+                            
+                            if homeowner_result:
+                                homeowner_id = homeowner_result['id']
+                                
+                                # Move guest project to regular projects table
+                                cursor.execute('''
+                                    INSERT INTO projects (title, description, project_type, location, budget_min, budget_max, 
+                                                        timeline, original_file_path, ai_processed_text, homeowner_id, created_at)
+                                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                                ''', (guest_project['title'], guest_project['description'], guest_project['project_type'],
+                                      guest_project['location'], guest_project['budget_min'], guest_project['budget_max'],
+                                      guest_project['timeline'], guest_project['original_file_path'], guest_project['ai_processed_text'],
+                                      homeowner_id, guest_project['created_at']))
+                                
+                                # Mark guest project as claimed
+                                cursor.execute('UPDATE guest_projects SET status = "Claimed" WHERE id = %s', (guest_project_id,))
+                                
+                                conn.commit()
+                                
+                                # Clear guest project from session
+                                session.pop('guest_project_id', None)
+                                
+                                flash(f'Welcome back! Your project "{guest_project["title"]}" has been added to your account.')
+                    except Exception as e:
+                        print(f"Error claiming guest project: {e}")
+                        # Continue with normal login even if claiming fails
+                
+                # Check if user is admin and redirect to admin portal
+                if is_admin_user(user['id']):
+                    flash('Welcome to the Admin Portal!')
+                    return redirect(url_for('admin_dashboard'))
+                
+                # Check for project submission context
+                redirect_to_project = request.form.get('redirect_to_project')
+                if redirect_to_project == 'true':
+                    flash('Login successful! You can now complete your project submission.')
+                    return redirect(url_for('submit_project'))
+                
+                if not guest_project_id:
+                    flash('Login successful!')
                 return redirect(url_for('dashboard'))
             else:
                 flash('Invalid email or password.')
@@ -692,6 +1148,444 @@ def dashboard():
     conn.close()
     return render_template(template, **render_args)
 
+# Global dictionary to store processing progress (in production, use Redis or database)
+processing_progress = {}
+
+@app.route('/process_audio_async', methods=['POST'])
+@login_required
+def process_audio_async():
+    """
+    Async endpoint for audio processing with progress tracking
+    """
+    import threading
+    import uuid
+    
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file provided'}), 400
+    
+    file = request.files['file']
+    if not file or not file.filename:
+        return jsonify({'error': 'No file selected'}), 400
+    
+    filename = secure_filename(file.filename)
+    if not allowed_file(filename, 'audio'):
+        return jsonify({'error': 'Invalid file type'}), 400
+    
+    # Generate unique processing ID
+    process_id = str(uuid.uuid4())
+    
+    # Save file
+    file_path = os.path.join(app.config['UPLOAD_FOLDER'], f"{process_id}_{filename}")
+    file.save(file_path)
+    
+    # Initialize progress tracking
+    processing_progress[process_id] = {
+        'status': 'starting',
+        'progress': 0,
+        'message': 'Initializing...',
+        'result': None,
+        'error': None
+    }
+    
+    def progress_callback(message, progress):
+        processing_progress[process_id].update({
+            'message': message,
+            'progress': progress,
+            'status': 'processing' if progress >= 0 else 'error'
+        })
+        if progress < 0:
+            processing_progress[process_id]['error'] = message
+    
+    def process_in_background():
+        try:
+            result = process_ai_submission(file_path, 'audio', progress_callback=progress_callback)
+            if result:
+                processing_progress[process_id].update({
+                    'status': 'completed',
+                    'progress': 100,
+                    'message': 'Processing complete!',
+                    'result': result
+                })
+            else:
+                processing_progress[process_id].update({
+                    'status': 'error',
+                    'progress': -1,
+                    'message': 'Processing failed',
+                    'error': 'Unknown error occurred'
+                })
+        except Exception as e:
+            processing_progress[process_id].update({
+                'status': 'error',
+                'progress': -1,
+                'message': f'Error: {str(e)}',
+                'error': str(e)
+            })
+        finally:
+            # Clean up file
+            try:
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+            except:
+                pass
+    
+    # Start background processing
+    thread = threading.Thread(target=process_in_background)
+    thread.daemon = True
+    thread.start()
+    
+    return jsonify({
+        'process_id': process_id,
+        'status': 'started',
+        'message': 'Processing started'
+    })
+
+@app.route('/processing_status/<process_id>')
+@login_required
+def get_processing_status(process_id):
+    """
+    Get the current status of audio processing
+    """
+    if process_id not in processing_progress:
+        return jsonify({'error': 'Process not found'}), 404
+    
+    status = processing_progress[process_id].copy()
+    
+    # Clean up completed processes after returning status
+    if status['status'] in ['completed', 'error']:
+        # Keep for a short time to allow client to retrieve
+        pass
+    
+    return jsonify(status)
+
+@app.route('/process_audio', methods=['POST'])
+def process_audio():
+    """
+    New route to handle audio processing and return JSON data for preview
+    Step 2 of the new workflow: AWS Transcribe + GenAI analysis
+    """
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    try:
+        logger.info("🎵 Starting audio processing for preview...")
+        
+        file = request.files.get('file')
+        if not file or not file.filename:
+            return jsonify({
+                'success': False,
+                'error': 'No audio file provided'
+            }), 400
+        
+        filename = secure_filename(file.filename)
+        logger.info(f"📁 Processing audio file: {filename}")
+        
+        # Check if file type is allowed
+        if not allowed_file(filename, 'audio'):
+            return jsonify({
+                'success': False,
+                'error': 'Invalid file type. Please upload an audio file in supported formats (MP3, WAV, M4A, AAC, FLAC, OGG, WMA, WebM).'
+            }), 400
+        
+        # Save the file
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(file_path)
+        logger.info(f"💾 File saved to: {file_path}")
+        
+        # Process the audio file with AI
+        def progress_callback(message, percentage):
+            logger.info(f"📊 Progress: {percentage}% - {message}")
+        
+        project_data = process_ai_submission(file_path, 'audio', progress_callback=progress_callback)
+        
+        if not project_data:
+            logger.error("❌ Audio processing failed")
+            return jsonify({
+                'success': False,
+                'error': 'Failed to process audio file. Please try again or use text submission.'
+            }), 500
+        
+        logger.info("✅ Audio processing completed successfully")
+        
+        # Return the processed data for preview
+        return jsonify({
+            'success': True,
+            'data': {
+                'title': project_data.get('title', ''),
+                'description': project_data.get('description', ''),
+                'project_type': project_data.get('project_type', 'General'),
+                'location': project_data.get('location', ''),
+                'budget_min': project_data.get('budget_min'),
+                'budget_max': project_data.get('budget_max'),
+                'timeline': project_data.get('timeline', ''),
+                'transcribed_text': project_data.get('transcribed_text', ''),
+                'confidence': project_data.get('confidence', 0.0),
+                'extraction_method': project_data.get('extraction_method', 'unknown'),
+                's3_key': project_data.get('s3_key'),
+                'filename': filename
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"❌ Audio processing error: {e}")
+        import traceback
+        logger.error(f"🔍 Stack trace: {traceback.format_exc()}")
+        
+        return jsonify({
+             'success': False,
+             'error': f'Processing error: {str(e)}'
+         }), 500
+
+@app.route('/process_audio_transcript', methods=['POST'])
+def process_audio_transcript():
+    """
+    New route to handle audio transcription only (no Bedrock analysis)
+    Step 2 of the 5-step workflow: AWS Transcribe only
+    """
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    try:
+        logger.info("🎤 Starting audio transcription only...")
+        
+        file = request.files.get('file')
+        if not file or not file.filename:
+            return jsonify({
+                'success': False,
+                'error': 'No audio file provided'
+            }), 400
+        
+        filename = secure_filename(file.filename)
+        logger.info(f"📁 Processing audio file: {filename}")
+        
+        # Check if file type is allowed
+        if not allowed_file(filename, 'audio'):
+            return jsonify({
+                'success': False,
+                'error': 'Invalid file type. Please upload an audio file in supported formats (MP3, WAV, M4A, AAC, FLAC, OGG, WMA, WebM).'
+            }), 400
+        
+        # Save the file
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(file_path)
+        logger.info(f"💾 File saved to: {file_path}")
+        
+        # Process the audio file for transcription only
+        from audio_processor import AudioProcessor
+        processor = AudioProcessor()
+        
+        def progress_callback(message, percentage):
+            logger.info(f"📊 Progress: {percentage}% - {message}")
+        
+        transcript_data = processor.transcribe_audio_only(file_path, progress_callback=progress_callback)
+        
+        if not transcript_data or transcript_data.get('error'):
+            logger.error("❌ Audio transcription failed")
+            return jsonify({
+                'success': False,
+                'error': transcript_data.get('error', 'Failed to transcribe audio file. Please try again.')
+            }), 500
+        
+        logger.info("✅ Audio transcription completed successfully")
+        
+        # Return the transcript data
+        return jsonify({
+            'success': True,
+            'data': {
+                'transcript': transcript_data.get('transcript', ''),
+                'processing_status': transcript_data.get('processing_status', 'transcription_complete'),
+                'confidence': transcript_data.get('confidence', 1.0),
+                's3_key': transcript_data.get('s3_key'),
+                's3_uri': transcript_data.get('s3_uri'),
+                'filename': filename
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"❌ Audio transcription error: {e}")
+        import traceback
+        logger.error(f"🔍 Stack trace: {traceback.format_exc()}")
+        
+        return jsonify({
+             'success': False,
+             'error': f'Transcription error: {str(e)}'
+         }), 500
+
+@app.route('/process_transcript_ai', methods=['POST'])
+def process_transcript_ai():
+    """
+    Process transcript with Bedrock AI for project detail extraction
+    Step 4 of the 5-step workflow: AI Analysis
+    """
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    try:
+        logger.info("🤖 Starting AI analysis of transcript...")
+        
+        # Get transcript from request
+        transcript = request.json.get('transcript', '')
+        filename = request.json.get('filename', '')
+        s3_key = request.json.get('s3_key', '')
+        
+        if not transcript:
+            return jsonify({
+                'success': False,
+                'error': 'No transcript provided for AI analysis'
+            }), 400
+        
+        logger.info(f"📝 Processing transcript of length: {len(transcript)}")
+        
+        # Process transcript with Bedrock
+        from audio_processor import AudioProcessor
+        processor = AudioProcessor()
+        
+        project_details = processor.extract_project_details_with_bedrock(transcript)
+        
+        if not project_details or project_details.get('error'):
+            logger.error("❌ AI analysis failed")
+            return jsonify({
+                'success': False,
+                'error': project_details.get('error', 'Failed to analyze transcript. Please try again.')
+            }), 500
+        
+        logger.info("✅ AI analysis completed successfully")
+        
+        # Add transcript and file info to results
+        project_details['transcript'] = transcript
+        project_details['filename'] = filename
+        project_details['s3_key'] = s3_key
+        project_details['processing_status'] = 'ai_analysis_complete'
+        
+        return jsonify({
+            'success': True,
+            'data': project_details
+        })
+        
+    except Exception as e:
+        logger.error(f"❌ AI analysis error: {e}")
+        import traceback
+        logger.error(f"🔍 Stack trace: {traceback.format_exc()}")
+        
+        return jsonify({
+             'success': False,
+             'error': f'AI analysis error: {str(e)}'
+         }), 500
+
+@app.route('/submit_preview', methods=['POST'])
+@login_required
+def submit_preview():
+    """
+    New route to handle preview form submission
+    Step 4 of the new workflow: Submit the preview form
+    Requires user authentication
+    """
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    try:
+        logger.info("📝 Processing preview form submission...")
+        
+        # Get form data
+        title = request.form.get('title', '').strip()
+        description = request.form.get('description', '').strip()
+        project_type = request.form.get('project_type', 'General')
+        location = request.form.get('location', '').strip()
+        budget_min = request.form.get('budget_min')
+        budget_max = request.form.get('budget_max')
+        timeline = request.form.get('timeline', '').strip()
+        
+        # Get AI processing data
+        transcribed_text = request.form.get('transcribed_text', '')
+        confidence = request.form.get('confidence', 0.0)
+        extraction_method = request.form.get('extraction_method', 'unknown')
+        s3_key = request.form.get('s3_key', '')
+        filename = request.form.get('filename', '')
+        
+        # Validate required fields
+        if not title:
+            return jsonify({
+                'success': False,
+                'error': 'Project title is required'
+            }), 400
+        
+        if not description:
+            return jsonify({
+                'success': False,
+                'error': 'Project description is required'
+            }), 400
+        
+        # Process budget values
+        try:
+            budget_min = float(budget_min) if budget_min else None
+            budget_max = float(budget_max) if budget_max else None
+        except (ValueError, TypeError):
+            budget_min = None
+            budget_max = None
+        
+        # User is authenticated (required by @login_required decorator)
+        user = session['user']
+        
+        if user['role'] != 'homeowner':
+            return jsonify({
+                'success': False,
+                'error': 'Only homeowners can submit projects'
+            }), 403
+        
+        # User is logged in as homeowner - save directly to projects table
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Get homeowner ID from homeowners table
+        cursor.execute('SELECT id FROM homeowners WHERE user_id = %s', (user['id'],))
+        homeowner_result = cursor.fetchone()
+        if not homeowner_result:
+            return jsonify({
+                'success': False,
+                'error': 'Homeowner profile not found. Please contact support.'
+            }), 400
+        
+        homeowner_id = homeowner_result['id']
+        
+        insert_query = """
+        INSERT INTO projects (
+            homeowner_id, title, description, project_type, location, 
+            budget_min, budget_max, timeline, status,
+            original_file_path, ai_processed_text, created_at
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW())
+        """
+        
+        # Construct file path if we have filename
+        file_path = f"uploads/{filename}" if filename else None
+        
+        cursor.execute(insert_query, (
+            homeowner_id, title, description, project_type, location,
+            budget_min, budget_max, timeline, 'Active',
+            file_path, transcribed_text
+        ))
+        
+        project_id = cursor.lastrowid
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        logger.info(f"✅ Project created successfully with ID: {project_id}")
+        
+        return jsonify({
+            'success': True,
+            'project_id': project_id,
+            'message': 'Project submitted successfully!'
+        })
+        
+    except Exception as e:
+        logger.error(f"❌ Preview submission error: {e}")
+        import traceback
+        logger.error(f"🔍 Stack trace: {traceback.format_exc()}")
+        
+        return jsonify({
+            'success': False,
+            'error': f'Submission error: {str(e)}'
+        }), 500
+
 @app.route('/submit_project', methods=['GET', 'POST'])
 def submit_project():
     if request.method == 'POST':
@@ -702,6 +1596,7 @@ def submit_project():
         print('Submission method:', submission_method)
         file = request.files.get('file')
         file_path = None
+        filename = None
         project_data = None
         
         if submission_method == 'audio':
@@ -714,18 +1609,53 @@ def submit_project():
             
             # Check if file type is allowed before saving
             if not allowed_file(filename, 'audio'):
-                flash('Invalid file type. Please upload an MP3 or WAV audio file.')
+                flash('Invalid file type. Please upload an audio file in supported formats (MP3, WAV, M4A, AAC, FLAC, OGG, WMA, WebM).')
                 return render_template('submit_project.html')
             
             file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             file.save(file_path)
             print(f'File saved to: {file_path}')
             
-            # Process the audio file
-            project_data = process_ai_submission(file_path, 'audio')
-            if not project_data:
-                flash('Failed to process audio file. Please try again or use text submission.')
+            # Process the audio file for transcription only
+            from audio_processor import AudioProcessor
+            processor = AudioProcessor()
+            transcript_data = processor.transcribe_audio_only(file_path)
+            
+            if not transcript_data or transcript_data.get('error'):
+                flash('Failed to transcribe audio file. Please try again or use text submission.')
                 return render_template('submit_project.html')
+            
+            print(f'Audio transcription successful. Transcript data: {transcript_data}')
+            
+            # Store transcript data in session and redirect to transcript review
+            session['transcript_data'] = transcript_data
+            session['file_path'] = filename
+            return redirect(url_for('review_transcript'))
+        
+        elif submission_method == 'video':
+            if not file or not file.filename:
+                flash('Please upload a video file for video submission.')
+                return render_template('submit_project.html')
+                
+            filename = secure_filename(file.filename)
+            print(f'Processing video file: {filename}')
+            
+            # Check if file type is allowed before saving
+            if not allowed_file(filename, 'video'):
+                flash('Invalid file type. Please upload a video file in supported formats (MP4, MOV, AVI, MKV).')
+                return render_template('submit_project.html')
+            
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            file.save(file_path)
+            print(f'File saved to: {file_path}')
+            
+            # Process the video file
+            project_data = process_ai_submission(file_path, 'video')
+            if not project_data:
+                flash('Failed to process video file. Please try again or use text submission.')
+                return render_template('submit_project.html')
+            
+            print(f'Video processing successful. Project data: {project_data}')
         
         elif submission_method == 'text':
             title = request.form.get('title', '')
@@ -748,14 +1678,18 @@ def submit_project():
                 'transcribed_text': description,
                 'confidence': 1.0
             }
+            print(f'Text processing successful. Project data: {project_data}')
         
         if project_data:
             session['ai_results'] = project_data  # Using same key for consistency
-            session['file_path'] = filename if submission_method == 'audio' else None
+            session['file_path'] = filename if submission_method in ['audio', 'video'] else None
+            print(f'Session data set: ai_results={bool(project_data)}, file_path={filename}')
             return redirect(url_for('review_project'))
         else:
             if submission_method == 'audio':
                 flash('Failed to process audio file. Please check the file format and try again.')
+            elif submission_method == 'video':
+                flash('Failed to process video file. Please check the file format and try again.')
             elif submission_method == 'text':
                 flash('Please provide the required information: Project Title and Description are required.')
             else:
@@ -763,6 +1697,17 @@ def submit_project():
             return render_template('submit_project.html')
     
     return render_template('submit_project.html')
+
+@app.route('/review_transcript')
+def review_transcript():
+    transcript_data = session.get('transcript_data')
+    file_path = session.get('file_path')
+    
+    if not transcript_data:
+        flash('No transcript data found. Please submit an audio file first.')
+        return redirect(url_for('submit_project'))
+    
+    return render_template('review_transcript.html', transcript_data=transcript_data, file_path=file_path)
 
 @app.route('/review_project')
 def review_project():
@@ -820,6 +1765,14 @@ def confirm_project():
     flash('Project submitted successfully!')
     return redirect(url_for('dashboard'))
 
+@app.route('/test_audio')
+def test_audio():
+    return render_template('test_audio.html')
+
+@app.route('/simple_audio_test')
+def simple_audio_test():
+    return render_template('simple_audio_test.html')
+
 @app.route('/project/<int:project_id>')
 def view_project(project_id):
     conn = get_db_connection()
@@ -848,22 +1801,28 @@ def view_project(project_id):
     
     audio_url = None
     if project['original_file_path']:
-        if s3_client:
+        # Check if this is a local file path (starts with 'uploads/')
+        if project['original_file_path'].startswith('uploads/'):
+            # For locally stored files, generate URL using our uploaded_file route
+            import os
+            filename = os.path.basename(project['original_file_path'])
+            audio_url = url_for('uploaded_file', filename=filename)
+        elif s3_client:
+            # For S3 stored files
             # Determine the correct bucket based on the file path
-            if project['original_file_path'].startswith('projects/audios/'):
+            if (project['original_file_path'].startswith('projects/audios/') or 
+                project['original_file_path'].startswith('projects/audios/new/')):
                 # This is an S3 key for audio files uploaded to homepro0723 bucket
                 bucket_name = 'homepro0723'
             else:
                 # Use the default configured bucket for other files
                 bucket_name = app.config.get('AWS_S3_BUCKET', 'homepro-uploads')
             
-            # For S3 stored files
             audio_url = s3_client.generate_presigned_url('get_object',
                 Params={'Bucket': bucket_name, 'Key': project['original_file_path']},
                 ExpiresIn=3600)
         else:
-            # For locally stored files, generate URL using our uploaded_file route
-            # Extract filename from the stored path
+            # Fallback: try to serve as local file
             import os
             filename = os.path.basename(project['original_file_path'])
             audio_url = url_for('uploaded_file', filename=filename)
@@ -1339,11 +2298,505 @@ def close_project(project_id):
 
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):
-    """Serve uploaded files from the uploads directory"""
-    try:
-        return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
-    except FileNotFoundError:
+    """Stream uploaded files from the uploads directory"""
+    import os
+    from flask import Response
+    file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    if not os.path.exists(file_path):
         abort(404)
+    def generate():
+        with open(file_path, "rb") as f:
+            data = f.read(1024)
+            while data:
+                yield data
+                data = f.read(1024)
+    return Response(generate(), mimetype="audio/mpeg")
+
+# ============================================================================
+# ADMIN PORTAL ROUTES
+# ============================================================================
+
+@app.route('/admin')
+@admin_required
+def admin_dashboard():
+    """Admin Dashboard Overview with real-time platform statistics"""
+    user = session['user']
+    admin_level = get_admin_level(user['id'])
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Get platform statistics
+    stats = {}
+    
+    # User statistics
+    cursor.execute('SELECT COUNT(*) as total_users FROM users')
+    stats['total_users'] = cursor.fetchone()['total_users']
+    
+    cursor.execute('SELECT COUNT(*) as total_homeowners FROM homeowners')
+    stats['total_homeowners'] = cursor.fetchone()['total_homeowners']
+    
+    cursor.execute('SELECT COUNT(*) as total_contractors FROM contractors')
+    stats['total_contractors'] = cursor.fetchone()['total_contractors']
+    
+    # Project statistics
+    cursor.execute('SELECT COUNT(*) as total_projects FROM projects')
+    stats['total_projects'] = cursor.fetchone()['total_projects']
+    
+    cursor.execute("SELECT COUNT(*) as active_projects FROM projects WHERE status = 'Active'")
+    stats['active_projects'] = cursor.fetchone()['active_projects']
+    
+    cursor.execute("SELECT COUNT(*) as completed_projects FROM projects WHERE status = 'Completed'")
+    stats['completed_projects'] = cursor.fetchone()['completed_projects']
+    
+    # Bid statistics
+    cursor.execute('SELECT COUNT(*) as total_bids FROM bids')
+    stats['total_bids'] = cursor.fetchone()['total_bids']
+    
+    cursor.execute("SELECT COUNT(*) as pending_bids FROM bids WHERE status = 'Submitted'")
+    stats['pending_bids'] = cursor.fetchone()['pending_bids']
+    
+    cursor.execute("SELECT COUNT(*) as accepted_bids FROM bids WHERE status = 'Accepted'")
+    stats['accepted_bids'] = cursor.fetchone()['accepted_bids']
+    
+    # Revenue statistics (mock data for now)
+    cursor.execute('SELECT SUM(amount) as total_bid_value FROM bids WHERE status = "Accepted"')
+    result = cursor.fetchone()
+    stats['total_revenue'] = result['total_bid_value'] if result['total_bid_value'] else 0
+    
+    # Recent activity
+    cursor.execute('''
+        SELECT u.first_name, u.last_name, u.email, u.role, u.created_at
+        FROM users u
+        ORDER BY u.created_at DESC
+        LIMIT 10
+    ''')
+    recent_users = cursor.fetchall()
+    
+    cursor.execute('''
+        SELECT p.title, p.project_type, p.created_at, 
+               CONCAT(u.first_name, ' ', u.last_name) as homeowner_name
+        FROM projects p
+        JOIN homeowners h ON p.homeowner_id = h.id
+        JOIN users u ON h.user_id = u.id
+        ORDER BY p.created_at DESC
+        LIMIT 10
+    ''')
+    recent_projects = cursor.fetchall()
+    
+    # Pending verifications
+    cursor.execute('''
+        SELECT COUNT(*) as pending_verifications 
+        FROM user_verification 
+        WHERE status = 'pending'
+    ''')
+    stats['pending_verifications'] = cursor.fetchone()['pending_verifications']
+    
+    # Pending content moderation
+    cursor.execute('''
+        SELECT COUNT(*) as pending_moderation 
+        FROM content_moderation 
+        WHERE status = 'pending'
+    ''')
+    stats['pending_moderation'] = cursor.fetchone()['pending_moderation']
+    
+    cursor.close()
+    conn.close()
+    
+    # Log admin activity
+    log_admin_activity(user['id'], 'Viewed Admin Dashboard', 'system')
+    
+    return render_template('admin/dashboard.html', 
+                         stats=stats, 
+                         recent_users=recent_users,
+                         recent_projects=recent_projects,
+                         admin_level=admin_level)
+
+@app.route('/admin/users')
+@admin_required
+def admin_users():
+    """User Management System"""
+    user = session['user']
+    page = request.args.get('page', 1, type=int)
+    per_page = 20
+    search = request.args.get('search', '')
+    role_filter = request.args.get('role', '')
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Build query with filters
+    where_conditions = []
+    params = []
+    
+    if search:
+        where_conditions.append('(u.first_name LIKE %s OR u.last_name LIKE %s OR u.email LIKE %s)')
+        search_param = f'%{search}%'
+        params.extend([search_param, search_param, search_param])
+    
+    if role_filter:
+        where_conditions.append('u.role = %s')
+        params.append(role_filter)
+    
+    where_clause = 'WHERE ' + ' AND '.join(where_conditions) if where_conditions else ''
+    
+    # Get total count
+    cursor.execute(f'SELECT COUNT(*) as total FROM users u {where_clause}', params)
+    total_users = cursor.fetchone()['total']
+    
+    # Get paginated users
+    offset = (page - 1) * per_page
+    cursor.execute(f'''
+        SELECT u.*, 
+               CASE WHEN au.id IS NOT NULL THEN TRUE ELSE FALSE END as is_admin,
+               au.admin_level,
+               CASE WHEN u.role = 'homeowner' THEN h.location
+                    WHEN u.role = 'contractor' THEN c.location
+                    ELSE NULL END as location,
+               CASE WHEN u.role = 'contractor' THEN c.company ELSE NULL END as company
+        FROM users u
+        LEFT JOIN admin_users au ON u.id = au.user_id AND au.is_active = TRUE
+        LEFT JOIN homeowners h ON u.id = h.user_id
+        LEFT JOIN contractors c ON u.id = c.user_id
+        {where_clause}
+        ORDER BY u.created_at DESC
+        LIMIT %s OFFSET %s
+    ''', params + [per_page, offset])
+    users = cursor.fetchall()
+    
+    cursor.close()
+    conn.close()
+    
+    # Calculate pagination
+    total_pages = (total_users + per_page - 1) // per_page
+    
+    # Log admin activity
+    log_admin_activity(user['id'], 'Viewed User Management', 'user')
+    
+    return render_template('admin/users.html', 
+                         users=users,
+                         page=page,
+                         total_pages=total_pages,
+                         total_users=total_users,
+                         search=search,
+                         role_filter=role_filter)
+
+@app.route('/admin/projects')
+@admin_required
+def admin_projects():
+    """Project Lifecycle Management"""
+    user = session['user']
+    page = request.args.get('page', 1, type=int)
+    per_page = 20
+    status_filter = request.args.get('status', '')
+    project_type_filter = request.args.get('project_type', '')
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Build query with filters
+    where_conditions = []
+    params = []
+    
+    if status_filter:
+        where_conditions.append('p.status = %s')
+        params.append(status_filter)
+    
+    if project_type_filter:
+        where_conditions.append('p.project_type = %s')
+        params.append(project_type_filter)
+    
+    where_clause = 'WHERE ' + ' AND '.join(where_conditions) if where_conditions else ''
+    
+    # Get total count
+    cursor.execute(f'SELECT COUNT(*) as total FROM projects p {where_clause}', params)
+    total_projects = cursor.fetchone()['total']
+    
+    # Get paginated projects
+    offset = (page - 1) * per_page
+    cursor.execute(f'''
+        SELECT p.*, 
+               CONCAT(u.first_name, ' ', u.last_name) as homeowner_name,
+               u.email as homeowner_email,
+               (SELECT COUNT(*) FROM bids b WHERE b.project_id = p.id) as bid_count,
+               (SELECT COUNT(*) FROM bids b WHERE b.project_id = p.id AND b.status = 'Accepted') as accepted_bids
+        FROM projects p
+        JOIN homeowners h ON p.homeowner_id = h.id
+        JOIN users u ON h.user_id = u.id
+        {where_clause}
+        ORDER BY p.created_at DESC
+        LIMIT %s OFFSET %s
+    ''', params + [per_page, offset])
+    projects = cursor.fetchall()
+    
+    cursor.close()
+    conn.close()
+    
+    # Calculate pagination
+    total_pages = (total_projects + per_page - 1) // per_page
+    
+    # Log admin activity
+    log_admin_activity(user['id'], 'Viewed Project Management', 'project')
+    
+    return render_template('admin/projects.html', 
+                         projects=projects,
+                         page=page,
+                         total_pages=total_pages,
+                         total_projects=total_projects,
+                         status_filter=status_filter,
+                         project_type_filter=project_type_filter)
+
+@app.route('/admin/analytics')
+@admin_required
+def admin_analytics():
+    """Business Intelligence & Analytics"""
+    user = session['user']
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # User engagement analytics
+    cursor.execute('''
+        SELECT 
+            DATE(created_at) as date,
+            COUNT(*) as new_users
+        FROM users 
+        WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+        GROUP BY DATE(created_at)
+        ORDER BY date DESC
+    ''')
+    user_growth = cursor.fetchall()
+    
+    # Project success rate metrics
+    cursor.execute('''
+        SELECT 
+            p.status,
+            COUNT(*) as count,
+            ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM projects), 2) as percentage
+        FROM projects p
+        GROUP BY p.status
+    ''')
+    project_status_distribution = cursor.fetchall()
+    
+    # Contractor performance analytics
+    cursor.execute('''
+        SELECT 
+            CONCAT(u.first_name, ' ', u.last_name) as contractor_name,
+            c.company,
+            COUNT(b.id) as total_bids,
+            COUNT(CASE WHEN b.status = 'Accepted' THEN 1 END) as accepted_bids,
+            ROUND(COUNT(CASE WHEN b.status = 'Accepted' THEN 1 END) * 100.0 / COUNT(b.id), 2) as success_rate,
+            AVG(b.amount) as avg_bid_amount
+        FROM contractors c
+        JOIN users u ON c.user_id = u.id
+        LEFT JOIN bids b ON c.id = b.contractor_id
+        GROUP BY c.id, u.first_name, u.last_name, c.company
+        HAVING COUNT(b.id) > 0
+        ORDER BY success_rate DESC, total_bids DESC
+        LIMIT 20
+    ''')
+    contractor_performance = cursor.fetchall()
+    
+    # Revenue tracking
+    cursor.execute('''
+        SELECT 
+            DATE_FORMAT(b.created_at, '%Y-%m') as month,
+            SUM(CASE WHEN b.status = 'Accepted' THEN b.amount ELSE 0 END) as revenue,
+            COUNT(CASE WHEN b.status = 'Accepted' THEN 1 END) as completed_projects
+        FROM bids b
+        WHERE b.created_at >= DATE_SUB(NOW(), INTERVAL 12 MONTH)
+        GROUP BY DATE_FORMAT(b.created_at, '%Y-%m')
+        ORDER BY month DESC
+    ''')
+    revenue_trends = cursor.fetchall()
+    
+    # Geographic distribution
+    cursor.execute('''
+        SELECT 
+            COALESCE(h.location, 'Unknown') as location,
+            COUNT(*) as homeowner_count
+        FROM homeowners h
+        GROUP BY h.location
+        ORDER BY homeowner_count DESC
+        LIMIT 10
+    ''')
+    homeowner_distribution = cursor.fetchall()
+    
+    cursor.execute('''
+        SELECT 
+            COALESCE(c.location, 'Unknown') as location,
+            COUNT(*) as contractor_count
+        FROM contractors c
+        GROUP BY c.location
+        ORDER BY contractor_count DESC
+        LIMIT 10
+    ''')
+    contractor_distribution = cursor.fetchall()
+    
+    cursor.close()
+    conn.close()
+    
+    # Log admin activity
+    log_admin_activity(user['id'], 'Viewed Analytics Dashboard', 'system')
+    
+    return render_template('admin/analytics.html',
+                         user_growth=user_growth,
+                         project_status_distribution=project_status_distribution,
+                         contractor_performance=contractor_performance,
+                         revenue_trends=revenue_trends,
+                         homeowner_distribution=homeowner_distribution,
+                         contractor_distribution=contractor_distribution)
+
+@app.route('/admin/moderation')
+@admin_required
+def admin_moderation():
+    """Content Moderation Interface"""
+    user = session['user']
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Get pending content for moderation
+    cursor.execute('''
+        SELECT cm.*, 
+               CASE 
+                   WHEN cm.content_type = 'project' THEN p.title
+                   WHEN cm.content_type = 'contractor_profile' THEN CONCAT(u.first_name, ' ', u.last_name, ' - ', c.company)
+                   ELSE 'Other Content'
+               END as content_title,
+               CASE 
+                   WHEN cm.content_type = 'project' THEN p.description
+                   WHEN cm.content_type = 'contractor_profile' THEN c.business_info
+                   ELSE NULL
+               END as content_description
+        FROM content_moderation cm
+        LEFT JOIN projects p ON cm.content_type = 'project' AND cm.content_id = p.id
+        LEFT JOIN contractors c ON cm.content_type = 'contractor_profile' AND cm.content_id = c.id
+        LEFT JOIN users u ON c.user_id = u.id
+        WHERE cm.status = 'pending'
+        ORDER BY cm.created_at ASC
+    ''')
+    pending_content = cursor.fetchall()
+    
+    # Get recent moderation actions
+    cursor.execute('''
+        SELECT cm.*, 
+               CONCAT(u.first_name, ' ', u.last_name) as reviewer_name,
+               CASE 
+                   WHEN cm.content_type = 'project' THEN p.title
+                   WHEN cm.content_type = 'contractor_profile' THEN CONCAT(cu.first_name, ' ', cu.last_name)
+                   ELSE 'Other Content'
+               END as content_title
+        FROM content_moderation cm
+        LEFT JOIN admin_users au ON cm.reviewed_by = au.id
+        LEFT JOIN users u ON au.user_id = u.id
+        LEFT JOIN projects p ON cm.content_type = 'project' AND cm.content_id = p.id
+        LEFT JOIN contractors c ON cm.content_type = 'contractor_profile' AND cm.content_id = c.id
+        LEFT JOIN users cu ON c.user_id = cu.id
+        WHERE cm.status != 'pending'
+        ORDER BY cm.reviewed_at DESC
+        LIMIT 20
+    ''')
+    recent_actions = cursor.fetchall()
+    
+    cursor.close()
+    conn.close()
+    
+    # Log admin activity
+    log_admin_activity(user['id'], 'Viewed Content Moderation', 'system')
+    
+    return render_template('admin/moderation.html',
+                         pending_content=pending_content,
+                         recent_actions=recent_actions)
+
+@app.route('/admin/user/<int:user_id>/toggle_status', methods=['POST'])
+@admin_required
+def admin_toggle_user_status(user_id):
+    """Toggle user account status (activate/deactivate)"""
+    admin_user = session['user']
+    action = request.json.get('action')  # 'activate' or 'deactivate'
+    
+    if action not in ['activate', 'deactivate']:
+        return jsonify({'success': False, 'message': 'Invalid action'}), 400
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Get user details
+    cursor.execute('SELECT * FROM users WHERE id = %s', (user_id,))
+    user = cursor.fetchone()
+    if not user:
+        cursor.close()
+        conn.close()
+        return jsonify({'success': False, 'message': 'User not found'}), 404
+    
+    # For now, we'll use a simple approach since we don't have an 'active' column
+    # In a production system, you'd add an 'is_active' column to the users table
+    
+    # Log the action
+    log_admin_activity(admin_user['id'], f'User {action.title()}', 'user', user_id, {
+        'target_user_email': user['email'],
+        'target_user_name': f"{user['first_name']} {user['last_name']}"
+    })
+    
+    cursor.close()
+    conn.close()
+    
+    return jsonify({'success': True, 'message': f'User {action}d successfully'})
+
+@app.route('/admin/create_admin', methods=['POST'])
+@admin_required
+def admin_create_admin():
+    """Create new admin user"""
+    admin_user = session['user']
+    admin_level = get_admin_level(admin_user['id'])
+    
+    # Only super_admin can create other admins
+    if admin_level != 'super_admin':
+        return jsonify({'success': False, 'message': 'Only super admins can create admin users'}), 403
+    
+    user_id = request.json.get('user_id')
+    new_admin_level = request.json.get('admin_level', 'admin')
+    
+    if new_admin_level not in ['super_admin', 'admin', 'moderator']:
+        return jsonify({'success': False, 'message': 'Invalid admin level'}), 400
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Check if user exists
+    cursor.execute('SELECT * FROM users WHERE id = %s', (user_id,))
+    user = cursor.fetchone()
+    if not user:
+        cursor.close()
+        conn.close()
+        return jsonify({'success': False, 'message': 'User not found'}), 404
+    
+    # Check if user is already an admin
+    cursor.execute('SELECT * FROM admin_users WHERE user_id = %s', (user_id,))
+    existing_admin = cursor.fetchone()
+    if existing_admin:
+        cursor.close()
+        conn.close()
+        return jsonify({'success': False, 'message': 'User is already an admin'}), 400
+    
+    # Create admin user
+    cursor.execute('''
+        INSERT INTO admin_users (user_id, admin_level, created_by)
+        VALUES (%s, %s, %s)
+    ''', (user_id, new_admin_level, admin_user['id']))
+    
+    conn.commit()
+    cursor.close()
+    conn.close()
+    
+    # Log the action
+    log_admin_activity(admin_user['id'], 'Created Admin User', 'user', user_id, {
+        'target_user_email': user['email'],
+        'admin_level': new_admin_level
+    })
+    
+    return jsonify({'success': True, 'message': 'Admin user created successfully'})
 
 # def create_demo_users():
 #     """Adapted for Cognito - run manually or via script"""
@@ -1368,6 +2821,12 @@ if __name__ == '__main__':
     expired_count = expire_old_bids()
     if expired_count > 0:
         print(f"Expired {expired_count} old bids")
+    
+    # Cleanup expired guest projects on startup
+    print("Cleaning up expired guest projects...")
+    cleanup_count = cleanup_expired_guest_projects()
+    if cleanup_count > 0:
+        print(f"Marked {cleanup_count} expired guest projects")
     
     # Tables should be created in RDS separately
     # create_demo_users()  # If needed, adapt and run separately

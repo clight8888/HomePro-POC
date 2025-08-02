@@ -1,0 +1,247 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard - HomePro{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h1 class="h3 mb-0">Admin Dashboard</h1>
+                <div class="d-flex align-items-center">
+                    <span class="badge bg-primary me-2">{{ admin_level.title() }}</span>
+                    <a href="/admin/users" class="btn btn-outline-primary btn-sm me-2">Manage Users</a>
+                    <a href="/admin/projects" class="btn btn-outline-success btn-sm me-2">Manage Projects</a>
+                    <a href="/admin/analytics" class="btn btn-outline-info btn-sm">Analytics</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Key Metrics Cards -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Total Users</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.total_users }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-users fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Active Projects</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.active_projects }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-project-diagram fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-info shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Total Revenue</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">${{ "{:,.2f}".format(stats.total_revenue) }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-dollar-sign fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Pending Reviews</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.pending_verifications + stats.pending_moderation }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-clock fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Detailed Statistics -->
+    <div class="row mb-4">
+        <div class="col-lg-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Platform Overview</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6">
+                            <div class="mb-3">
+                                <small class="text-muted">Homeowners</small>
+                                <div class="h6">{{ stats.total_homeowners }}</div>
+                            </div>
+                            <div class="mb-3">
+                                <small class="text-muted">Contractors</small>
+                                <div class="h6">{{ stats.total_contractors }}</div>
+                            </div>
+                            <div class="mb-3">
+                                <small class="text-muted">Total Projects</small>
+                                <div class="h6">{{ stats.total_projects }}</div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="mb-3">
+                                <small class="text-muted">Completed Projects</small>
+                                <div class="h6">{{ stats.completed_projects }}</div>
+                            </div>
+                            <div class="mb-3">
+                                <small class="text-muted">Total Bids</small>
+                                <div class="h6">{{ stats.total_bids }}</div>
+                            </div>
+                            <div class="mb-3">
+                                <small class="text-muted">Accepted Bids</small>
+                                <div class="h6">{{ stats.accepted_bids }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Quick Actions</h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="/admin/moderation" class="btn btn-outline-warning">
+                            <i class="fas fa-flag me-2"></i>Content Moderation ({{ stats.pending_moderation }})
+                        </a>
+                        <a href="/admin/users?role=contractor" class="btn btn-outline-info">
+                            <i class="fas fa-user-check me-2"></i>Verify Contractors
+                        </a>
+                        <a href="/admin/projects?status=Active" class="btn btn-outline-success">
+                            <i class="fas fa-tasks me-2"></i>Monitor Active Projects
+                        </a>
+                        <a href="/admin/analytics" class="btn btn-outline-primary">
+                            <i class="fas fa-chart-bar me-2"></i>View Analytics
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="row">
+        <div class="col-lg-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Recent Users</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Role</th>
+                                    <th>Joined</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for user in recent_users %}
+                                <tr>
+                                    <td>{{ user.first_name }} {{ user.last_name }}</td>
+                                    <td>
+                                        <span class="badge bg-{{ 'success' if user.role == 'contractor' else 'primary' }}">
+                                            {{ user.role.title() }}
+                                        </span>
+                                    </td>
+                                    <td>{{ user.created_at.strftime('%m/%d/%Y') }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="text-center">
+                        <a href="/admin/users" class="btn btn-sm btn-outline-primary">View All Users</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Recent Projects</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Project</th>
+                                    <th>Type</th>
+                                    <th>Created</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for project in recent_projects %}
+                                <tr>
+                                    <td>
+                                        <div class="fw-bold">{{ project.title[:30] }}{% if project.title|length > 30 %}...{% endif %}</div>
+                                        <small class="text-muted">by {{ project.homeowner_name }}</small>
+                                    </td>
+                                    <td>{{ project.project_type }}</td>
+                                    <td>{{ project.created_at.strftime('%m/%d/%Y') }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="text-center">
+                        <a href="/admin/projects" class="btn btn-sm btn-outline-primary">View All Projects</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.border-left-primary {
+    border-left: 0.25rem solid #4e73df !important;
+}
+.border-left-success {
+    border-left: 0.25rem solid #1cc88a !important;
+}
+.border-left-info {
+    border-left: 0.25rem solid #36b9cc !important;
+}
+.border-left-warning {
+    border-left: 0.25rem solid #f6c23e !important;
+}
+</style>
+{% endblock %}

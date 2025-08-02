@@ -1,0 +1,261 @@
+{% extends "base.html" %}
+
+{% block title %}Project Management - Admin Portal{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h1 class="h3 mb-0">Project Management</h1>
+                <div class="d-flex align-items-center">
+                    <a href="/admin" class="btn btn-outline-secondary btn-sm">
+                        <i class="fas fa-arrow-left me-1"></i>Back to Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <form method="GET" class="row g-3">
+                        <div class="col-md-4">
+                            <label for="status" class="form-label">Status Filter</label>
+                            <select class="form-select" id="status" name="status">
+                                <option value="">All Statuses</option>
+                                <option value="Active" {{ 'selected' if status_filter == 'Active' }}>Active</option>
+                                <option value="Completed" {{ 'selected' if status_filter == 'Completed' }}>Completed</option>
+                                <option value="Cancelled" {{ 'selected' if status_filter == 'Cancelled' }}>Cancelled</option>
+                                <option value="On Hold" {{ 'selected' if status_filter == 'On Hold' }}>On Hold</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="project_type" class="form-label">Project Type</label>
+                            <select class="form-select" id="project_type" name="project_type">
+                                <option value="">All Types</option>
+                                <option value="Kitchen Renovation" {{ 'selected' if project_type_filter == 'Kitchen Renovation' }}>Kitchen Renovation</option>
+                                <option value="Bathroom Renovation" {{ 'selected' if project_type_filter == 'Bathroom Renovation' }}>Bathroom Renovation</option>
+                                <option value="Roofing" {{ 'selected' if project_type_filter == 'Roofing' }}>Roofing</option>
+                                <option value="Plumbing" {{ 'selected' if project_type_filter == 'Plumbing' }}>Plumbing</option>
+                                <option value="Electrical" {{ 'selected' if project_type_filter == 'Electrical' }}>Electrical</option>
+                                <option value="Flooring" {{ 'selected' if project_type_filter == 'Flooring' }}>Flooring</option>
+                                <option value="Painting" {{ 'selected' if project_type_filter == 'Painting' }}>Painting</option>
+                                <option value="HVAC" {{ 'selected' if project_type_filter == 'HVAC' }}>HVAC</option>
+                                <option value="Other" {{ 'selected' if project_type_filter == 'Other' }}>Other</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary me-2">
+                                <i class="fas fa-search me-1"></i>Filter
+                            </button>
+                            <a href="/admin/projects" class="btn btn-outline-secondary">Clear</a>
+                        </div>
+                        <div class="col-md-2 text-end">
+                            <small class="text-muted">{{ total_projects }} total projects</small>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Projects Table -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Projects</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Project</th>
+                                    <th>Homeowner</th>
+                                    <th>Type</th>
+                                    <th>Status</th>
+                                    <th>Budget</th>
+                                    <th>Bids</th>
+                                    <th>Created</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for project in projects %}
+                                <tr>
+                                    <td>
+                                        <div class="fw-bold">{{ project.title }}</div>
+                                        <div class="text-muted small">
+                                            {{ project.description[:100] }}{% if project.description|length > 100 %}...{% endif %}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="fw-bold">{{ project.homeowner_name }}</div>
+                                        <div class="text-muted small">{{ project.homeowner_email }}</div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-info">{{ project.project_type }}</span>
+                                    </td>
+                                    <td>
+                                        {% set status_class = {
+                                            'Active': 'success',
+                                            'Completed': 'primary',
+                                            'Cancelled': 'danger',
+                                            'On Hold': 'warning'
+                                        } %}
+                                        <span class="badge bg-{{ status_class.get(project.status, 'secondary') }}">
+                                            {{ project.status }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if project.budget_min and project.budget_max %}
+                                        ${{ "{:,.0f}".format(project.budget_min) }} - ${{ "{:,.0f}".format(project.budget_max) }}
+                                        {% else %}
+                                        <span class="text-muted">Not specified</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <span class="badge bg-secondary me-1">{{ project.bid_count }}</span>
+                                            {% if project.accepted_bids > 0 %}
+                                            <span class="badge bg-success">{{ project.accepted_bids }} accepted</span>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                    <td>{{ project.created_at.strftime('%m/%d/%Y') }}</td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <button type="button" class="btn btn-sm btn-outline-primary" 
+                                                    onclick="viewProjectDetails({{ project.id }})">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-outline-warning" 
+                                                    onclick="moderateProject({{ project.id }})">
+                                                <i class="fas fa-flag"></i>
+                                            </button>
+                                            <div class="btn-group" role="group">
+                                                <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle" 
+                                                        data-bs-toggle="dropdown">
+                                                    <i class="fas fa-cog"></i>
+                                                </button>
+                                                <ul class="dropdown-menu">
+                                                    <li><a class="dropdown-item" href="#" onclick="changeProjectStatus({{ project.id }}, 'Active')">Mark Active</a></li>
+                                                    <li><a class="dropdown-item" href="#" onclick="changeProjectStatus({{ project.id }}, 'On Hold')">Put On Hold</a></li>
+                                                    <li><a class="dropdown-item" href="#" onclick="changeProjectStatus({{ project.id }}, 'Completed')">Mark Completed</a></li>
+                                                    <li><hr class="dropdown-divider"></li>
+                                                    <li><a class="dropdown-item text-danger" href="#" onclick="changeProjectStatus({{ project.id }}, 'Cancelled')">Cancel Project</a></li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination -->
+                    {% if total_pages > 1 %}
+                    <nav aria-label="Project pagination">
+                        <ul class="pagination justify-content-center">
+                            {% if page > 1 %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page - 1 }}&status={{ status_filter }}&project_type={{ project_type_filter }}">Previous</a>
+                            </li>
+                            {% endif %}
+                            
+                            {% for p in range(1, total_pages + 1) %}
+                            {% if p == page %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ p }}</span>
+                            </li>
+                            {% elif p <= 3 or p >= total_pages - 2 or (p >= page - 1 and p <= page + 1) %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ p }}&status={{ status_filter }}&project_type={{ project_type_filter }}">{{ p }}</a>
+                            </li>
+                            {% elif p == 4 or p == total_pages - 3 %}
+                            <li class="page-item disabled">
+                                <span class="page-link">...</span>
+                            </li>
+                            {% endif %}
+                            {% endfor %}
+                            
+                            {% if page < total_pages %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page + 1 }}&status={{ status_filter }}&project_type={{ project_type_filter }}">Next</a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Project Details Modal -->
+<div class="modal fade" id="projectDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Project Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="projectDetailsContent">
+                <!-- Project details will be loaded here -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function viewProjectDetails(projectId) {
+    // In a real implementation, you would fetch project details via AJAX
+    document.getElementById('projectDetailsContent').innerHTML = `
+        <div class="text-center">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2">Loading project details for ID: ${projectId}</p>
+        </div>
+    `;
+    
+    new bootstrap.Modal(document.getElementById('projectDetailsModal')).show();
+    
+    // Simulate loading project details
+    setTimeout(() => {
+        document.getElementById('projectDetailsContent').innerHTML = `
+            <div class="alert alert-info">
+                <strong>Project ID:</strong> ${projectId}<br>
+                <strong>Note:</strong> Full project details implementation would fetch data from the server.
+            </div>
+        `;
+    }, 1000);
+}
+
+function moderateProject(projectId) {
+    if (confirm('Flag this project for content moderation?')) {
+        // Implement project moderation
+        alert('Project flagged for moderation: ' + projectId);
+    }
+}
+
+function changeProjectStatus(projectId, newStatus) {
+    if (confirm(`Change project status to "${newStatus}"?`)) {
+        // Implement status change
+        alert(`Project ${projectId} status changed to: ${newStatus}`);
+        location.reload();
+    }
+}
+</script>
+{% endblock %}

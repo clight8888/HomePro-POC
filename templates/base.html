@@ -89,6 +89,30 @@
                                 {% endif %}
                             </a>
                         </li>
+                        {% if user.is_admin %}
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" id="adminDropdown" role="button" data-bs-toggle="dropdown">
+                                    <i class="fas fa-cog me-1"></i>Admin
+                                </a>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="{{ url_for('admin_dashboard') }}">
+                                        <i class="fas fa-chart-line me-2"></i>Dashboard
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="{{ url_for('admin_users') }}">
+                                        <i class="fas fa-users me-2"></i>User Management
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="{{ url_for('admin_projects') }}">
+                                        <i class="fas fa-project-diagram me-2"></i>Project Management
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="{{ url_for('admin_analytics') }}">
+                                        <i class="fas fa-analytics me-2"></i>Analytics
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="{{ url_for('admin_moderation') }}">
+                                        <i class="fas fa-shield-alt me-2"></i>Content Moderation
+                                    </a></li>
+                                </ul>
+                            </li>
+                        {% endif %}
                     {% else %}
                         <li class="nav-item">
                             <a class="nav-link" href="{{ url_for('submit_project') }}">Submit Project</a>
@@ -105,6 +129,9 @@
                                 {% else %}
                                     <i class="fas fa-home me-1"></i>{{ user.first_name }}
                                     <span class="badge bg-success ms-1">Homeowner</span>
+                                {% endif %}
+                                {% if user.is_admin %}
+                                    <span class="badge bg-danger ms-1">Admin</span>
                                 {% endif %}
                             </a>
                             <ul class="dropdown-menu">

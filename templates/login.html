@@ -26,6 +26,11 @@
                     {% endwith %}
                     
                     <form method="POST">
+                        <!-- Hidden field for redirect context -->
+                        {% if request.args.get('return_to') == 'submit_project' %}
+                            <input type="hidden" name="redirect_to_project" value="true">
+                        {% endif %}
+                        
                         <div class="mb-3">
                             <label for="email" class="form-label">Email Address</label>
                             <input type="email" class="form-control" id="email" name="email" required>
@@ -57,7 +62,12 @@
                     <hr class="my-4">
                     
                     <div class="text-center">
-                        <p class="mb-0">Don't have an account? <a href="{{ url_for('register') }}" class="text-decoration-none">Create one here</a></p>
+                        {% if session.get('guest_project_id') %}
+                            <p class="mb-0">Don't have an account? <a href="{{ url_for('guest_register') }}" class="text-decoration-none">Complete your registration</a></p>
+                            <small class="text-muted">You have a project waiting to be claimed!</small>
+                        {% else %}
+                            <p class="mb-0">Don't have an account? <a href="{{ url_for('register') }}" class="text-decoration-none">Create one here</a></p>
+                        {% endif %}
                     </div>
                 </div>
             </div>

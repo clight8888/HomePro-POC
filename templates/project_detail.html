@@ -124,10 +124,35 @@
                     {% if audio_url %}
                     <div class="mb-4">
                         <h5><i class="fas fa-microphone me-2"></i>Original Audio Recording</h5>
-                        <audio controls class="w-100">
-                            <source src="{{ audio_url }}" type="audio/mpeg">
-                            Your browser does not support the audio element.
-                        </audio>
+                        <div class="custom-audio-player bg-light p-3 rounded">
+                            <audio id="audioPlayer" preload="metadata">
+                                <source src="{{ audio_url }}" type="audio/mpeg">
+                                <source src="{{ audio_url }}" type="audio/webm">
+                                <source src="{{ audio_url }}" type="audio/wav">
+                                Your browser does not support the audio element.
+                            </audio>
+                            
+                            <div class="audio-controls d-flex align-items-center gap-3">
+                                <button id="playPauseBtn" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-play"></i>
+                                </button>
+                                
+                                <div class="audio-progress flex-grow-1">
+                                    <div class="progress" style="height: 8px; cursor: pointer;">
+                                        <div id="progressBar" class="progress-bar bg-primary" role="progressbar" style="width: 0%"></div>
+                                    </div>
+                                    <div class="d-flex justify-content-between mt-1">
+                                        <small id="currentTime" class="text-muted">0:00</small>
+                                        <small id="duration" class="text-muted">0:00</small>
+                                    </div>
+                                </div>
+                                
+                                <div class="volume-control d-flex align-items-center gap-2">
+                                    <i class="fas fa-volume-up text-muted"></i>
+                                    <input type="range" id="volumeSlider" class="form-range" min="0" max="100" value="100" style="width: 80px;">
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     {% endif %}
                     
@@ -1109,5 +1134,79 @@ function shareProject() {
 function saveProject() {
     alert('Save project functionality would be implemented here');
 }
+
+// Custom Audio Player Functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const audioPlayer = document.getElementById('audioPlayer');
+    const playPauseBtn = document.getElementById('playPauseBtn');
+    const progressBar = document.getElementById('progressBar');
+    const currentTimeEl = document.getElementById('currentTime');
+    const durationEl = document.getElementById('duration');
+    const volumeSlider = document.getElementById('volumeSlider');
+    const progressContainer = progressBar?.parentElement;
+
+    if (!audioPlayer) return; // Exit if no audio player on page
+
+    // Format time helper function
+    function formatTime(seconds) {
+        const mins = Math.floor(seconds / 60);
+        const secs = Math.floor(seconds % 60);
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
+    }
+
+    // Load metadata and set duration
+    audioPlayer.addEventListener('loadedmetadata', function() {
+        durationEl.textContent = formatTime(audioPlayer.duration);
+    });
+
+    // Update progress bar and current time
+    audioPlayer.addEventListener('timeupdate', function() {
+        const progress = (audioPlayer.currentTime / audioPlayer.duration) * 100;
+        progressBar.style.width = progress + '%';
+        currentTimeEl.textContent = formatTime(audioPlayer.currentTime);
+    });
+
+    // Play/Pause button functionality
+    playPauseBtn.addEventListener('click', function() {
+        if (audioPlayer.paused) {
+            audioPlayer.play();
+            playPauseBtn.innerHTML = '<i class="fas fa-pause"></i>';
+        } else {
+            audioPlayer.pause();
+            playPauseBtn.innerHTML = '<i class="fas fa-play"></i>';
+        }
+    });
+
+    // Progress bar click to seek
+    progressContainer.addEventListener('click', function(e) {
+        const rect = progressContainer.getBoundingClientRect();
+        const clickX = e.clientX - rect.left;
+        const width = rect.width;
+        const clickPercent = clickX / width;
+        const newTime = clickPercent * audioPlayer.duration;
+        audioPlayer.currentTime = newTime;
+    });
+
+    // Volume control
+    volumeSlider.addEventListener('input', function() {
+        audioPlayer.volume = volumeSlider.value / 100;
+    });
+
+    // Reset play button when audio ends
+    audioPlayer.addEventListener('ended', function() {
+        playPauseBtn.innerHTML = '<i class="fas fa-play"></i>';
+        progressBar.style.width = '0%';
+        currentTimeEl.textContent = '0:00';
+    });
+
+    // Handle audio loading errors
+    audioPlayer.addEventListener('error', function() {
+        console.error('Audio loading error:', audioPlayer.error);
+        playPauseBtn.disabled = true;
+        playPauseBtn.innerHTML = '<i class="fas fa-exclamation-triangle"></i>';
+        currentTimeEl.textContent = 'Error';
+        durationEl.textContent = 'Error';
+    });
+});
 </script>
 {% endblock %}

@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Complete Your Registration - HomePro</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .hero-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 4rem 0;
+        }
+        .form-container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            padding: 2rem;
+            margin-top: -2rem;
+            position: relative;
+            z-index: 10;
+        }
+        .project-summary {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            border-left: 4px solid #667eea;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-weight: 600;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        .form-control:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+        }
+        .success-icon {
+            color: #28a745;
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Hero Section -->
+    <section class="hero-section">
+        <div class="container">
+            <div class="row justify-content-center text-center">
+                <div class="col-lg-8">
+                    <i class="fas fa-check-circle success-icon"></i>
+                    <h1 class="display-4 fw-bold mb-3">Project Submitted Successfully!</h1>
+                    <p class="lead">Complete your registration to manage your project and receive contractor bids.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Registration Form -->
+    <section class="py-5">
+        <div class="container">
+            <div class="row justify-content-center">
+                <div class="col-lg-8">
+                    <div class="form-container">
+                        {% if guest_project %}
+                        <!-- Project Summary -->
+                        <div class="project-summary">
+                            <h5><i class="fas fa-project-diagram me-2"></i>Your Project Summary</h5>
+                            <div class="row mt-3">
+                                <div class="col-md-6">
+                                    <strong>Title:</strong> {{ guest_project.title }}
+                                </div>
+                                <div class="col-md-6">
+                                    <strong>Type:</strong> {{ guest_project.project_type }}
+                                </div>
+                                <div class="col-md-6 mt-2">
+                                    <strong>Location:</strong> {{ guest_project.location or 'Not specified' }}
+                                </div>
+                                <div class="col-md-6 mt-2">
+                                    <strong>Budget:</strong> 
+                                    {% if guest_project.budget_min and guest_project.budget_max %}
+                                        ${{ "{:,.0f}".format(guest_project.budget_min) }} - ${{ "{:,.0f}".format(guest_project.budget_max) }}
+                                    {% else %}
+                                        Not specified
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <h3 class="text-center mb-4">Complete Your Registration</h3>
+                        
+                        {% with messages = get_flashed_messages() %}
+                            {% if messages %}
+                                {% for message in messages %}
+                                    <div class="alert alert-info alert-dismissible fade show" role="alert">
+                                        {{ message }}
+                                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                    </div>
+                                {% endfor %}
+                            {% endif %}
+                        {% endwith %}
+
+                        <form method="POST" action="{{ url_for('guest_register') }}">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="first_name" class="form-label">First Name *</label>
+                                    <input type="text" class="form-control" id="first_name" name="first_name" 
+                                           value="{{ request.form.first_name or '' }}" required>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="last_name" class="form-label">Last Name *</label>
+                                    <input type="text" class="form-control" id="last_name" name="last_name" 
+                                           value="{{ request.form.last_name or '' }}" required>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="email" class="form-label">Email Address *</label>
+                                <input type="email" class="form-control" id="email" name="email" 
+                                       value="{{ guest_project.guest_email if guest_project else request.form.email or '' }}" required>
+                                <div class="form-text">We'll use this to send you project updates and contractor bids.</div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="phone" class="form-label">Phone Number</label>
+                                <input type="tel" class="form-control" id="phone" name="phone" 
+                                       value="{{ guest_project.guest_phone if guest_project else request.form.phone or '' }}">
+                                <div class="form-text">Optional - for contractors to contact you directly.</div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="location" class="form-label">Location</label>
+                                <input type="text" class="form-control" id="location" name="location" 
+                                       value="{{ guest_project.location if guest_project else request.form.location or '' }}" 
+                                       placeholder="City, State">
+                                <div class="form-text">Help contractors find projects in their area.</div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="password" class="form-label">Password *</label>
+                                <input type="password" class="form-control" id="password" name="password" required>
+                                <div class="form-text">Must be at least 8 characters long.</div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="confirm_password" class="form-label">Confirm Password *</label>
+                                <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
+                            </div>
+
+                            <div class="mb-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="terms" name="terms" required>
+                                    <label class="form-check-label" for="terms">
+                                        I agree to the <a href="#" class="text-decoration-none">Terms of Service</a> and 
+                                        <a href="#" class="text-decoration-none">Privacy Policy</a> *
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="d-grid gap-2">
+                                <button type="submit" class="btn btn-primary btn-lg">
+                                    <i class="fas fa-user-plus me-2"></i>Complete Registration
+                                </button>
+                            </div>
+                        </form>
+
+                        <div class="text-center mt-4">
+                            <p class="text-muted">Already have an account? 
+                                <a href="{{ url_for('login') }}" class="text-decoration-none">Sign in here</a>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Password confirmation validation
+        document.getElementById('confirm_password').addEventListener('input', function() {
+            const password = document.getElementById('password').value;
+            const confirmPassword = this.value;
+            
+            if (password !== confirmPassword) {
+                this.setCustomValidity('Passwords do not match');
+            } else {
+                this.setCustomValidity('');
+            }
+        });
+
+        // Password strength validation
+        document.getElementById('password').addEventListener('input', function() {
+            const password = this.value;
+            
+            if (password.length < 8) {
+                this.setCustomValidity('Password must be at least 8 characters long');
+            } else {
+                this.setCustomValidity('');
+            }
+        });
+    </script>
+</body>
+</html>
