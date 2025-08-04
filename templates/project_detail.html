@@ -113,6 +113,84 @@
                         </div>
                     </div>
                     
+                    <!-- Project Status Flow (only show for In Progress projects) -->
+                    {% set accepted_bid = bids|selectattr('status', 'equalto', 'Accepted')|first %}
+                    {% if accepted_bid and project.status == 'In Progress' %}
+                    <div class="mb-4">
+                        <h5><i class="fas fa-tasks me-2"></i>Project Progress</h5>
+                        <div class="bg-light p-4 rounded">
+                            <div class="row align-items-center mb-3">
+                                <div class="col-md-8">
+                                    <div class="progress" style="height: 25px;">
+                                        <div class="progress-bar bg-success progress-bar-striped progress-bar-animated" 
+                                             role="progressbar" 
+                                             style="width: {{ project_status.progress_percentage if project_status else 0 }}%"
+                                             aria-valuenow="{{ project_status.progress_percentage if project_status else 0 }}" 
+                                             aria-valuemin="0" 
+                                             aria-valuemax="100">
+                                            {{ project_status.progress_percentage if project_status else 0 }}%
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 text-end">
+                                    {% if user and (user.role == 'homeowner' and user.id == project.homeowner_id) or (user.role == 'contractor' and user.id == accepted_bid.contractor_id) %}
+                                    <button class="btn btn-primary btn-sm" onclick="updateProgress({{ project.id }})">
+                                        <i class="fas fa-edit me-1"></i>Update Progress
+                                    </button>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <!-- Progress Milestones -->
+                            <div class="row g-2">
+                                {% for milestone in range(0, 101, 10) %}
+                                <div class="col-6 col-md-4 col-lg-3">
+                                    <div class="d-flex align-items-center">
+                                        <div class="milestone-indicator me-2 
+                                                    {% if project_status and project_status.progress_percentage >= milestone %}
+                                                        bg-success text-white
+                                                    {% else %}
+                                                        bg-light text-muted
+                                                    {% endif %}" 
+                                             style="width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold;">
+                                            {% if project_status and project_status.progress_percentage >= milestone %}
+                                                <i class="fas fa-check"></i>
+                                            {% else %}
+                                                {{ milestone }}
+                                            {% endif %}
+                                        </div>
+                                        <small class="text-muted">
+                                            {% if milestone == 0 %}Project Started
+                                            {% elif milestone == 10 %}Planning
+                                            {% elif milestone == 20 %}Materials
+                                            {% elif milestone == 30 %}Preparation
+                                            {% elif milestone == 40 %}Foundation
+                                            {% elif milestone == 50 %}Halfway
+                                            {% elif milestone == 60 %}Major Work
+                                            {% elif milestone == 70 %}Finishing
+                                            {% elif milestone == 80 %}Details
+                                            {% elif milestone == 90 %}Final Touches
+                                            {% elif milestone == 100 %}Completed
+                                            {% endif %}
+                                        </small>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            
+                            {% if project_status and project_status.notes %}
+                            <div class="mt-3">
+                                <small class="text-muted">
+                                    <strong>Latest Update:</strong> {{ project_status.notes }}
+                                    <br>
+                                    <em>Updated {{ project_status.updated_at.strftime('%B %d, %Y at %I:%M %p') }}</em>
+                                </small>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+                    
                     <!-- Project Description -->
                     <div class="mb-4">
                         <h5><i class="fas fa-file-alt me-2"></i>Project Description</h5>
@@ -121,37 +199,52 @@
                         </div>
                     </div>
                     
+                    <!-- Project Images -->
+                    {% if project_images %}
+                    <div class="mb-4">
+                        <h5><i class="fas fa-images me-2"></i>Project Images ({{ project_images|length }})</h5>
+                        <div class="row g-3">
+                            {% for image in project_images %}
+                            <div class="col-md-6 col-lg-3">
+                                <div class="card shadow-sm">
+                                    <div class="position-relative">
+                                        <img src="{{ url_for('uploaded_file', filename=image.image_path) }}" 
+                                             class="card-img-top" 
+                                             alt="Project Image {{ loop.index }}"
+                                             style="height: 200px; object-fit: cover; cursor: pointer; transition: transform 0.2s;"
+                                             onclick="openImageSlideshow({{ loop.index0 }})"
+                                             onmouseover="this.style.transform='scale(1.05)'"
+                                             onmouseout="this.style.transform='scale(1)'">
+                                        <div class="position-absolute top-0 end-0 m-2">
+                                            <span class="badge bg-dark bg-opacity-75">{{ loop.index }}/{{ project_images|length }}</span>
+                                        </div>
+                                        <div class="position-absolute bottom-0 start-0 end-0 bg-dark bg-opacity-50 text-white p-2">
+                                            <i class="fas fa-search-plus me-1"></i>Click to view
+                                        </div>
+                                    </div>
+                                    <div class="card-body p-2">
+                                        <small class="text-muted">
+                                            <i class="fas fa-calendar me-1"></i>
+                                            {{ image.created_at.strftime('%m/%d/%Y') }}
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                    
                     {% if audio_url %}
                     <div class="mb-4">
                         <h5><i class="fas fa-microphone me-2"></i>Original Audio Recording</h5>
-                        <div class="custom-audio-player bg-light p-3 rounded">
-                            <audio id="audioPlayer" preload="metadata">
+                        <div class="bg-light p-3 rounded">
+                            <audio controls preload="metadata" class="w-100" style="height: 40px;">
                                 <source src="{{ audio_url }}" type="audio/mpeg">
                                 <source src="{{ audio_url }}" type="audio/webm">
                                 <source src="{{ audio_url }}" type="audio/wav">
                                 Your browser does not support the audio element.
                             </audio>
-                            
-                            <div class="audio-controls d-flex align-items-center gap-3">
-                                <button id="playPauseBtn" class="btn btn-primary btn-sm">
-                                    <i class="fas fa-play"></i>
-                                </button>
-                                
-                                <div class="audio-progress flex-grow-1">
-                                    <div class="progress" style="height: 8px; cursor: pointer;">
-                                        <div id="progressBar" class="progress-bar bg-primary" role="progressbar" style="width: 0%"></div>
-                                    </div>
-                                    <div class="d-flex justify-content-between mt-1">
-                                        <small id="currentTime" class="text-muted">0:00</small>
-                                        <small id="duration" class="text-muted">0:00</small>
-                                    </div>
-                                </div>
-                                
-                                <div class="volume-control d-flex align-items-center gap-2">
-                                    <i class="fas fa-volume-up text-muted"></i>
-                                    <input type="range" id="volumeSlider" class="form-range" min="0" max="100" value="100" style="width: 80px;">
-                                </div>
-                            </div>
                         </div>
                     </div>
                     {% endif %}
@@ -453,6 +546,9 @@
                                                     <button class="btn btn-outline-danger" onclick="showRejectConfirmation({{ bid.id }}, '{{ bid.contractor.first_name }} {{ bid.contractor.last_name }}')">
                                                         <i class="fas fa-times"></i>
                                                     </button>
+                                                    <button class="btn btn-outline-info" onclick="openBidMessaging({{ bid.id }}, '{{ bid.contractor.first_name }} {{ bid.contractor.last_name }}', {{ bid.amount }})" title="Discuss Bid">
+                                                        <i class="fas fa-comments"></i>
+                                                    </button>
                                                     <button class="btn btn-outline-primary" onclick="contactContractor({{ bid.contractor.id }})">
                                                         <i class="fas fa-envelope"></i>
                                                     </button>
@@ -462,6 +558,9 @@
                                                     {% if bid.status == 'Submitted' %}
                                                     <button class="btn btn-outline-warning" onclick="showWithdrawConfirmation({{ bid.id }})" title="Withdraw Bid">
                                                         <i class="fas fa-minus-circle"></i>
+                                                    </button>
+                                                    <button class="btn btn-outline-info" onclick="openBidMessaging({{ bid.id }}, '{{ bid.contractor.first_name }} {{ bid.contractor.last_name }}', {{ bid.amount }})" title="Discuss Bid">
+                                                        <i class="fas fa-comments"></i>
                                                     </button>
                                                     {% endif %}
                                                     <button class="btn btn-outline-info" onclick="window.location.href='{{ url_for('bid_history', bid_id=bid.id) }}'" title="View History">
@@ -552,6 +651,9 @@
                                                     <button class="btn btn-outline-danger btn-sm" onclick="showRejectConfirmation({{ bid.id }}, '{{ bid.contractor.first_name }} {{ bid.contractor.last_name }}')" title="Reject Bid">
                                                         <i class="fas fa-times"></i>
                                                     </button>
+                                                    <button class="btn btn-outline-info btn-sm" onclick="openBidMessaging({{ bid.id }}, '{{ bid.contractor.first_name }} {{ bid.contractor.last_name }}', {{ bid.amount }})" title="Discuss Bid">
+                                                        <i class="fas fa-comments"></i>
+                                                    </button>
                                                     <button class="btn btn-outline-primary btn-sm" onclick="contactContractor({{ bid.contractor.id }})" title="Contact Contractor">
                                                         <i class="fas fa-envelope"></i>
                                                     </button>
@@ -561,6 +663,9 @@
                                                     {% if bid.status == 'Submitted' %}
                                                     <button class="btn btn-outline-warning btn-sm" onclick="showWithdrawConfirmation({{ bid.id }})" title="Withdraw Bid">
                                                         <i class="fas fa-minus-circle"></i>
+                                                    </button>
+                                                    <button class="btn btn-outline-info btn-sm" onclick="openBidMessaging({{ bid.id }}, '{{ bid.contractor.first_name }} {{ bid.contractor.last_name }}', {{ bid.amount }})" title="Discuss Bid">
+                                                        <i class="fas fa-comments"></i>
                                                     </button>
                                                     {% endif %}
                                                     <button class="btn btn-outline-info btn-sm" onclick="window.location.href='{{ url_for('bid_history', bid_id=bid.id) }}'" title="View History">
@@ -599,6 +704,112 @@
         </div>
     </div>
 </div>
+
+<!-- Review Section for Completed Projects -->
+{% if project.status == 'Completed' %}
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card shadow">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-star me-2"></i>Project Review</h5>
+            </div>
+            <div class="card-body">
+                {% set accepted_bid = bids|selectattr('status', 'equalto', 'Accepted')|first %}
+                {% if accepted_bid %}
+                    {% if user and user.role == 'homeowner' and user.id == project.homeowner_id %}
+                        <!-- Check if review already exists -->
+                        {% set existing_review = reviews|selectattr('project_id', 'equalto', project.id)|selectattr('homeowner_id', 'equalto', user.id)|first if reviews else none %}
+                        
+                        {% if existing_review %}
+                            <!-- Display existing review -->
+                            <div class="alert alert-success">
+                                <h6><i class="fas fa-check-circle me-2"></i>Review Submitted</h6>
+                                <p class="mb-2">You have already reviewed this project. Thank you for your feedback!</p>
+                                <div class="d-flex align-items-center mb-2">
+                                    <span class="me-2">Your Rating:</span>
+                                    {% for i in range(1, 6) %}
+                                        <i class="fas fa-star {% if i <= existing_review.rating %}text-warning{% else %}text-muted{% endif %}"></i>
+                                    {% endfor %}
+                                    <span class="ms-2">({{ existing_review.rating }}/5)</span>
+                                </div>
+                                <p class="mb-0"><strong>Your Review:</strong> {{ existing_review.review_text }}</p>
+                                <small class="text-muted">Submitted on {{ existing_review.created_at.strftime('%B %d, %Y') }}</small>
+                            </div>
+                        {% else %}
+                            <!-- Review submission form -->
+                            <div class="alert alert-info mb-4">
+                                <h6><i class="fas fa-info-circle me-2"></i>Share Your Experience</h6>
+                                <p class="mb-0">Your project has been completed! Please take a moment to review your experience with {{ accepted_bid.contractor.first_name }} {{ accepted_bid.contractor.last_name }}.</p>
+                            </div>
+                            
+                            <form id="reviewForm">
+                                <input type="hidden" id="projectId" value="{{ project.id }}">
+                                <input type="hidden" id="contractorId" value="{{ accepted_bid.contractor.id }}">
+                                
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        <div class="mb-3">
+                                            <label class="form-label">Rate Your Experience *</label>
+                                            <div class="rating-input d-flex align-items-center">
+                                                {% for i in range(1, 6) %}
+                                                <i class="fas fa-star rating-star me-1" data-rating="{{ i }}" style="font-size: 1.5rem; cursor: pointer; color: #ddd;"></i>
+                                                {% endfor %}
+                                                <span class="ms-3 rating-text">Click to rate</span>
+                                            </div>
+                                            <input type="hidden" id="rating" name="rating" required>
+                                        </div>
+                                        
+                                        <div class="mb-3">
+                                            <label for="reviewText" class="form-label">Write Your Review *</label>
+                                            <textarea class="form-control" id="reviewText" name="review_text" rows="4" 
+                                                      placeholder="Share details about your experience with this contractor. How was the quality of work, communication, timeliness, and professionalism?" required></textarea>
+                                            <div class="form-text">Help other homeowners by sharing your honest experience.</div>
+                                        </div>
+                                        
+                                        <div class="d-flex gap-2">
+                                            <button type="submit" class="btn btn-primary">
+                                                <i class="fas fa-paper-plane me-2"></i>Submit Review
+                                            </button>
+                                            <button type="button" class="btn btn-outline-secondary" onclick="clearReviewForm()">
+                                                <i class="fas fa-undo me-2"></i>Clear
+                                            </button>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="col-md-4">
+                                        <div class="card bg-light">
+                                            <div class="card-body">
+                                                <h6><i class="fas fa-user me-2"></i>Contractor Details</h6>
+                                                <p class="mb-1"><strong>{{ accepted_bid.contractor.first_name }} {{ accepted_bid.contractor.last_name }}</strong></p>
+                                                <p class="mb-1 text-muted">{{ accepted_bid.contractor.location or 'Location not specified' }}</p>
+                                                <p class="mb-1"><strong>Project Amount:</strong> ${{ "%.0f"|format(accepted_bid.amount) }}</p>
+                                                <p class="mb-0"><strong>Timeline:</strong> {{ accepted_bid.timeline }}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </form>
+                        {% endif %}
+                    {% else %}
+                        <!-- For contractors or other users -->
+                        <div class="text-center py-4">
+                            <i class="fas fa-star fa-3x text-muted mb-3"></i>
+                            <h6 class="text-muted">Project Review</h6>
+                            <p class="text-muted">Reviews can be submitted by the homeowner after project completion.</p>
+                        </div>
+                    {% endif %}
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
+                        <h6 class="text-warning">No Accepted Bid</h6>
+                        <p class="text-muted">This project was completed without an accepted bid through the platform.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
 
 <!-- Close Project Modal -->
 <div class="modal fade" id="closeProjectModal" tabindex="-1">
@@ -757,9 +968,88 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-info me-2" onclick="saveComparison()">
+                    <i class="fas fa-save me-2"></i>Save Comparison
+                </button>
                 <button type="button" class="btn btn-primary" onclick="selectBestBid()">
                     <i class="fas fa-star me-2"></i>Select Best Overall
                 </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bid Messaging Modal -->
+<div class="modal fade" id="bidMessagingModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title"><i class="fas fa-comments me-2"></i>Bid Discussion</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <h6 id="messagingBidInfo" class="text-muted"></h6>
+                </div>
+                
+                <!-- Messages Container -->
+                <div id="messagesContainer" class="border rounded p-3 mb-3" style="height: 300px; overflow-y: auto;">
+                    <div class="text-center text-muted">
+                        <i class="fas fa-spinner fa-spin"></i> Loading messages...
+                    </div>
+                </div>
+                
+                <!-- Message Form -->
+                <form id="messageForm">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="messageType" class="form-label">Message Type</label>
+                            <select class="form-select" id="messageType" required>
+                                <option value="question">Question</option>
+                                <option value="clarification">Clarification</option>
+                                <option value="negotiation">Negotiation</option>
+                                <option value="counter_offer">Counter Offer</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6" id="proposedAmountContainer" style="display: none;">
+                            <label for="proposedAmount" class="form-label">Proposed Amount ($)</label>
+                            <input type="number" class="form-control" id="proposedAmount" step="0.01" min="0">
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3" id="proposedTimelineContainer" style="display: none;">
+                        <label for="proposedTimeline" class="form-label">Proposed Timeline</label>
+                        <input type="text" class="form-control" id="proposedTimeline" placeholder="e.g., 2-3 weeks">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="messageText" class="form-label">Message</label>
+                        <textarea class="form-control" id="messageText" rows="3" required placeholder="Type your message here..."></textarea>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-paper-plane me-2"></i>Send Message
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Notifications Modal -->
+<div class="modal fade" id="notificationsModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title"><i class="fas fa-bell me-2"></i>Notifications</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="notificationsContainer">
+                    <div class="text-center text-muted">
+                        <i class="fas fa-spinner fa-spin"></i> Loading notifications...
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -1118,6 +1408,246 @@ function contactContractors() {
     alert('Contact contractors functionality would be implemented here');
 }
 
+// ============================================================================
+// ADVANCED BIDDING FEATURES
+// ============================================================================
+
+let currentBidForMessaging = null;
+
+function saveComparison() {
+    const checkedBoxes = document.querySelectorAll('.bid-checkbox:checked, .bid-checkbox-table:checked');
+    const selectedBidIds = Array.from(checkedBoxes).map(cb => cb.dataset.bidId);
+    
+    if (selectedBidIds.length < 2) {
+        alert('Please select at least 2 bids to save comparison.');
+        return;
+    }
+    
+    const notes = prompt('Add notes for this comparison (optional):');
+    
+    fetch('/api/bid_comparison', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            project_id: {{ project.id }},
+            bid_ids: selectedBidIds,
+            notes: notes || ''
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Comparison saved successfully!');
+        } else {
+            alert('Error saving comparison: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred while saving the comparison.');
+    });
+}
+
+function openBidMessaging(bidId, contractorName, amount) {
+    currentBidForMessaging = bidId;
+    
+    // Update modal header info
+    document.getElementById('messagingBidInfo').textContent = 
+        `Discussing bid from ${contractorName} - $${parseFloat(amount).toLocaleString()}`;
+    
+    // Load existing messages
+    loadBidMessages(bidId);
+    
+    // Show modal
+    new bootstrap.Modal(document.getElementById('bidMessagingModal')).show();
+}
+
+function loadBidMessages(bidId) {
+    const container = document.getElementById('messagesContainer');
+    container.innerHTML = '<div class="text-center text-muted"><i class="fas fa-spinner fa-spin"></i> Loading messages...</div>';
+    
+    fetch(`/api/bid_messages/${bidId}`)
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            displayMessages(data.messages);
+        } else {
+            container.innerHTML = '<div class="text-center text-danger">Error loading messages</div>';
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        container.innerHTML = '<div class="text-center text-danger">Error loading messages</div>';
+    });
+}
+
+function displayMessages(messages) {
+    const container = document.getElementById('messagesContainer');
+    
+    if (messages.length === 0) {
+        container.innerHTML = '<div class="text-center text-muted">No messages yet. Start the conversation!</div>';
+        return;
+    }
+    
+    let html = '';
+    messages.forEach(message => {
+        const isCurrentUser = message.sender_id === {{ session.user.id }};
+        const messageClass = isCurrentUser ? 'bg-primary text-white ms-auto' : 'bg-light';
+        const alignment = isCurrentUser ? 'text-end' : 'text-start';
+        
+        html += `
+            <div class="mb-3 ${alignment}">
+                <div class="d-inline-block p-3 rounded ${messageClass}" style="max-width: 70%;">
+                    <div class="fw-bold small mb-1">
+                        ${message.first_name} ${message.last_name} (${message.role})
+                        <span class="badge bg-secondary ms-2">${message.message_type}</span>
+                    </div>
+                    <div>${message.message_text}</div>
+                    ${message.proposed_amount ? `<div class="mt-2"><strong>Proposed Amount:</strong> $${parseFloat(message.proposed_amount).toLocaleString()}</div>` : ''}
+                    ${message.proposed_timeline ? `<div><strong>Proposed Timeline:</strong> ${message.proposed_timeline}</div>` : ''}
+                    <div class="small mt-2 opacity-75">
+                        ${new Date(message.created_at).toLocaleString()}
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html;
+    container.scrollTop = container.scrollHeight;
+}
+
+function showNotifications() {
+    loadNotifications();
+    new bootstrap.Modal(document.getElementById('notificationsModal')).show();
+}
+
+function loadNotifications() {
+    const container = document.getElementById('notificationsContainer');
+    container.innerHTML = '<div class="text-center text-muted"><i class="fas fa-spinner fa-spin"></i> Loading notifications...</div>';
+    
+    fetch('/api/notifications')
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            displayNotifications(data.notifications);
+        } else {
+            container.innerHTML = '<div class="text-center text-danger">Error loading notifications</div>';
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        container.innerHTML = '<div class="text-center text-danger">Error loading notifications</div>';
+    });
+}
+
+function displayNotifications(notifications) {
+    const container = document.getElementById('notificationsContainer');
+    
+    if (notifications.length === 0) {
+        container.innerHTML = '<div class="text-center text-muted">No notifications</div>';
+        return;
+    }
+    
+    let html = '';
+    notifications.forEach(notification => {
+        const readClass = notification.is_read ? 'opacity-75' : '';
+        html += `
+            <div class="border-bottom pb-2 mb-2 ${readClass}">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="mb-1">${notification.title}</h6>
+                        <p class="mb-1 small">${notification.message}</p>
+                        <small class="text-muted">Project: ${notification.project_title}</small>
+                    </div>
+                    ${!notification.is_read ? `<button class="btn btn-sm btn-outline-primary" onclick="markNotificationRead(${notification.id})">Mark Read</button>` : ''}
+                </div>
+                <small class="text-muted">${new Date(notification.created_at).toLocaleString()}</small>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html;
+}
+
+function markNotificationRead(notificationId) {
+    fetch(`/api/notifications/${notificationId}/mark_read`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            loadNotifications(); // Reload notifications
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+    });
+}
+
+// Message form handling
+document.addEventListener('DOMContentLoaded', function() {
+    const messageForm = document.getElementById('messageForm');
+    const messageType = document.getElementById('messageType');
+    const proposedAmountContainer = document.getElementById('proposedAmountContainer');
+    const proposedTimelineContainer = document.getElementById('proposedTimelineContainer');
+    
+    // Show/hide proposal fields based on message type
+    messageType.addEventListener('change', function() {
+        const showProposals = this.value === 'negotiation' || this.value === 'counter_offer';
+        proposedAmountContainer.style.display = showProposals ? 'block' : 'none';
+        proposedTimelineContainer.style.display = showProposals ? 'block' : 'none';
+    });
+    
+    // Handle message form submission
+    messageForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        if (!currentBidForMessaging) {
+            alert('No bid selected for messaging');
+            return;
+        }
+        
+        const formData = {
+            message_text: document.getElementById('messageText').value,
+            message_type: document.getElementById('messageType').value,
+            proposed_amount: document.getElementById('proposedAmount').value || null,
+            proposed_timeline: document.getElementById('proposedTimeline').value || null
+        };
+        
+        fetch(`/send_bid_message/${currentBidForMessaging}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(formData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Clear form
+                messageForm.reset();
+                proposedAmountContainer.style.display = 'none';
+                proposedTimelineContainer.style.display = 'none';
+                
+                // Reload messages
+                loadBidMessages(currentBidForMessaging);
+            } else {
+                alert('Error sending message: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while sending the message.');
+        });
+    });
+});
+
 function shareProject() {
     if (navigator.share) {
         navigator.share({
@@ -1135,78 +1665,409 @@ function saveProject() {
     alert('Save project functionality would be implemented here');
 }
 
-// Custom Audio Player Functionality
+
+
+// Review Form Functionality
 document.addEventListener('DOMContentLoaded', function() {
-    const audioPlayer = document.getElementById('audioPlayer');
-    const playPauseBtn = document.getElementById('playPauseBtn');
-    const progressBar = document.getElementById('progressBar');
-    const currentTimeEl = document.getElementById('currentTime');
-    const durationEl = document.getElementById('duration');
-    const volumeSlider = document.getElementById('volumeSlider');
-    const progressContainer = progressBar?.parentElement;
-
-    if (!audioPlayer) return; // Exit if no audio player on page
-
-    // Format time helper function
-    function formatTime(seconds) {
-        const mins = Math.floor(seconds / 60);
-        const secs = Math.floor(seconds % 60);
-        return `${mins}:${secs.toString().padStart(2, '0')}`;
+    const reviewForm = document.getElementById('reviewForm');
+    const ratingStars = document.querySelectorAll('.rating-star');
+    const ratingInput = document.getElementById('rating');
+    const ratingText = document.querySelector('.rating-text');
+    
+    let selectedRating = 0;
+    
+    // Handle star rating clicks
+    ratingStars.forEach(star => {
+        star.addEventListener('click', function() {
+            selectedRating = parseInt(this.dataset.rating);
+            updateStarDisplay(selectedRating);
+            ratingInput.value = selectedRating;
+            
+            // Update rating text
+            const ratingTexts = {
+                1: 'Poor (1/5)',
+                2: 'Fair (2/5)',
+                3: 'Good (3/5)',
+                4: 'Very Good (4/5)',
+                5: 'Excellent (5/5)'
+            };
+            ratingText.textContent = ratingTexts[selectedRating];
+        });
+        
+        // Hover effects
+        star.addEventListener('mouseenter', function() {
+            const hoverRating = parseInt(this.dataset.rating);
+            updateStarDisplay(hoverRating);
+        });
+    });
+    
+    // Reset stars on mouse leave
+    document.querySelector('.rating-input')?.addEventListener('mouseleave', function() {
+        updateStarDisplay(selectedRating);
+    });
+    
+    function updateStarDisplay(rating) {
+        ratingStars.forEach((star, index) => {
+            if (index < rating) {
+                star.style.color = '#ffc107'; // Yellow for selected
+            } else {
+                star.style.color = '#ddd'; // Gray for unselected
+            }
+        });
     }
+    
+    // Handle review form submission
+    if (reviewForm) {
+        reviewForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const projectId = document.getElementById('projectId').value;
+            const contractorId = document.getElementById('contractorId').value;
+            const rating = document.getElementById('rating').value;
+            const reviewText = document.getElementById('reviewText').value;
+            
+            // Validation
+            if (!rating || rating < 1 || rating > 5) {
+                alert('Please select a rating from 1 to 5 stars.');
+                return;
+            }
+            
+            if (!reviewText.trim()) {
+                alert('Please write a review.');
+                return;
+            }
+            
+            if (reviewText.trim().length < 10) {
+                alert('Please write a more detailed review (at least 10 characters).');
+                return;
+            }
+            
+            // Disable submit button to prevent double submission
+            const submitBtn = reviewForm.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Submitting...';
+            
+            // Submit review
+            fetch(`/submit_review/${projectId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    contractor_id: parseInt(contractorId),
+                    rating: parseInt(rating),
+                    review_text: reviewText.trim()
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Review submitted successfully! Thank you for your feedback.');
+                    location.reload(); // Refresh to show the submitted review
+                } else {
+                    alert('Error submitting review: ' + data.message);
+                    // Re-enable submit button
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalText;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while submitting your review. Please try again.');
+                // Re-enable submit button
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+            });
+        });
+    }
+});
 
-    // Load metadata and set duration
-    audioPlayer.addEventListener('loadedmetadata', function() {
-        durationEl.textContent = formatTime(audioPlayer.duration);
+function clearReviewForm() {
+    // Reset rating
+    selectedRating = 0;
+    document.getElementById('rating').value = '';
+    document.querySelector('.rating-text').textContent = 'Click to rate';
+    
+    // Reset stars
+    document.querySelectorAll('.rating-star').forEach(star => {
+        star.style.color = '#ddd';
     });
+    
+    // Clear review text
+    document.getElementById('reviewText').value = '';
+}
 
-    // Update progress bar and current time
-    audioPlayer.addEventListener('timeupdate', function() {
-        const progress = (audioPlayer.currentTime / audioPlayer.duration) * 100;
-        progressBar.style.width = progress + '%';
-        currentTimeEl.textContent = formatTime(audioPlayer.currentTime);
-    });
+// Project Images Data
+const projectImages = [
+    {% for image in project_images %}
+    {
+        src: "{{ url_for('uploaded_file', filename=image.image_path) }}",
+        title: "Project Image {{ loop.index }}",
+        date: "{{ image.created_at.strftime('%m/%d/%Y') }}"
+    }{% if not loop.last %},{% endif %}
+    {% endfor %}
+];
 
-    // Play/Pause button functionality
-    playPauseBtn.addEventListener('click', function() {
-        if (audioPlayer.paused) {
-            audioPlayer.play();
-            playPauseBtn.innerHTML = '<i class="fas fa-pause"></i>';
-        } else {
-            audioPlayer.pause();
-            playPauseBtn.innerHTML = '<i class="fas fa-play"></i>';
+let currentImageIndex = 0;
+
+// Image Slideshow Functions
+function openImageSlideshow(index) {
+    if (projectImages.length === 0) return;
+    
+    currentImageIndex = index;
+    updateSlideshow();
+    
+    const modal = new bootstrap.Modal(document.getElementById('imageSlideshowModal'));
+    modal.show();
+}
+
+function updateSlideshow() {
+    if (projectImages.length === 0) return;
+    
+    const modalImage = document.getElementById('slideshowImage');
+    const modalTitle = document.getElementById('slideshowModalLabel');
+    const imageCounter = document.getElementById('imageCounter');
+    const prevBtn = document.getElementById('prevImageBtn');
+    const nextBtn = document.getElementById('nextImageBtn');
+    
+    const currentImage = projectImages[currentImageIndex];
+    modalImage.src = currentImage.src;
+    modalTitle.textContent = currentImage.title;
+    imageCounter.textContent = `${currentImageIndex + 1} of ${projectImages.length}`;
+    
+    // Update navigation buttons
+    prevBtn.disabled = currentImageIndex === 0;
+    nextBtn.disabled = currentImageIndex === projectImages.length - 1;
+    
+    // Add fade effect
+    modalImage.style.opacity = '0';
+    setTimeout(() => {
+        modalImage.style.opacity = '1';
+    }, 100);
+}
+
+function previousImage() {
+    if (currentImageIndex > 0) {
+        currentImageIndex--;
+        updateSlideshow();
+    }
+}
+
+function nextImage() {
+    if (currentImageIndex < projectImages.length - 1) {
+        currentImageIndex++;
+        updateSlideshow();
+    }
+}
+
+// Keyboard navigation for slideshow
+document.addEventListener('keydown', function(e) {
+    const modal = document.getElementById('imageSlideshowModal');
+    if (modal.classList.contains('show')) {
+        if (e.key === 'ArrowLeft') {
+            previousImage();
+        } else if (e.key === 'ArrowRight') {
+            nextImage();
+        } else if (e.key === 'Escape') {
+            bootstrap.Modal.getInstance(modal).hide();
         }
-    });
+    }
+});
 
-    // Progress bar click to seek
-    progressContainer.addEventListener('click', function(e) {
-        const rect = progressContainer.getBoundingClientRect();
-        const clickX = e.clientX - rect.left;
-        const width = rect.width;
-        const clickPercent = clickX / width;
-        const newTime = clickPercent * audioPlayer.duration;
-        audioPlayer.currentTime = newTime;
-    });
+// Download current image function
+function downloadCurrentImage() {
+    if (projectImages.length === 0) return;
+    
+    const currentImage = projectImages[currentImageIndex];
+    const link = document.createElement('a');
+    link.href = currentImage.src;
+    link.download = `project-image-${currentImageIndex + 1}.jpg`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
 
-    // Volume control
-    volumeSlider.addEventListener('input', function() {
-        audioPlayer.volume = volumeSlider.value / 100;
-    });
+// Legacy function for compatibility
+function openImageModal(imageSrc, imageTitle) {
+    // Find the image index
+    const index = projectImages.findIndex(img => img.src === imageSrc);
+    if (index !== -1) {
+        openImageSlideshow(index);
+    }
+}
 
-    // Reset play button when audio ends
-    audioPlayer.addEventListener('ended', function() {
-        playPauseBtn.innerHTML = '<i class="fas fa-play"></i>';
-        progressBar.style.width = '0%';
-        currentTimeEl.textContent = '0:00';
-    });
+// Progress Update Functions
+function updateProgress(projectId) {
+    // Show progress update modal
+    const modal = new bootstrap.Modal(document.getElementById('progressModal'));
+    modal.show();
+}
 
-    // Handle audio loading errors
-    audioPlayer.addEventListener('error', function() {
-        console.error('Audio loading error:', audioPlayer.error);
-        playPauseBtn.disabled = true;
-        playPauseBtn.innerHTML = '<i class="fas fa-exclamation-triangle"></i>';
-        currentTimeEl.textContent = 'Error';
-        durationEl.textContent = 'Error';
+function submitProgressUpdate() {
+    const projectId = window.location.pathname.split('/').pop();
+    const percentage = document.getElementById('progressPercentage').value;
+    const notes = document.getElementById('progressNotes').value;
+    
+    if (!percentage || percentage < 0 || percentage > 100) {
+        alert('Please enter a valid percentage between 0 and 100.');
+        return;
+    }
+    
+    // Disable submit button
+    const submitBtn = document.getElementById('submitProgressBtn');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Updating...';
+    
+    fetch(`/update_project_progress/${projectId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            progress_percentage: parseInt(percentage),
+            update_notes: notes.trim()
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Progress updated successfully!');
+            location.reload(); // Refresh to show updated progress
+        } else {
+            alert('Error updating progress: ' + data.message);
+            // Re-enable submit button
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalText;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred while updating progress. Please try again.');
+        // Re-enable submit button
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
     });
+}
+</script>
+
+<!-- Image Slideshow Modal -->
+<div class="modal fade" id="imageSlideshowModal" tabindex="-1" aria-labelledby="slideshowModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="slideshowModalLabel">Project Image</h5>
+                <div class="d-flex align-items-center">
+                    <span id="imageCounter" class="badge bg-secondary me-3">1 of 1</span>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+            </div>
+            <div class="modal-body text-center position-relative p-0">
+                <div class="slideshow-container position-relative">
+                    <img id="slideshowImage" src="" alt="Project Image" 
+                         class="img-fluid w-100" 
+                         style="max-height: 80vh; object-fit: contain; transition: opacity 0.3s ease;">
+                    
+                    <!-- Navigation arrows -->
+                    <button id="prevImageBtn" class="btn btn-dark btn-lg position-absolute top-50 start-0 translate-middle-y ms-3" 
+                            onclick="previousImage()" style="z-index: 10; opacity: 0.8;">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <button id="nextImageBtn" class="btn btn-dark btn-lg position-absolute top-50 end-0 translate-middle-y me-3" 
+                            onclick="nextImage()" style="z-index: 10; opacity: 0.8;">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                    
+                    <!-- Image loading indicator -->
+                    <div id="imageLoader" class="position-absolute top-50 start-50 translate-middle d-none">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer justify-content-between">
+                <div class="d-flex align-items-center">
+                    <small class="text-muted">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Use arrow keys or buttons to navigate
+                    </small>
+                </div>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="downloadCurrentImage()">
+                        <i class="fas fa-download me-1"></i>Download
+                    </button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Progress Update Modal -->
+<div class="modal fade" id="progressModal" tabindex="-1" aria-labelledby="progressModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="progressModalLabel">
+                    <i class="fas fa-tasks me-2"></i>Update Project Progress
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="progressForm">
+                    <div class="mb-3">
+                        <label for="progressPercentage" class="form-label">Progress Percentage *</label>
+                        <div class="input-group">
+                            <input type="number" class="form-control" id="progressPercentage" 
+                                   min="0" max="100" step="10" 
+                                   value="{{ project_status.progress_percentage if project_status else 0 }}"
+                                   required>
+                            <span class="input-group-text">%</span>
+                        </div>
+                        <div class="form-text">Enter progress in 10% increments (0, 10, 20, etc.)</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="progressNotes" class="form-label">Progress Notes</label>
+                        <textarea class="form-control" id="progressNotes" rows="3" 
+                                  placeholder="Describe what has been completed or any updates..."></textarea>
+                        <div class="form-text">Optional: Add notes about the current progress</div>
+                    </div>
+                    
+                    <div class="progress mb-3" style="height: 20px;">
+                        <div class="progress-bar bg-success" role="progressbar" 
+                             style="width: {{ project_status.progress_percentage if project_status else 0 }}%"
+                             id="previewProgressBar">
+                            {{ project_status.progress_percentage if project_status else 0 }}%
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="submitProgressBtn" onclick="submitProgressUpdate()">
+                    <i class="fas fa-save me-2"></i>Update Progress
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Update progress bar preview when percentage changes
+document.addEventListener('DOMContentLoaded', function() {
+    const progressInput = document.getElementById('progressPercentage');
+    const previewBar = document.getElementById('previewProgressBar');
+    
+    if (progressInput && previewBar) {
+        progressInput.addEventListener('input', function() {
+            const value = this.value || 0;
+            previewBar.style.width = value + '%';
+            previewBar.textContent = value + '%';
+        });
+    }
 });
 </script>
 {% endblock %}

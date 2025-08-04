@@ -1,0 +1,443 @@
+{% extends "base.html" %}
+
+{% block title %}{{ contractor.first_name }} {{ contractor.last_name }} - Reviews - HomePro{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h4 class="mb-0">
+                                <i class="fas fa-star me-2"></i>
+                                Reviews for {{ contractor.first_name }} {{ contractor.last_name }}
+                            </h4>
+                            {% if contractor.company %}
+                                <p class="text-muted mb-0">{{ contractor.company }}</p>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4 text-md-end">
+                            {% if contractor.verified %}
+                                <span class="badge bg-success mb-2">
+                                    <i class="fas fa-check-circle me-1"></i>
+                                    Verified Contractor
+                                </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% if reviews %}
+                        <div class="reviews-list">
+                            {% for review in reviews %}
+                                <div class="review-item mb-4 pb-4 {% if not loop.last %}border-bottom{% endif %}">
+                                    <div class="row">
+                                        <div class="col-md-8">
+                                            <div class="d-flex align-items-center mb-2">
+                                                <div class="rating-stars me-3">
+                                                    {% for i in range(1, 6) %}
+                                                        {% if i <= review.rating %}
+                                                            <i class="fas fa-star text-warning"></i>
+                                                        {% else %}
+                                                            <i class="far fa-star text-muted"></i>
+                                                        {% endif %}
+                                                    {% endfor %}
+                                                </div>
+                                                <h6 class="mb-0">{{ review.homeowner_name }}</h6>
+                                            </div>
+                                            <p class="review-text mb-2">{{ review.review_text }}</p>
+                                            <div class="review-meta">
+                                                <small class="text-muted">
+                                                    <i class="fas fa-hammer me-1"></i>
+                                                    Project: <strong>{{ review.project_title }}</strong>
+                                                </small>
+                                            </div>
+                                            
+                                            <!-- Contractor Reply Section -->
+                                            {% if review.reply_text %}
+                                                <div class="contractor-reply mt-3 p-3 bg-light rounded">
+                                                    <div class="d-flex align-items-center mb-2">
+                                                        <i class="fas fa-reply text-primary me-2"></i>
+                                                        <strong class="text-primary">{{ contractor.first_name }} {{ contractor.last_name }} replied:</strong>
+                                                        <small class="text-muted ms-auto">
+                                                            {{ review.reply_created_at.strftime('%B %d, %Y') }}
+                                                        </small>
+                                                    </div>
+                                                    <p class="mb-0">{{ review.reply_text }}</p>
+                                                    {% if session.user and session.user.role == 'contractor' %}
+                                                        <button class="btn btn-sm btn-outline-primary mt-2" onclick="editReply({{ review.id }})">
+                                                            <i class="fas fa-edit me-1"></i>Edit Reply
+                                                        </button>
+                                                    {% endif %}
+                                                </div>
+                                            {% elif session.user and session.user.role == 'contractor' %}
+                                                <div class="reply-section mt-3">
+                                                    <button class="btn btn-sm btn-primary" onclick="showReplyForm({{ review.id }})">
+                                                        <i class="fas fa-reply me-1"></i>Reply to Review
+                                                    </button>
+                                                </div>
+                                            {% endif %}
+                                            
+                                            <!-- Reply Form (Hidden by default) -->
+                                            {% if session.user and session.user.role == 'contractor' %}
+                                                <div id="reply-form-{{ review.id }}" class="reply-form mt-3" style="display: none;">
+                                                    <div class="card">
+                                                        <div class="card-body">
+                                                            <h6 class="card-title">
+                                                                <i class="fas fa-reply me-2"></i>
+                                                                {% if review.reply_text %}Edit Your Reply{% else %}Reply to Review{% endif %}
+                                                            </h6>
+                                                            <form onsubmit="submitReply(event, {{ review.id }})">
+                                                                <div class="mb-3">
+                                                                    <textarea class="form-control" id="reply-text-{{ review.id }}" 
+                                                                              rows="3" maxlength="1000" 
+                                                                              placeholder="Write your professional response...">{% if review.reply_text %}{{ review.reply_text }}{% endif %}</textarea>
+                                                                    <div class="form-text">Maximum 1000 characters</div>
+                                                                </div>
+                                                                <div class="d-flex gap-2">
+                                                                    <button type="submit" class="btn btn-primary btn-sm">
+                                                                        <i class="fas fa-paper-plane me-1"></i>
+                                                                        {% if review.reply_text %}Update Reply{% else %}Submit Reply{% endif %}
+                                                                    </button>
+                                                                    <button type="button" class="btn btn-secondary btn-sm" onclick="hideReplyForm({{ review.id }})">
+                                                                        Cancel
+                                                                    </button>
+                                                                </div>
+                                                            </form>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                        <div class="col-md-4 text-md-end">
+                                            <small class="text-muted">
+                                                <i class="fas fa-calendar me-1"></i>
+                                                {{ review.created_at.strftime('%B %d, %Y') }}
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                        
+                        <!-- Pagination -->
+                        {% if total_pages > 1 %}
+                            <nav aria-label="Reviews pagination">
+                                <ul class="pagination justify-content-center">
+                                    {% if page > 1 %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="{{ url_for('contractor_reviews', contractor_id=contractor.id, page=page-1) }}">
+                                                <i class="fas fa-chevron-left"></i>
+                                            </a>
+                                        </li>
+                                    {% endif %}
+                                    
+                                    {% for p in range(1, total_pages + 1) %}
+                                        {% if p == page %}
+                                            <li class="page-item active">
+                                                <span class="page-link">{{ p }}</span>
+                                            </li>
+                                        {% elif p <= 3 or p > total_pages - 3 or (p >= page - 1 and p <= page + 1) %}
+                                            <li class="page-item">
+                                                <a class="page-link" href="{{ url_for('contractor_reviews', contractor_id=contractor.id, page=p) }}">{{ p }}</a>
+                                            </li>
+                                        {% elif p == 4 or p == total_pages - 3 %}
+                                            <li class="page-item disabled">
+                                                <span class="page-link">...</span>
+                                            </li>
+                                        {% endif %}
+                                    {% endfor %}
+                                    
+                                    {% if page < total_pages %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="{{ url_for('contractor_reviews', contractor_id=contractor.id, page=page+1) }}">
+                                                <i class="fas fa-chevron-right"></i>
+                                            </a>
+                                        </li>
+                                    {% endif %}
+                                </ul>
+                            </nav>
+                        {% endif %}
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-star fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">No Reviews Yet</h5>
+                            <p class="text-muted">This contractor hasn't received any reviews yet.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-bar me-2"></i>
+                        Rating Overview
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if contractor.average_rating %}
+                        <div class="text-center mb-4">
+                            <div class="rating-score">
+                                <h2 class="text-primary mb-0">{{ "%.1f"|format(contractor.average_rating) }}</h2>
+                                <div class="rating-stars mb-2">
+                                    {% for i in range(1, 6) %}
+                                        {% if i <= contractor.average_rating %}
+                                            <i class="fas fa-star text-warning"></i>
+                                        {% else %}
+                                            <i class="far fa-star text-muted"></i>
+                                        {% endif %}
+                                    {% endfor %}
+                                </div>
+                                <p class="text-muted mb-0">Based on {{ total_reviews }} review{{ 's' if total_reviews != 1 else '' }}</p>
+                            </div>
+                        </div>
+                        
+                        {% if rating_distribution %}
+                            <div class="rating-breakdown">
+                                <h6 class="mb-3">Rating Breakdown</h6>
+                                {% for rating_data in rating_distribution %}
+                                    <div class="rating-bar-item mb-2">
+                                        <div class="d-flex align-items-center">
+                                            <span class="rating-label me-2">{{ rating_data.rating }} star{{ 's' if rating_data.rating != 1 else '' }}</span>
+                                            <div class="rating-bar flex-grow-1 me-2">
+                                                <div class="rating-bar-fill" 
+                                                     style="width: {{ (rating_data.count / total_reviews * 100) if total_reviews > 0 else 0 }}%"></div>
+                                            </div>
+                                            <span class="rating-count">{{ rating_data.count }}</span>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-star fa-2x text-muted mb-3"></i>
+                            <p class="text-muted">No ratings yet</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Contractor Info
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if contractor.location %}
+                        <div class="info-item mb-3">
+                            <i class="fas fa-map-marker-alt text-muted me-2"></i>
+                            <span>{{ contractor.location }}</span>
+                        </div>
+                    {% endif %}
+                    
+                    {% if contractor.specialties %}
+                        <div class="info-item mb-3">
+                            <i class="fas fa-tools text-muted me-2"></i>
+                            <span>{{ contractor.specialties }}</span>
+                        </div>
+                    {% endif %}
+                    
+                    {% if contractor.years_experience %}
+                        <div class="info-item mb-3">
+                            <i class="fas fa-calendar-check text-muted me-2"></i>
+                            <span>{{ contractor.years_experience }} years experience</span>
+                        </div>
+                    {% endif %}
+                    
+                    {% if contractor.bio %}
+                        <div class="info-item">
+                            <h6 class="mb-2">About</h6>
+                            <p class="text-muted small">{{ contractor.bio }}</p>
+                        </div>
+                    {% endif %}
+                    
+                    {% if contractor.portfolio %}
+                        <div class="info-item mt-3">
+                            <a href="{{ contractor.portfolio }}" target="_blank" class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-external-link-alt me-2"></i>
+                                View Portfolio
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.rating-stars {
+    font-size: 1.1rem;
+}
+
+.rating-score .rating-stars {
+    font-size: 1.5rem;
+}
+
+.review-text {
+    line-height: 1.6;
+    color: #333;
+}
+
+.review-item {
+    transition: all 0.2s ease;
+}
+
+.review-item:hover {
+    background-color: #f8f9fa;
+    border-radius: 0.375rem;
+    padding: 1rem !important;
+    margin: -0.5rem;
+    margin-bottom: 1rem !important;
+}
+
+.rating-bar {
+    height: 8px;
+    background-color: #e9ecef;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.rating-bar-fill {
+    height: 100%;
+    background-color: #ffc107;
+    transition: width 0.3s ease;
+}
+
+.rating-bar-item {
+    font-size: 0.9rem;
+}
+
+.rating-label {
+    min-width: 60px;
+    font-size: 0.85rem;
+}
+
+.rating-count {
+    min-width: 20px;
+    text-align: right;
+    font-size: 0.85rem;
+    color: #6c757d;
+}
+
+.info-item {
+    display: flex;
+    align-items: flex-start;
+    font-size: 0.9rem;
+}
+
+.info-item i {
+    margin-top: 0.1rem;
+    width: 16px;
+}
+
+.card {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    border: 1px solid rgba(0, 0, 0, 0.125);
+}
+
+.card-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+}
+
+@media (max-width: 768px) {
+    .review-item .row {
+        flex-direction: column;
+    }
+    
+    .review-item .col-md-4 {
+        margin-top: 0.5rem;
+    }
+    
+    .rating-breakdown {
+        font-size: 0.85rem;
+    }
+}
+
+.contractor-reply {
+    border-left: 3px solid #007bff;
+}
+
+.reply-form .card {
+    border: 1px solid #dee2e6;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+</style>
+
+<script>
+function showReplyForm(reviewId) {
+    document.getElementById('reply-form-' + reviewId).style.display = 'block';
+    document.querySelector(`[onclick="showReplyForm(${reviewId})"]`).style.display = 'none';
+}
+
+function hideReplyForm(reviewId) {
+    document.getElementById('reply-form-' + reviewId).style.display = 'none';
+    document.querySelector(`[onclick="showReplyForm(${reviewId})"]`).style.display = 'block';
+}
+
+function editReply(reviewId) {
+    showReplyForm(reviewId);
+}
+
+function submitReply(event, reviewId) {
+    event.preventDefault();
+    
+    const replyText = document.getElementById('reply-text-' + reviewId).value.trim();
+    
+    if (!replyText) {
+        alert('Please enter a reply message.');
+        return;
+    }
+    
+    if (replyText.length > 1000) {
+        alert('Reply text is too long (maximum 1000 characters).');
+        return;
+    }
+    
+    // Show loading state
+    const submitBtn = event.target.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Submitting...';
+    submitBtn.disabled = true;
+    
+    fetch(`/contractor/reply_review/${reviewId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            reply_text: replyText
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Show success message
+            alert('Reply submitted successfully!');
+            // Reload the page to show the new reply
+            window.location.reload();
+        } else {
+            alert('Error: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred while submitting your reply.');
+    })
+    .finally(() => {
+        // Restore button state
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+    });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,274 @@
+{% extends "base.html" %}
+
+{% block title %}Contractor Profile - HomePro{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">
+                        <i class="fas fa-user-tie me-2"></i>
+                        Contractor Profile
+                    </h4>
+                    <div class="d-flex align-items-center">
+                        {% if contractor.verified %}
+                            <span class="badge bg-success me-2">
+                                <i class="fas fa-check-circle me-1"></i>
+                                Verified
+                            </span>
+                        {% endif %}
+                        {% if contractor.average_rating %}
+                            <div class="rating-display me-2">
+                                <span class="rating-stars">
+                                    {% for i in range(1, 6) %}
+                                        {% if i <= contractor.average_rating %}
+                                            <i class="fas fa-star text-warning"></i>
+                                        {% else %}
+                                            <i class="far fa-star text-muted"></i>
+                                        {% endif %}
+                                    {% endfor %}
+                                </span>
+                                <span class="rating-text ms-1">
+                                    {{ "%.1f"|format(contractor.average_rating) }} 
+                                    ({{ contractor.rating_count }} reviews)
+                                </span>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="card-body">
+                    <form id="profileForm">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="company" class="form-label">Company Name</label>
+                                    <input type="text" class="form-control" id="company" name="company" 
+                                           value="{{ contractor.company or '' }}">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="location" class="form-label">Location</label>
+                                    <input type="text" class="form-control" id="location" name="location" 
+                                           value="{{ contractor.location or '' }}">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="specialties" class="form-label">Specialties</label>
+                                    <input type="text" class="form-control" id="specialties" name="specialties" 
+                                           value="{{ contractor.specialties or '' }}"
+                                           placeholder="e.g., Plumbing, Electrical, HVAC">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="years_experience" class="form-label">Years of Experience</label>
+                                    <input type="number" class="form-control" id="years_experience" name="years_experience" 
+                                           value="{{ contractor.years_experience or 0 }}" min="0" max="50">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="bio" class="form-label">Professional Bio</label>
+                            <textarea class="form-control" id="bio" name="bio" rows="4" 
+                                      placeholder="Tell potential clients about your experience, expertise, and what sets you apart...">{{ contractor.bio or '' }}</textarea>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="business_info" class="form-label">Business Information</label>
+                            <textarea class="form-control" id="business_info" name="business_info" rows="3" 
+                                      placeholder="License numbers, insurance information, certifications...">{{ contractor.business_info or '' }}</textarea>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="portfolio" class="form-label">Portfolio/Website</label>
+                            <input type="url" class="form-control" id="portfolio" name="portfolio" 
+                                   value="{{ contractor.portfolio or '' }}"
+                                   placeholder="https://your-website.com">
+                        </div>
+                        
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('contractor_availability') }}" class="btn btn-outline-primary">
+                                <i class="fas fa-calendar-alt me-2"></i>
+                                Manage Availability
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>
+                                Update Profile
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-star me-2"></i>
+                        Recent Reviews
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if reviews %}
+                        {% for review in reviews %}
+                            <div class="review-item mb-3 pb-3 {% if not loop.last %}border-bottom{% endif %}">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <div class="rating-stars">
+                                        {% for i in range(1, 6) %}
+                                            {% if i <= review.rating %}
+                                                <i class="fas fa-star text-warning"></i>
+                                            {% else %}
+                                                <i class="far fa-star text-muted"></i>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                    <small class="text-muted">{{ review.created_at.strftime('%m/%d/%Y') }}</small>
+                                </div>
+                                <p class="mb-1 small">{{ review.review_text }}</p>
+                                <small class="text-muted">
+                                    <strong>{{ review.project_title }}</strong> - {{ review.homeowner_name }}
+                                </small>
+                            </div>
+                        {% endfor %}
+                        <div class="text-center">
+                            <a href="{{ url_for('contractor_reviews', contractor_id=contractor.id) }}" 
+                               class="btn btn-sm btn-outline-primary">
+                                View All Reviews
+                            </a>
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center">No reviews yet. Complete projects to start receiving reviews!</p>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-line me-2"></i>
+                        Profile Stats
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <div class="stat-item">
+                                <h4 class="text-primary mb-0">{{ contractor.rating_count or 0 }}</h4>
+                                <small class="text-muted">Reviews</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="stat-item">
+                                <h4 class="text-success mb-0">{{ contractor.years_experience or 0 }}</h4>
+                                <small class="text-muted">Years Experience</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('profileForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const submitBtn = this.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Updating...';
+    
+    fetch('{{ url_for("update_contractor_profile") }}', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Show success message
+            const alert = document.createElement('div');
+            alert.className = 'alert alert-success alert-dismissible fade show';
+            alert.innerHTML = `
+                <i class="fas fa-check-circle me-2"></i>
+                ${data.message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            document.querySelector('.container').insertBefore(alert, document.querySelector('.row'));
+            
+            // Auto-dismiss after 3 seconds
+            setTimeout(() => {
+                if (alert.parentNode) {
+                    alert.remove();
+                }
+            }, 3000);
+        } else {
+            // Show error message
+            const alert = document.createElement('div');
+            alert.className = 'alert alert-danger alert-dismissible fade show';
+            alert.innerHTML = `
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                ${data.message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            document.querySelector('.container').insertBefore(alert, document.querySelector('.row'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        const alert = document.createElement('div');
+        alert.className = 'alert alert-danger alert-dismissible fade show';
+        alert.innerHTML = `
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            An error occurred while updating your profile.
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        document.querySelector('.container').insertBefore(alert, document.querySelector('.row'));
+    })
+    .finally(() => {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+    });
+});
+</script>
+
+<style>
+.rating-stars {
+    font-size: 0.9rem;
+}
+
+.rating-display {
+    display: flex;
+    align-items: center;
+}
+
+.stat-item {
+    padding: 1rem 0;
+}
+
+.review-item {
+    font-size: 0.9rem;
+}
+
+.card {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    border: 1px solid rgba(0, 0, 0, 0.125);
+}
+
+.card-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+}
+</style>
+{% endblock %}

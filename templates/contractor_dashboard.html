@@ -28,6 +28,46 @@
         </div>
     </div>
     
+    <!-- Contractor Management Navigation -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <a href="{{ url_for('contractor_profile') }}" class="btn btn-outline-primary w-100 h-100 d-flex flex-column align-items-center justify-content-center py-3">
+                                <i class="fas fa-user-tie fa-2x mb-2"></i>
+                                <strong>Manage Profile</strong>
+                                <small class="text-muted">Update your professional information</small>
+                            </a>
+                        </div>
+                        <div class="col-md-3">
+                            <a href="{{ url_for('contractor_availability') }}" class="btn btn-outline-success w-100 h-100 d-flex flex-column align-items-center justify-content-center py-3">
+                                <i class="fas fa-calendar-alt fa-2x mb-2"></i>
+                                <strong>Availability Calendar</strong>
+                                <small class="text-muted">Set your work schedule</small>
+                            </a>
+                        </div>
+                        <div class="col-md-3">
+                            <a href="{{ url_for('contractor_messages') }}" class="btn btn-outline-info w-100 h-100 d-flex flex-column align-items-center justify-content-center py-3">
+                                <i class="fas fa-comments fa-2x mb-2"></i>
+                                <strong>Messages</strong>
+                                <small class="text-muted">Manage bid conversations</small>
+                            </a>
+                        </div>
+                        <div class="col-md-3">
+                            <a href="{{ url_for('contractor_reviews', contractor_id=contractor_id) }}" class="btn btn-outline-warning w-100 h-100 d-flex flex-column align-items-center justify-content-center py-3">
+                                <i class="fas fa-star fa-2x mb-2"></i>
+                                <strong>My Reviews</strong>
+                                <small class="text-muted">View customer feedback</small>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
     <!-- Quick Stats -->
     <div class="row mb-4">
         <div class="col-md-3">

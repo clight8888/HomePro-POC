@@ -434,6 +434,20 @@ function updateProjectType() {
     }
 }
 
+function loadCategoryTemplate() {
+    const projectTypeSelect = document.querySelector('#project_type');
+    const descriptionField = document.querySelector('#description');
+    if (!projectTypeSelect || !descriptionField) return;
+    
+    const selectedOption = projectTypeSelect.options[projectTypeSelect.selectedIndex];
+    const template = selectedOption.getAttribute('data-template');
+    if (template && (!descriptionField.value || descriptionField.value === ai_results.transcribed_text)) {
+        descriptionField.value = template;
+    }
+}
+
+document.querySelector('#project_type')?.addEventListener('change', loadCategoryTemplate);
+
 function estimateBudget() {
     const description = document.querySelector('#description')?.value || '';
     const projectType = document.querySelector('#project_type')?.value;
@@ -464,6 +478,62 @@ function estimateBudget() {
     if (!budgetMaxInput.value) budgetMaxInput.value = estimatedMax;
 }
 
+function launchEstimationWizard() {
+    const modal = new bootstrap.Modal(document.getElementById('estimationWizardModal'));
+    modal.show();
+    
+    let currentStep = 1;
+    const totalSteps = 3;
+    const steps = document.querySelectorAll('.step');
+    const progressBar = document.querySelector('.progress-bar');
+    const prevBtn = document.getElementById('wizardPrev');
+    const nextBtn = document.getElementById('wizardNext');
+    
+    function updateStep() {
+        steps.forEach((step, index) => {
+            step.classList.toggle('d-none', index + 1 !== currentStep);
+        });
+        progressBar.style.width = `${(currentStep / totalSteps) * 100}%`;
+        prevBtn.disabled = currentStep === 1;
+        nextBtn.textContent = currentStep === totalSteps ? 'Finish' : 'Next';
+    }
+    
+    prevBtn.addEventListener('click', () => {
+        if (currentStep > 1) {
+            currentStep--;
+            updateStep();
+        }
+    });
+    
+    nextBtn.addEventListener('click', () => {
+        if (currentStep < totalSteps) {
+            currentStep++;
+            updateStep();
+        } else {
+            // Calculate estimates
+            const area = parseInt(document.getElementById('areaSize').value) || 100;
+            const quality = document.getElementById('materialsQuality').value;
+            const urgency = document.getElementById('urgency').value;
+            
+            let baseCost = area * 10; // simple calculation
+            if (quality === 'standard') baseCost *= 1.5;
+            if (quality === 'premium') baseCost *= 2;
+            
+            let timeline = '2-4 weeks';
+            if (urgency === 'medium') timeline = '1-2 weeks';
+            if (urgency === 'high') timeline = 'Within 1 week';
+            
+            document.getElementById('budget_min').value = Math.round(baseCost * 0.8);
+            document.getElementById('budget_max').value = Math.round(baseCost * 1.2);
+            document.getElementById('timeline').value = timeline;
+            
+            modal.hide();
+        }
+    });
+    
+    updateStep();
+}
+
 // Export functions for global use
 window.HomePro = {
     showAlert,
@@ -472,5 +542,6 @@ window.HomePro = {
     toggleContractorFields,
     updateProjectType,
     estimateBudget,
-    debounce
+    debounce,
+    launchEstimationWizard
 };

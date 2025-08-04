@@ -75,16 +75,16 @@
                             <div class="col-md-6">
                                 <label for="project_type" class="form-label">Project Type *</label>
                                 <select class="form-select" id="project_type" name="project_type" required>
-                                    <option value="Kitchen Renovation" {% if ai_results.project_type == 'Kitchen Renovation' %}selected{% endif %}>Kitchen Renovation</option>
-                                    <option value="Bathroom Remodeling" {% if ai_results.project_type == 'Bathroom Remodeling' %}selected{% endif %}>Bathroom Remodeling</option>
-                                    <option value="Plumbing" {% if ai_results.project_type == 'Plumbing' %}selected{% endif %}>Plumbing</option>
-                                    <option value="Electrical" {% if ai_results.project_type == 'Electrical' %}selected{% endif %}>Electrical</option>
-                                    <option value="Painting" {% if ai_results.project_type == 'Painting' %}selected{% endif %}>Painting</option>
-                                    <option value="Flooring" {% if ai_results.project_type == 'Flooring' %}selected{% endif %}>Flooring</option>
-                                    <option value="Roofing" {% if ai_results.project_type == 'Roofing' %}selected{% endif %}>Roofing</option>
-                                    <option value="HVAC" {% if ai_results.project_type == 'HVAC' %}selected{% endif %}>HVAC</option>
-                                    <option value="Landscaping" {% if ai_results.project_type == 'Landscaping' %}selected{% endif %}>Landscaping</option>
-                                    <option value="General" {% if ai_results.project_type == 'General' or not ai_results.project_type %}selected{% endif %}>General</option>
+                                    <option value="Kitchen Renovation" data-template="Complete kitchen remodel including cabinets, countertops, appliances, and flooring." {% if ai_results.project_type == 'Kitchen Renovation' %}selected{% endif %}>Kitchen Renovation</option>
+                                    <option value="Bathroom Remodeling" data-template="Bathroom update with new fixtures, tiles, vanity, and lighting." {% if ai_results.project_type == 'Bathroom Remodeling' %}selected{% endif %}>Bathroom Remodeling</option>
+                                    <option value="Plumbing" data-template="Plumbing repairs or installations including pipes, faucets, and fixtures." {% if ai_results.project_type == 'Plumbing' %}selected{% endif %}>Plumbing</option>
+                                    <option value="Electrical" data-template="Electrical work such as wiring, outlets, lighting, and panel upgrades." {% if ai_results.project_type == 'Electrical' %}selected{% endif %}>Electrical</option>
+                                    <option value="Painting" data-template="Interior or exterior painting, including walls, ceilings, and trim." {% if ai_results.project_type == 'Painting' %}selected{% endif %}>Painting</option>
+                                    <option value="Flooring" data-template="Installation of new flooring materials like hardwood, tile, or carpet." {% if ai_results.project_type == 'Flooring' %}selected{% endif %}>Flooring</option>
+                                    <option value="Roofing" data-template="Roof repair or replacement, including shingles and gutters." {% if ai_results.project_type == 'Roofing' %}selected{% endif %}>Roofing</option>
+                                    <option value="HVAC" data-template="Heating, ventilation, and air conditioning system installation or repair." {% if ai_results.project_type == 'HVAC' %}selected{% endif %}>HVAC</option>
+                                    <option value="Landscaping" data-template="Outdoor landscaping including plants, lawn, and hardscaping." {% if ai_results.project_type == 'Landscaping' %}selected{% endif %}>Landscaping</option>
+                                    <option value="General" data-template="General home repair or maintenance tasks." {% if ai_results.project_type == 'General' or not ai_results.project_type %}selected{% endif %}>General</option>
                                 </select>
                             </div>
                             
@@ -102,6 +102,11 @@
                                 <label for="description" class="form-label">Project Description *</label>
                                 <textarea class="form-control" id="description" name="description" rows="5" required>{{ ai_results.description or ai_results.transcribed_text }}</textarea>
                                 <div class="form-text">Detailed description of the work needed</div>
+                            </div>
+                            <div class="col-12 mt-3">
+                                <button type="button" class="btn btn-outline-info" onclick="launchEstimationWizard()">
+                                    <i class="fas fa-magic me-2"></i>Launch Estimation Wizard
+                                </button>
                             </div>
                             
                             <!-- Budget Range -->
@@ -240,6 +245,50 @@
                                 </button>
                             </div>
                         </div>
+
+<!-- Estimation Wizard Modal -->
+<div class="modal fade" id="estimationWizardModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Project Estimation Wizard</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="wizard-steps">
+                    <div class="step" id="step1">
+                        <h6>Step 1: Project Scope</h6>
+                        <p>What is the size of the area? (in sq ft)</p>
+                        <input type="number" id="areaSize" class="form-control" placeholder="e.g., 500">
+                    </div>
+                    <div class="step d-none" id="step2">
+                        <h6>Step 2: Materials Quality</h6>
+                        <select id="materialsQuality" class="form-select">
+                            <option value="basic">Basic</option>
+                            <option value="standard">Standard</option>
+                            <option value="premium">Premium</option>
+                        </select>
+                    </div>
+                    <div class="step d-none" id="step3">
+                        <h6>Step 3: Urgency</h6>
+                        <select id="urgency" class="form-select">
+                            <option value="low">Not urgent</option>
+                            <option value="medium">Within a month</option>
+                            <option value="high">ASAP</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="progress mt-3">
+                    <div class="progress-bar" style="width: 33%"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="wizardPrev">Previous</button>
+                <button type="button" class="btn btn-primary" id="wizardNext">Next</button>
+            </div>
+        </div>
+    </div>
+</div>
                     </form>
                 </div>
             </div>

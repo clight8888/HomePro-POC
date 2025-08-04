@@ -53,6 +53,28 @@
         .status-archived {
             color: #6c757d;
         }
+        
+        /* Mobile Submit Button */
+        .mobile-submit-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+            border-radius: 50px;
+            padding: 15px 25px;
+            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
+            display: none;
+        }
+        
+        @media (max-width: 768px) {
+            .mobile-submit-btn {
+                display: block;
+            }
+            
+            .footer {
+                padding-bottom: 80px; /* Add space for mobile button */
+            }
+        }
     </style>
 </head>
 <body>
@@ -69,9 +91,6 @@
             
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('index') }}">Home</a>
-                    </li>
                     {% if user %}
                         {% if user.role == 'homeowner' %}
                             <li class="nav-item">
@@ -121,6 +140,14 @@
                 </ul>
                 <ul class="navbar-nav ms-auto">
                     {% if user %}
+                        <li class="nav-item">
+                            <button class="btn btn-outline-primary position-relative me-2" onclick="showNotifications()" title="Notifications">
+                                <i class="fas fa-bell"></i>
+                                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="notificationBadge" style="display: none;">
+                                    0
+                                </span>
+                            </button>
+                        </li>
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
                                 {% if user.role == 'contractor' %}
@@ -135,7 +162,7 @@
                                 {% endif %}
                             </a>
                             <ul class="dropdown-menu">
-                                <li><a class="dropdown-item" href="#">
+                                <li><a class="dropdown-item" href="{% if user.role == 'contractor' %}{{ url_for('contractor_profile') }}{% else %}#{% endif %}">
                                     <i class="fas fa-user me-2"></i>Profile
                                 </a></li>
                                 <li><hr class="dropdown-divider"></li>
@@ -176,31 +203,240 @@
         {% block content %}{% endblock %}
     </main>
 
+    <!-- Mobile Submit Button -->
+    {% if not user or user.role != 'contractor' %}
+    <a href="{{ url_for('submit_project') }}" class="btn btn-primary mobile-submit-btn">
+        <i class="fas fa-plus me-2"></i>Submit Project
+    </a>
+    {% endif %}
+
     <!-- Footer -->
     <footer class="footer">
         <div class="container">
-            <div class="row">
-                <div class="col-md-6">
+            <div class="row g-4">
+                <div class="col-lg-4 col-md-6">
                     <h5><i class="fas fa-home me-2"></i>HomePro</h5>
-                    <p>Connecting homeowners with trusted contractors through AI-powered project matching.</p>
+                    <p class="mb-3">Transform your home with confidence. Our AI-powered platform connects you with verified, skilled contractors who bring your vision to life.</p>
+                    <div class="d-flex gap-3">
+                        <a href="#" class="text-light"><i class="fab fa-facebook-f"></i></a>
+                        <a href="#" class="text-light"><i class="fab fa-twitter"></i></a>
+                        <a href="#" class="text-light"><i class="fab fa-linkedin-in"></i></a>
+                        <a href="#" class="text-light"><i class="fab fa-instagram"></i></a>
+                    </div>
                 </div>
-                <div class="col-md-6">
-                    <h6>Quick Links</h6>
+                <div class="col-lg-2 col-md-6">
+                    <h6>For Homeowners</h6>
                     <ul class="list-unstyled">
-                        <li><a href="{{ url_for('index') }}" class="text-light text-decoration-none">Home</a></li>
-                        <li><a href="#" class="text-light text-decoration-none">About</a></li>
-                        <li><a href="#" class="text-light text-decoration-none">Contact</a></li>
+                        <li><a href="{{ url_for('submit_project') }}" class="text-light text-decoration-none">Submit Project</a></li>
+                        <li><a href="#" class="text-light text-decoration-none">How It Works</a></li>
+                        <li><a href="#" class="text-light text-decoration-none">Success Stories</a></li>
+                        <li><a href="#" class="text-light text-decoration-none">Safety & Trust</a></li>
                     </ul>
                 </div>
+                <div class="col-lg-2 col-md-6">
+                    <h6>For Contractors</h6>
+                    <ul class="list-unstyled">
+                        <li><a href="{{ url_for('register') }}" class="text-light text-decoration-none">Join as Pro</a></li>
+                        <li><a href="#" class="text-light text-decoration-none">Find Projects</a></li>
+                        <li><a href="#" class="text-light text-decoration-none">Grow Business</a></li>
+                        <li><a href="#" class="text-light text-decoration-none">Resources</a></li>
+                    </ul>
+                </div>
+                <div class="col-lg-2 col-md-6">
+                    <h6>Support</h6>
+                    <ul class="list-unstyled">
+                        <li><a href="#" class="text-light text-decoration-none">Help Center</a></li>
+                        <li><a href="#" class="text-light text-decoration-none">Contact Us</a></li>
+                        <li><a href="#" class="text-light text-decoration-none">Privacy Policy</a></li>
+                        <li><a href="#" class="text-light text-decoration-none">Terms of Service</a></li>
+                    </ul>
+                </div>
+                <div class="col-lg-2 col-md-12">
+                    <h6>Get Started Today</h6>
+                    <p class="small mb-3">Ready to transform your space? Start your project in minutes.</p>
+                    <a href="{{ url_for('submit_project') }}" class="btn btn-light btn-sm">
+                        <i class="fas fa-plus me-1"></i>Start Project
+                    </a>
+                </div>
             </div>
-            <hr class="my-4">
-            <div class="text-center">
-                <p>&copy; 2024 HomePro. All rights reserved.</p>
+            <hr class="my-4 opacity-25">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <p class="mb-0">&copy; 2024 HomePro. All rights reserved.</p>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <p class="mb-0 small">
+                        <i class="fas fa-shield-alt me-1"></i>Trusted by thousands of homeowners
+                        <span class="mx-2">•</span>
+                        <i class="fas fa-star me-1"></i>4.9/5 average rating
+                    </p>
+                </div>
             </div>
         </div>
     </footer>
 
+    <!-- Global Notifications Modal -->
+    {% if user %}
+    <div class="modal fade" id="globalNotificationsModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-bell me-2"></i>Notifications
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="globalNotificationsList">
+                        <div class="text-center py-4">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    {% if user %}
+    <script>
+        // Global notification functions
+        function showNotifications() {
+            const modal = new bootstrap.Modal(document.getElementById('globalNotificationsModal'));
+            modal.show();
+            loadGlobalNotifications();
+        }
+
+        function loadGlobalNotifications() {
+            fetch('/api/notifications')
+                .then(response => response.json())
+                .then(data => {
+                    const container = document.getElementById('globalNotificationsList');
+                    
+                    if (data.notifications && data.notifications.length > 0) {
+                        container.innerHTML = data.notifications.map(notification => `
+                            <div class="notification-item border-bottom py-3 ${!notification.is_read ? 'bg-light' : ''}" data-id="${notification.id}">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div class="flex-grow-1">
+                                        <h6 class="mb-1">${notification.title}</h6>
+                                        <p class="mb-1 text-muted">${notification.message}</p>
+                                        <small class="text-muted">
+                                            <i class="fas fa-clock me-1"></i>
+                                            ${new Date(notification.created_at).toLocaleString()}
+                                        </small>
+                                        ${notification.project_title ? `
+                                            <br><small class="text-primary">
+                                                <i class="fas fa-project-diagram me-1"></i>Project: ${notification.project_title}
+                                            </small>
+                                        ` : ''}
+                                    </div>
+                                    <div class="ms-3 d-flex flex-column gap-1">
+                                        ${notification.bid_id && (notification.notification_type === 'new_message' || notification.notification_type === 'counter_offer') ? `
+                                            <button class="btn btn-sm btn-primary" onclick="replyToNotification(${notification.bid_id})" title="Reply to this message">
+                                                <i class="fas fa-reply me-1"></i>Reply
+                                            </button>
+                                        ` : ''}
+                                        ${!notification.is_read ? `
+                                            <button class="btn btn-sm btn-outline-secondary" onclick="markGlobalNotificationRead(${notification.id})">
+                                                Mark Read
+                                            </button>
+                                        ` : `
+                                            <span class="badge bg-success">Read</span>
+                                        `}
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('');
+                        
+                        // Update notification badge
+                        const unreadCount = data.notifications.filter(n => !n.is_read).length;
+                        updateNotificationBadge(unreadCount);
+                    } else {
+                        container.innerHTML = `
+                            <div class="text-center py-4">
+                                <i class="fas fa-bell-slash fa-3x text-muted mb-3"></i>
+                                <h6 class="text-muted">No notifications</h6>
+                                <p class="text-muted">You're all caught up!</p>
+                            </div>
+                        `;
+                        updateNotificationBadge(0);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading notifications:', error);
+                    document.getElementById('globalNotificationsList').innerHTML = `
+                        <div class="text-center py-4">
+                            <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
+                            <h6 class="text-warning">Error loading notifications</h6>
+                            <p class="text-muted">Please try again later.</p>
+                        </div>
+                    `;
+                });
+        }
+
+        function markGlobalNotificationRead(notificationId) {
+            fetch(`/api/notifications/${notificationId}/mark_read`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    loadGlobalNotifications(); // Reload to update the display
+                }
+            })
+            .catch(error => {
+                console.error('Error marking notification as read:', error);
+            });
+        }
+
+        function updateNotificationBadge(count) {
+            const badge = document.getElementById('notificationBadge');
+            if (count > 0) {
+                badge.textContent = count;
+                badge.style.display = 'block';
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+
+        function replyToNotification(bidId) {
+            // Close the notifications modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('globalNotificationsModal'));
+            if (modal) {
+                modal.hide();
+            }
+            
+            // Navigate to contractor messages page and open the specific conversation
+            window.location.href = `/contractor/messages?bid_id=${bidId}`;
+        }
+
+        // Load notification count on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            fetch('/api/notifications')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.notifications) {
+                        const unreadCount = data.notifications.filter(n => !n.is_read).length;
+                        updateNotificationBadge(unreadCount);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading notification count:', error);
+                });
+        });
+    </script>
+    {% endif %}
+    
     {% block scripts %}{% endblock %}
 </body>
 </html>

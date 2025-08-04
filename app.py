@@ -681,6 +681,731 @@ def cleanup_expired_guest_projects():
         print(f"Error cleaning up expired guest projects: {e}")
         return 0
 
+# ============================================================================
+# ADVANCED BIDDING FEATURES
+# ============================================================================
+
+@app.route('/api/bid_comparison', methods=['POST'])
+@login_required
+def save_bid_comparison():
+    """Save bid comparison for future reference"""
+    user = session['user']
+    if user['role'] != 'homeowner':
+        return jsonify({'success': False, 'message': 'Only homeowners can save bid comparisons'}), 403
+    
+    data = request.get_json()
+    project_id = data.get('project_id')
+    bid_ids = data.get('bid_ids', [])
+    notes = data.get('notes', '')
+    
+    if not project_id or len(bid_ids) < 2:
+        return jsonify({'success': False, 'message': 'Invalid comparison data'}), 400
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Get homeowner ID
+    cursor.execute('SELECT id FROM homeowners WHERE user_id = %s', (user['id'],))
+    homeowner_result = cursor.fetchone()
+    if not homeowner_result:
+        cursor.close()
+        conn.close()
+        return jsonify({'success': False, 'message': 'Homeowner profile not found'}), 404
+    
+    homeowner_id = homeowner_result['id']
+    
+    # Verify project ownership
+    cursor.execute('SELECT * FROM projects WHERE id = %s AND homeowner_id = %s', (project_id, homeowner_id))
+    if not cursor.fetchone():
+        cursor.close()
+        conn.close()
+        return jsonify({'success': False, 'message': 'Project not found or access denied'}), 404
+    
+    # Save comparison
+    import json
+    cursor.execute('''
+        INSERT INTO bid_comparisons (project_id, homeowner_id, bid_ids, comparison_notes)
+        VALUES (%s, %s, %s, %s)
+    ''', (project_id, homeowner_id, json.dumps(bid_ids), notes))
+    
+    conn.commit()
+    cursor.close()
+    conn.close()
+    
+    return jsonify({'success': True, 'message': 'Comparison saved successfully'})
+
+@app.route('/api/bid_comparison/<int:project_id>')
+@login_required
+def get_bid_comparisons(project_id):
+    """Get saved bid comparisons for a project"""
+    user = session['user']
+    if user['role'] != 'homeowner':
+        return jsonify({'success': False, 'message': 'Access denied'}), 403
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Get homeowner ID
+    cursor.execute('SELECT id FROM homeowners WHERE user_id = %s', (user['id'],))
+    homeowner_result = cursor.fetchone()
+    if not homeowner_result:
+        cursor.close()
+        conn.close()
+        return jsonify({'success': False, 'message': 'Homeowner profile not found'}), 404
+    
+    homeowner_id = homeowner_result['id']
+    
+    # Get comparisons
+    cursor.execute('''
+        SELECT * FROM bid_comparisons 
+        WHERE project_id = %s AND homeowner_id = %s 
+        ORDER BY created_at DESC
+    ''', (project_id, homeowner_id))
+    
+    comparisons = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    
+    return jsonify({'success': True, 'comparisons': comparisons})
+
+@app.route('/send_bid_message/<int:bid_id>', methods=['POST'])
+@login_required
+def send_bid_message(bid_id):
+    """Send a message related to a bid (negotiation, question, etc.)"""
+    user = session['user']
+    data = request.get_json()
+    
+    message_text = data.get('message_text', '').strip()
+    message_type = data.get('message_type', 'negotiation')
+    proposed_amount = data.get('proposed_amount')
+    proposed_timeline = data.get('proposed_timeline')
+    
+    if not message_text:
+        return jsonify({'success': False, 'message': 'Message text is required'}), 400
+    
+    if message_type not in ['negotiation', 'question', 'clarification', 'counter_offer']:
+        return jsonify({'success': False, 'message': 'Invalid message type'}), 400
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Get bid details
+    cursor.execute('''
+        SELECT b.*, p.homeowner_id, c.user_id as contractor_user_id
+        FROM bids b
+        JOIN projects p ON b.project_id = p.id
+        JOIN contractors c ON b.contractor_id = c.id
+        WHERE b.id = %s
+    ''', (bid_id,))
+    
+    bid = cursor.fetchone()
+    if not bid:
+        cursor.close()
+        conn.close()
+        return jsonify({'success': False, 'message': 'Bid not found'}), 404
+    
+    # Determine sender and receiver
+    if user['role'] == 'homeowner':
+        cursor.execute('SELECT id FROM homeowners WHERE user_id = %s', (user['id'],))
+        homeowner_result = cursor.fetchone()
+        if not homeowner_result or homeowner_result['id'] != bid['homeowner_id']:
+            cursor.close()
+            conn.close()
+            return jsonify({'success': False, 'message': 'Access denied'}), 403
+        receiver_id = bid['contractor_user_id']
+    else:  # contractor
+        if bid['contractor_user_id'] != user['id']:
+            cursor.close()
+            conn.close()
+            return jsonify({'success': False, 'message': 'Access denied'}), 403
+        cursor.execute('SELECT user_id FROM homeowners WHERE id = %s', (bid['homeowner_id'],))
+        homeowner_user = cursor.fetchone()
+        receiver_id = homeowner_user['user_id']
+    
+    # Insert message
+    cursor.execute('''
+        INSERT INTO bid_messages (bid_id, sender_id, receiver_id, message_type, message_text, proposed_amount, proposed_timeline)
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
+    ''', (bid_id, user['id'], receiver_id, message_type, message_text, proposed_amount, proposed_timeline))
+    
+    message_id = cursor.lastrowid
+    
+    # Update bid activity timestamp
+    cursor.execute('UPDATE bids SET last_activity_at = NOW() WHERE id = %s', (bid_id,))
+    
+    # Create notification
+    notification_type = 'new_message' if message_type in ['question', 'clarification'] else 'counter_offer'
+    title = f"New {message_type.replace('_', ' ').title()} on Bid"
+    notification_message = f"{user['first_name']} {user['last_name']} sent you a {message_type.replace('_', ' ')}"
+    
+    cursor.execute('''
+        INSERT INTO bid_notifications (bid_id, user_id, notification_type, title, message)
+        VALUES (%s, %s, %s, %s, %s)
+    ''', (bid_id, receiver_id, notification_type, title, notification_message))
+    
+    conn.commit()
+    cursor.close()
+    conn.close()
+    
+    return jsonify({'success': True, 'message': 'Message sent successfully', 'message_id': message_id})
+
+@app.route('/api/bids/<int:bid_id>')
+@login_required
+def get_bid_details(bid_id):
+    """Get bid details for a specific bid"""
+    user = session['user']
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Get bid details with project and homeowner info
+    cursor.execute('''
+        SELECT b.*, p.title as project_title, p.description,
+               h.user_id as homeowner_user_id,
+               u.first_name as homeowner_first_name, u.last_name as homeowner_last_name,
+               c.user_id as contractor_user_id
+        FROM bids b
+        JOIN projects p ON b.project_id = p.id
+        JOIN homeowners h ON p.homeowner_id = h.id
+        JOIN users u ON h.user_id = u.id
+        JOIN contractors c ON b.contractor_id = c.id
+        WHERE b.id = %s
+    ''', (bid_id,))
+    
+    bid = cursor.fetchone()
+    if not bid:
+        cursor.close()
+        conn.close()
+        return jsonify({'success': False, 'message': 'Bid not found'}), 404
+    
+    # Check access
+    has_access = False
+    if user['role'] == 'homeowner':
+        cursor.execute('SELECT id FROM homeowners WHERE user_id = %s', (user['id'],))
+        homeowner_result = cursor.fetchone()
+        if homeowner_result and bid['homeowner_user_id'] == user['id']:
+            has_access = True
+    elif user['role'] == 'contractor':
+        if bid['contractor_user_id'] == user['id']:
+            has_access = True
+    
+    if not has_access:
+        cursor.close()
+        conn.close()
+        return jsonify({'success': False, 'message': 'Access denied'}), 403
+    
+    cursor.close()
+    conn.close()
+    
+    # Format response
+    response_data = {
+        'success': True,
+        'bid_id': bid['id'],
+        'project_title': bid['project_title'],
+        'homeowner_name': f"{bid['homeowner_first_name']} {bid['homeowner_last_name']}",
+        'amount': bid['amount'],
+        'timeline': bid['timeline'],
+        'status': bid['status'],
+        'description': bid['description'],
+        'created_at': bid['created_at']
+    }
+    
+    return jsonify(response_data)
+
+@app.route('/api/bid_messages/<int:bid_id>')
+@login_required
+def get_bid_messages(bid_id):
+    """Get all messages for a bid"""
+    user = session['user']
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Verify access to bid
+    cursor.execute('''
+        SELECT b.*, p.homeowner_id, c.user_id as contractor_user_id
+        FROM bids b
+        JOIN projects p ON b.project_id = p.id
+        JOIN contractors c ON b.contractor_id = c.id
+        WHERE b.id = %s
+    ''', (bid_id,))
+    
+    bid = cursor.fetchone()
+    if not bid:
+        cursor.close()
+        conn.close()
+        return jsonify({'success': False, 'message': 'Bid not found'}), 404
+    
+    # Check access
+    has_access = False
+    if user['role'] == 'homeowner':
+        cursor.execute('SELECT id FROM homeowners WHERE user_id = %s', (user['id'],))
+        homeowner_result = cursor.fetchone()
+        if homeowner_result and homeowner_result['id'] == bid['homeowner_id']:
+            has_access = True
+    else:  # contractor
+        if bid['contractor_user_id'] == user['id']:
+            has_access = True
+    
+    if not has_access:
+        cursor.close()
+        conn.close()
+        return jsonify({'success': False, 'message': 'Access denied'}), 403
+    
+    # Get messages
+    cursor.execute('''
+        SELECT bm.*, 
+               u.first_name, u.last_name, u.role
+        FROM bid_messages bm
+        JOIN users u ON bm.sender_id = u.id
+        WHERE bm.bid_id = %s
+        ORDER BY bm.created_at ASC
+    ''', (bid_id,))
+    
+    messages = cursor.fetchall()
+    
+    # Mark messages as read for current user
+    cursor.execute('''
+        UPDATE bid_messages 
+        SET is_read = TRUE 
+        WHERE bid_id = %s AND receiver_id = %s AND is_read = FALSE
+    ''', (bid_id, user['id']))
+    
+    conn.commit()
+    cursor.close()
+    conn.close()
+    
+    return jsonify({'success': True, 'messages': messages})
+
+@app.route('/api/notifications')
+@login_required
+def get_notifications():
+    """Get notifications for current user"""
+    user = session['user']
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute('''
+        SELECT bn.*, b.amount, p.title as project_title
+        FROM bid_notifications bn
+        JOIN bids b ON bn.bid_id = b.id
+        JOIN projects p ON b.project_id = p.id
+        WHERE bn.user_id = %s
+        ORDER BY bn.created_at DESC
+        LIMIT 20
+    ''', (user['id'],))
+    
+    notifications = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    
+    return jsonify({'success': True, 'notifications': notifications})
+
+@app.route('/api/notifications/<int:notification_id>/mark_read', methods=['POST'])
+@login_required
+def mark_notification_read(notification_id):
+    """Mark a notification as read"""
+    user = session['user']
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute('''
+        UPDATE bid_notifications 
+        SET is_read = TRUE 
+        WHERE id = %s AND user_id = %s
+    ''', (notification_id, user['id']))
+    
+    conn.commit()
+    cursor.close()
+    conn.close()
+    
+    return jsonify({'success': True, 'message': 'Notification marked as read'})
+
+@app.route('/api/contractor/message_stats')
+@login_required
+def get_contractor_message_stats():
+    """Get message statistics for contractor dashboard"""
+    user = session['user']
+    
+    if user['role'] != 'contractor':
+        return jsonify({'success': False, 'message': 'Access denied'}), 403
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Get contractor ID
+    cursor.execute('SELECT id FROM contractors WHERE user_id = %s', (user['id'],))
+    contractor_result = cursor.fetchone()
+    if not contractor_result:
+        return jsonify({'success': False, 'message': 'Contractor not found'}), 404
+    contractor_id = contractor_result['id']
+    
+    # Get total conversations (bids with messages)
+    cursor.execute('''
+        SELECT COUNT(DISTINCT b.id) as total
+        FROM bids b
+        WHERE b.contractor_id = %s
+        AND EXISTS (SELECT 1 FROM bid_messages bm WHERE bm.bid_id = b.id)
+    ''', (contractor_id,))
+    total_conversations = cursor.fetchone()['total']
+    
+    # Get unread messages count
+    cursor.execute('''
+        SELECT COUNT(*) as unread
+        FROM bid_messages bm
+        JOIN bids b ON bm.bid_id = b.id
+        WHERE b.contractor_id = %s
+        AND bm.receiver_id = %s
+        AND bm.is_read = FALSE
+    ''', (contractor_id, user['id']))
+    unread_messages = cursor.fetchone()['unread']
+    
+    # Get active negotiations (bids with recent activity)
+    cursor.execute('''
+        SELECT COUNT(DISTINCT b.id) as active
+        FROM bids b
+        WHERE b.contractor_id = %s
+        AND b.status IN ('Submitted', 'Under Review')
+        AND b.negotiation_allowed = TRUE
+        AND b.last_activity_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+    ''', (contractor_id,))
+    active_negotiations = cursor.fetchone()['active']
+    
+    cursor.close()
+    conn.close()
+    
+    return jsonify({
+        'success': True,
+        'total': total_conversations,
+        'unread': unread_messages,
+        'active': active_negotiations
+    })
+
+@app.route('/api/contractor/messages')
+@login_required
+def get_contractor_messages():
+    """Get all bid conversations for a contractor"""
+    user = session['user']
+    
+    if user['role'] != 'contractor':
+        return jsonify({'success': False, 'message': 'Access denied'}), 403
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Get contractor ID
+    cursor.execute('SELECT id FROM contractors WHERE user_id = %s', (user['id'],))
+    contractor_result = cursor.fetchone()
+    if not contractor_result:
+        return jsonify({'success': False, 'message': 'Contractor not found'}), 404
+    contractor_id = contractor_result['id']
+    
+    # Get filter parameters
+    status_filter = request.args.get('status', '')
+    sort_by = request.args.get('sort', 'recent')
+    search_term = request.args.get('search', '')
+    
+    # Build query
+    query = '''
+        SELECT DISTINCT b.id as bid_id, b.amount as bid_amount, b.status as bid_status,
+               b.timeline, b.last_activity_at,
+               p.title as project_title,
+               CONCAT(u.first_name, ' ', u.last_name) as homeowner_name,
+               (SELECT COUNT(*) FROM bid_messages bm 
+                WHERE bm.bid_id = b.id AND bm.receiver_id = %s AND bm.is_read = FALSE) as unread_count,
+               (SELECT bm2.message_text FROM bid_messages bm2 
+                WHERE bm2.bid_id = b.id ORDER BY bm2.created_at DESC LIMIT 1) as last_message
+        FROM bids b
+        JOIN projects p ON b.project_id = p.id
+        JOIN homeowners h ON p.homeowner_id = h.id
+        JOIN users u ON h.user_id = u.id
+        WHERE b.contractor_id = %s
+        AND EXISTS (SELECT 1 FROM bid_messages bm WHERE bm.bid_id = b.id)
+    '''
+    
+    params = [user['id'], contractor_id]
+    
+    # Add status filter
+    if status_filter:
+        if status_filter == 'active':
+            query += " AND b.status IN ('Submitted', 'Under Review')"
+        elif status_filter == 'pending':
+            query += " AND b.status = 'Submitted'"
+        elif status_filter == 'negotiating':
+            query += " AND b.negotiation_allowed = TRUE AND b.status = 'Under Review'"
+        elif status_filter == 'accepted':
+            query += " AND b.status = 'Accepted'"
+        elif status_filter == 'declined':
+            query += " AND b.status = 'Declined'"
+    
+    # Add search filter
+    if search_term:
+        query += " AND (p.title LIKE %s OR CONCAT(u.first_name, ' ', u.last_name) LIKE %s)"
+        search_pattern = f'%{search_term}%'
+        params.extend([search_pattern, search_pattern])
+    
+    # Add sorting
+    if sort_by == 'recent':
+        query += " ORDER BY b.last_activity_at DESC"
+    elif sort_by == 'oldest':
+        query += " ORDER BY b.last_activity_at ASC"
+    elif sort_by == 'project':
+        query += " ORDER BY p.title ASC"
+    elif sort_by == 'amount':
+        query += " ORDER BY b.amount DESC"
+    else:
+        query += " ORDER BY b.last_activity_at DESC"
+    
+    cursor.execute(query, params)
+    messages = cursor.fetchall()
+    
+    cursor.close()
+    conn.close()
+    
+    return jsonify({'success': True, 'messages': messages})
+
+@app.route('/api/bid_messages/<int:bid_id>/mark_read', methods=['POST'])
+@login_required
+def mark_bid_messages_read(bid_id):
+    """Mark all messages in a bid conversation as read for current user"""
+    user = session['user']
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Verify access to bid
+    cursor.execute('''
+        SELECT b.*, p.homeowner_id, c.user_id as contractor_user_id
+        FROM bids b
+        JOIN projects p ON b.project_id = p.id
+        JOIN contractors c ON b.contractor_id = c.id
+        WHERE b.id = %s
+    ''', (bid_id,))
+    
+    bid = cursor.fetchone()
+    if not bid:
+        cursor.close()
+        conn.close()
+        return jsonify({'success': False, 'message': 'Bid not found'}), 404
+    
+    # Check access
+    has_access = False
+    if user['role'] == 'homeowner':
+        cursor.execute('SELECT id FROM homeowners WHERE user_id = %s', (user['id'],))
+        homeowner_result = cursor.fetchone()
+        if homeowner_result and homeowner_result['id'] == bid['homeowner_id']:
+            has_access = True
+    else:  # contractor
+        if bid['contractor_user_id'] == user['id']:
+            has_access = True
+    
+    if not has_access:
+        cursor.close()
+        conn.close()
+        return jsonify({'success': False, 'message': 'Access denied'}), 403
+    
+    # Mark messages as read
+    cursor.execute('''
+        UPDATE bid_messages 
+        SET is_read = TRUE 
+        WHERE bid_id = %s AND receiver_id = %s AND is_read = FALSE
+    ''', (bid_id, user['id']))
+    
+    conn.commit()
+    cursor.close()
+    conn.close()
+    
+    return jsonify({'success': True, 'message': 'Messages marked as read'})
+
+@app.route('/api/bid_messages', methods=['POST'])
+@login_required
+def send_bid_message_api():
+    """Send a bid message via API (for contractor messages page)"""
+    user = session['user']
+    data = request.get_json()
+    
+    bid_id = data.get('bid_id')
+    message = data.get('message', '').strip()
+    message_type = data.get('message_type', 'response')
+    price_adjustment = data.get('price_adjustment')
+    timeline_adjustment = data.get('timeline_adjustment')
+    
+    if not bid_id or not message:
+        return jsonify({'success': False, 'error': 'Bid ID and message are required'}), 400
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    try:
+        # Verify access to bid
+        cursor.execute('''
+            SELECT b.*, p.homeowner_id, c.user_id as contractor_user_id,
+                   h.user_id as homeowner_user_id
+            FROM bids b
+            JOIN projects p ON b.project_id = p.id
+            JOIN contractors c ON b.contractor_id = c.id
+            JOIN homeowners h ON p.homeowner_id = h.id
+            WHERE b.id = %s
+        ''', (bid_id,))
+        
+        bid = cursor.fetchone()
+        if not bid:
+            return jsonify({'success': False, 'error': 'Bid not found'}), 404
+        
+        # Check access and determine receiver
+        receiver_id = None
+        if user['role'] == 'homeowner' and bid['homeowner_user_id'] == user['id']:
+            receiver_id = bid['contractor_user_id']
+        elif user['role'] == 'contractor' and bid['contractor_user_id'] == user['id']:
+            receiver_id = bid['homeowner_user_id']
+        else:
+            return jsonify({'success': False, 'error': 'Access denied'}), 403
+        
+        # Insert message
+        cursor.execute('''
+            INSERT INTO bid_messages (bid_id, sender_id, receiver_id, message_text, message_type, 
+                                    proposed_amount, proposed_timeline)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+        ''', (bid_id, user['id'], receiver_id, message, message_type, 
+              price_adjustment, timeline_adjustment))
+        
+        message_id = cursor.lastrowid
+        
+        # Update bid activity
+        cursor.execute('''
+            UPDATE bids SET last_activity_at = NOW() WHERE id = %s
+        ''', (bid_id,))
+        
+        # Create notification for receiver
+        notification_title = f"New message about your bid"
+        if message_type == 'price_adjustment':
+            notification_title = "Price adjustment proposed"
+        elif message_type == 'timeline_adjustment':
+            notification_title = "Timeline adjustment proposed"
+        elif message_type == 'negotiation':
+            notification_title = "Bid negotiation message"
+        
+        cursor.execute('''
+            INSERT INTO bid_notifications (bid_id, user_id, notification_type, title, message)
+            VALUES (%s, %s, %s, %s, %s)
+        ''', (bid_id, receiver_id, 'new_message', notification_title, 
+              f'New message: {message[:100]}...'))
+        
+        conn.commit()
+        
+        return jsonify({
+            'success': True, 
+            'message': 'Message sent successfully',
+            'message_id': message_id
+        })
+        
+    except Exception as e:
+        conn.rollback()
+        return jsonify({'success': False, 'error': f'Error sending message: {str(e)}'}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
+@app.route('/api/expire_bids', methods=['POST'])
+@login_required
+def manual_expire_bids():
+    """Manually trigger bid expiration check (admin only)"""
+    user = session['user']
+    
+    # Check if user is admin (simplified check)
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM admin_users WHERE user_id = %s AND is_active = TRUE', (user['id'],))
+    if not cursor.fetchone():
+        cursor.close()
+        conn.close()
+        return jsonify({'success': False, 'message': 'Admin access required'}), 403
+    
+    cursor.close()
+    conn.close()
+    
+    # Run expiration check
+    expired_count = expire_old_bids()
+    
+    return jsonify({
+        'success': True, 
+        'message': f'Expired {expired_count} bids',
+        'expired_count': expired_count
+    })
+
+def expire_old_bids():
+    """Check for and expire old bids based on their expiration dates"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    try:
+        # Find bids that should be expired
+        cursor.execute('''
+            SELECT id, project_id, contractor_id, amount
+            FROM bids 
+            WHERE status = 'Submitted' 
+            AND auto_expire_enabled = TRUE
+            AND expires_at IS NOT NULL 
+            AND expires_at < NOW()
+        ''')
+        
+        expired_bids = cursor.fetchall()
+        expired_count = len(expired_bids)
+        
+        if expired_count > 0:
+            # Update bid statuses to expired
+            cursor.execute('''
+                UPDATE bids 
+                SET status = 'Expired', last_activity_at = NOW()
+                WHERE status = 'Submitted' 
+                AND auto_expire_enabled = TRUE
+                AND expires_at IS NOT NULL 
+                AND expires_at < NOW()
+            ''')
+            
+            # Create notifications for expired bids
+            for bid in expired_bids:
+                # Notify contractor
+                cursor.execute('''
+                    SELECT user_id FROM contractors WHERE id = %s
+                ''', (bid['contractor_id'],))
+                contractor_user = cursor.fetchone()
+                
+                if contractor_user:
+                    cursor.execute('''
+                        INSERT INTO bid_notifications (bid_id, user_id, notification_type, title, message)
+                        VALUES (%s, %s, %s, %s, %s)
+                    ''', (bid['id'], contractor_user['user_id'], 'bid_expired', 
+                          'Bid Expired', f'Your bid of ${bid["amount"]:,.2f} has expired'))
+                
+                # Notify homeowner
+                cursor.execute('''
+                    SELECT h.user_id FROM homeowners h
+                    JOIN projects p ON h.id = p.homeowner_id
+                    WHERE p.id = %s
+                ''', (bid['project_id'],))
+                homeowner_user = cursor.fetchone()
+                
+                if homeowner_user:
+                    cursor.execute('''
+                        INSERT INTO bid_notifications (bid_id, user_id, notification_type, title, message)
+                        VALUES (%s, %s, %s, %s, %s)
+                    ''', (bid['id'], homeowner_user['user_id'], 'bid_expired', 
+                          'Bid Expired', f'A bid of ${bid["amount"]:,.2f} on your project has expired'))
+        
+        conn.commit()
+        return expired_count
+        
+    except Exception as e:
+        conn.rollback()
+        print(f"Error expiring bids: {e}")
+        return 0
+    finally:
+        cursor.close()
+        conn.close()
+
 # def create_demo_users():
 #     """Adapted for Cognito - run manually or via script"""
 
@@ -962,6 +1687,135 @@ def init_database():
             )
         ''')
         
+        # Create project_images table for storing project images (up to 4 per project)
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS project_images (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                project_id INT NOT NULL,
+                image_path VARCHAR(500) NOT NULL,
+                image_order TINYINT NOT NULL DEFAULT 1 CHECK (image_order >= 1 AND image_order <= 4),
+                original_filename VARCHAR(255),
+                file_size INT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+                UNIQUE KEY unique_project_order (project_id, image_order),
+                INDEX idx_project (project_id),
+                INDEX idx_order (image_order)
+            )
+        ''')
+
+        # Create project_status table for tracking project progress (10% increments)
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS project_status (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                project_id INT NOT NULL,
+                status_percentage INT NOT NULL DEFAULT 0 CHECK (status_percentage >= 0 AND status_percentage <= 100),
+                status_description VARCHAR(255),
+                updated_by INT NOT NULL,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+                FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE CASCADE,
+                INDEX idx_project (project_id),
+                INDEX idx_percentage (status_percentage),
+                INDEX idx_updated (updated_at)
+            )
+        ''')
+
+        # Create reviews table for contractor ratings and reviews
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS reviews (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                project_id INT NOT NULL,
+                contractor_id INT NOT NULL,
+                homeowner_id INT NOT NULL,
+                rating INT NOT NULL CHECK (rating >= 1 AND rating <= 5),
+                review_text TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+                FOREIGN KEY (contractor_id) REFERENCES contractors(id) ON DELETE CASCADE,
+                FOREIGN KEY (homeowner_id) REFERENCES homeowners(id) ON DELETE CASCADE,
+                UNIQUE KEY unique_project_review (project_id, contractor_id),
+                INDEX idx_contractor (contractor_id),
+                INDEX idx_homeowner (homeowner_id),
+                INDEX idx_rating (rating),
+                INDEX idx_created (created_at)
+            )
+        ''')
+        
+        # Create review_replies table for contractor responses to reviews
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS review_replies (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                review_id INT NOT NULL,
+                contractor_id INT NOT NULL,
+                reply_text TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                FOREIGN KEY (review_id) REFERENCES reviews(id) ON DELETE CASCADE,
+                FOREIGN KEY (contractor_id) REFERENCES contractors(id) ON DELETE CASCADE,
+                UNIQUE KEY unique_review_reply (review_id),
+                INDEX idx_review (review_id),
+                INDEX idx_contractor (contractor_id),
+                INDEX idx_created (created_at)
+            )
+        ''')
+        
+        # Create contractor_availability table for availability calendar
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS contractor_availability (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                contractor_id INT NOT NULL,
+                available_date DATE NOT NULL,
+                status ENUM('available', 'busy', 'unavailable') DEFAULT 'available',
+                notes TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                FOREIGN KEY (contractor_id) REFERENCES contractors(id) ON DELETE CASCADE,
+                UNIQUE KEY unique_contractor_date (contractor_id, available_date),
+                INDEX idx_contractor (contractor_id),
+                INDEX idx_date (available_date),
+                INDEX idx_status (status)
+            )
+        ''')
+        
+        # Check if contractors table needs new columns (for migration)
+        try:
+            cursor.execute("SHOW COLUMNS FROM contractors LIKE 'average_rating'")
+            if not cursor.fetchone():
+                new_columns = [
+                    "ADD COLUMN bio TEXT AFTER business_info",
+                    "ADD COLUMN years_experience INT DEFAULT 0 AFTER bio",
+                    "ADD COLUMN profile_picture VARCHAR(500) AFTER years_experience",
+                    "ADD COLUMN portfolio TEXT AFTER profile_picture",
+                    "ADD COLUMN average_rating DECIMAL(3,1) DEFAULT 0.0 AFTER portfolio",
+                    "ADD COLUMN rating_count INTEGER DEFAULT 0 AFTER average_rating",
+                    "ADD COLUMN verified BOOLEAN DEFAULT FALSE AFTER rating_count"
+                ]
+                
+                for column in new_columns:
+                    try:
+                        cursor.execute(f"ALTER TABLE contractors {column}")
+                        print(f"Added column: {column}")
+                    except Exception as e:
+                        if "Duplicate column name" not in str(e):
+                            print(f"Warning: Could not add column {column}: {e}")
+        except Exception as e:
+            print(f"Migration check error: {e}")
+
+        # Check if projects table needs status update (for migration)
+        try:
+            cursor.execute("SHOW COLUMNS FROM projects WHERE Field = 'status'")
+            status_column = cursor.fetchone()
+            if status_column and 'Completed' not in status_column['Type']:
+                # Update the status enum to include more options
+                cursor.execute('''
+                    ALTER TABLE projects 
+                    MODIFY COLUMN status ENUM('Active', 'In Progress', 'Completed', 'Terminated', 'Closed') DEFAULT 'Active'
+                ''')
+                print("Updated projects status column with new options")
+        except Exception as e:
+            print(f"Projects status migration error: {e}")
+        
         conn.commit()
         cursor.close()
         conn.close()
@@ -1142,7 +1996,7 @@ def dashboard():
         ''', (contractor_id,))
         bids = cursor.fetchall()
         template = 'contractor_dashboard.html'
-        render_args = {'projects': projects, 'bids': bids}
+        render_args = {'projects': projects, 'bids': bids, 'contractor_id': contractor_id}
     
     cursor.close()
     conn.close()
@@ -1564,6 +2418,45 @@ def submit_preview():
         ))
         
         project_id = cursor.lastrowid
+        
+        # Handle image uploads
+        import os
+        from werkzeug.utils import secure_filename
+        
+        for i in range(1, 5):  # Handle up to 4 images
+            image_key = f'project_image_{i}'
+            if image_key in request.files:
+                image_file = request.files[image_key]
+                if image_file and image_file.filename:
+                    # Validate file type
+                    allowed_extensions = {'png', 'jpg', 'jpeg', 'gif'}
+                    if '.' in image_file.filename and \
+                       image_file.filename.rsplit('.', 1)[1].lower() in allowed_extensions:
+                        
+                        # Create secure filename
+                        filename = secure_filename(image_file.filename)
+                        # Add project ID and timestamp to avoid conflicts
+                        import time
+                        timestamp = str(int(time.time()))
+                        filename = f"project_{project_id}_{timestamp}_{i}_{filename}"
+                        
+                        # Ensure uploads directory exists
+                        upload_dir = os.path.join(os.getcwd(), 'static', 'uploads', 'projects')
+                        os.makedirs(upload_dir, exist_ok=True)
+                        
+                        # Save file
+                        file_path = os.path.join(upload_dir, filename)
+                        image_file.save(file_path)
+                        
+                        # Store relative path in database
+                        relative_path = f"uploads/projects/{filename}"
+                        
+                        # Insert into project_images table
+                        cursor.execute("""
+                            INSERT INTO project_images (project_id, image_path, image_order, created_at)
+                            VALUES (%s, %s, %s, NOW())
+                        """, (project_id, relative_path, i))
+        
         conn.commit()
         cursor.close()
         conn.close()
@@ -1852,10 +2745,70 @@ def view_project(project_id):
             }
             bids.append(bid)
     
+    # Fetch reviews for this project (if completed)
+    reviews = []
+    if project['status'] == 'Completed':
+        cursor.execute('''
+            SELECT r.*, u.first_name as homeowner_first_name, u.last_name as homeowner_last_name
+            FROM reviews r
+            JOIN homeowners h ON r.homeowner_id = h.id
+            JOIN users u ON h.user_id = u.id
+            WHERE r.project_id = %s
+            ORDER BY r.created_at DESC
+        ''', (project_id,))
+        reviews = cursor.fetchall()
+    
+    # Fetch project progress status
+    cursor.execute('''
+        SELECT ps.*, u.first_name, u.last_name
+        FROM project_status ps
+        LEFT JOIN users u ON ps.updated_by = u.id
+        WHERE ps.project_id = %s
+        ORDER BY ps.updated_at DESC
+        LIMIT 1
+    ''', (project_id,))
+    project_status = cursor.fetchone()
+    
+    # Fetch accepted bid information
+    cursor.execute('''
+        SELECT b.*, u.first_name as contractor_first_name, u.last_name as contractor_last_name, 
+               c.location as contractor_location, c.company as contractor_company, c.id as contractor_id
+        FROM bids b 
+        JOIN contractors c ON b.contractor_id = c.id
+        JOIN users u ON c.user_id = u.id 
+        WHERE b.project_id = %s AND b.status = 'Accepted'
+    ''', (project_id,))
+    accepted_bid = cursor.fetchone()
+    
+    if accepted_bid:
+        accepted_bid['contractor'] = {
+            'id': accepted_bid['contractor_id'],
+            'first_name': accepted_bid['contractor_first_name'],
+            'last_name': accepted_bid['contractor_last_name'],
+            'location': accepted_bid['contractor_location'],
+            'company': accepted_bid['contractor_company']
+        }
+    
+    # Fetch project images
+    cursor.execute('''
+        SELECT * FROM project_images 
+        WHERE project_id = %s 
+        ORDER BY image_order ASC, created_at ASC
+    ''', (project_id,))
+    project_images = cursor.fetchall()
+    
     cursor.close()
     conn.close()
     
-    return render_template('project_detail.html', project=project, bids=bids, show_bids=show_bids, audio_url=audio_url)
+    return render_template('project_detail.html', 
+                         project=project, 
+                         bids=bids, 
+                         show_bids=show_bids, 
+                         audio_url=audio_url, 
+                         reviews=reviews,
+                         project_status=project_status,
+                         accepted_bid=accepted_bid,
+                         project_images=project_images)
 
 @app.route('/submit_bid/<int:project_id>', methods=['POST'])
 @login_required
@@ -2209,6 +3162,93 @@ def bid_history(bid_id):
     
     return render_template('bid_history.html', bid=bid, history=history)
 
+@app.route('/update_project_progress/<int:project_id>', methods=['POST'])
+@login_required
+def update_project_progress(project_id):
+    """Update project progress in 10% increments"""
+    user = session['user']
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    try:
+        # Get project details
+        cursor.execute('SELECT * FROM projects WHERE id = %s', (project_id,))
+        project = cursor.fetchone()
+        if not project:
+            return jsonify({'success': False, 'message': 'Project not found'}), 404
+        
+        # Check if project has an accepted bid
+        cursor.execute("SELECT * FROM bids WHERE project_id = %s AND status = 'Accepted'", (project_id,))
+        accepted_bid = cursor.fetchone()
+        if not accepted_bid:
+            return jsonify({'success': False, 'message': 'Project must have an accepted bid before progress can be updated'}), 400
+        
+        # Check permissions based on user role
+        can_update = False
+        if user['role'] == 'homeowner':
+            # Get homeowner ID and check if they own the project
+            cursor.execute('SELECT id FROM homeowners WHERE user_id = %s', (user['id'],))
+            homeowner_result = cursor.fetchone()
+            if homeowner_result and homeowner_result['id'] == project['homeowner_id']:
+                can_update = True
+        elif user['role'] == 'contractor':
+            # Get contractor ID and check if they have the accepted bid
+            cursor.execute('SELECT id FROM contractors WHERE user_id = %s', (user['id'],))
+            contractor_result = cursor.fetchone()
+            if contractor_result and contractor_result['id'] == accepted_bid['contractor_id']:
+                can_update = True
+        
+        if not can_update:
+            return jsonify({'success': False, 'message': 'You do not have permission to update this project progress'}), 403
+        
+        # Get progress data from request
+        progress_percentage = request.json.get('progress_percentage')
+        update_notes = request.json.get('update_notes', '').strip()
+        
+        # Validate progress percentage
+        if progress_percentage is None or not isinstance(progress_percentage, int):
+            return jsonify({'success': False, 'message': 'Progress percentage must be a number'}), 400
+        
+        if progress_percentage < 0 or progress_percentage > 100 or progress_percentage % 10 != 0:
+            return jsonify({'success': False, 'message': 'Progress must be in 10% increments (0, 10, 20, ..., 100)'}), 400
+        
+        # Get current progress
+        cursor.execute('SELECT progress_percentage FROM project_status WHERE project_id = %s ORDER BY updated_at DESC LIMIT 1', (project_id,))
+        current_progress = cursor.fetchone()
+        current_percentage = current_progress['progress_percentage'] if current_progress else 0
+        
+        # Don't allow going backwards in progress
+        if progress_percentage < current_percentage:
+            return jsonify({'success': False, 'message': 'Progress cannot go backwards'}), 400
+        
+        # Insert new progress update
+        cursor.execute('''
+            INSERT INTO project_status (project_id, progress_percentage, update_notes, updated_by, updated_at)
+            VALUES (%s, %s, %s, %s, NOW())
+        ''', (project_id, progress_percentage, update_notes, user['id']))
+        
+        # Update project status based on progress
+        if progress_percentage == 100:
+            cursor.execute("UPDATE projects SET status = 'Completed' WHERE id = %s", (project_id,))
+        elif progress_percentage > 0:
+            cursor.execute("UPDATE projects SET status = 'In Progress' WHERE id = %s", (project_id,))
+        
+        conn.commit()
+        
+        return jsonify({
+            'success': True, 
+            'message': 'Project progress updated successfully!',
+            'progress_percentage': progress_percentage,
+            'update_notes': update_notes
+        })
+        
+    except Exception as e:
+        conn.rollback()
+        return jsonify({'success': False, 'message': f'Error updating progress: {str(e)}'}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
 @app.route('/complete_project/<int:project_id>', methods=['POST'])
 @login_required
 def complete_project(project_id):
@@ -2258,6 +3298,92 @@ def complete_project(project_id):
     
     return jsonify({'success': True, 'message': 'Project marked as completed successfully!'})
 
+@app.route('/submit_review/<int:project_id>', methods=['POST'])
+@login_required
+def submit_review(project_id):
+    """Submit a review for a completed project"""
+    user = session['user']
+    
+    if user['role'] != 'homeowner':
+        return jsonify({'success': False, 'message': 'Only homeowners can submit reviews'}), 403
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    try:
+        # Get homeowner ID
+        cursor.execute('SELECT id FROM homeowners WHERE user_id = %s', (user['id'],))
+        homeowner_result = cursor.fetchone()
+        if not homeowner_result:
+            return jsonify({'success': False, 'message': 'Homeowner profile not found'}), 404
+        homeowner_id = homeowner_result['id']
+        
+        # Verify project exists and belongs to homeowner
+        cursor.execute('SELECT * FROM projects WHERE id = %s AND homeowner_id = %s', (project_id, homeowner_id))
+        project = cursor.fetchone()
+        if not project:
+            return jsonify({'success': False, 'message': 'Project not found'}), 404
+        
+        # Check if project is completed
+        if project['status'] != 'Completed':
+            return jsonify({'success': False, 'message': 'You can only review completed projects'}), 400
+        
+        # Get the accepted bid to find the contractor
+        cursor.execute('SELECT contractor_id FROM bids WHERE project_id = %s AND status = "Accepted"', (project_id,))
+        bid_result = cursor.fetchone()
+        if not bid_result:
+            return jsonify({'success': False, 'message': 'No accepted contractor found for this project'}), 400
+        contractor_id = bid_result['contractor_id']
+        
+        # Check if review already exists
+        cursor.execute('SELECT id FROM reviews WHERE project_id = %s AND contractor_id = %s', (project_id, contractor_id))
+        existing_review = cursor.fetchone()
+        if existing_review:
+            return jsonify({'success': False, 'message': 'You have already reviewed this project'}), 400
+        
+        # Get review data from request
+        rating = request.json.get('rating')
+        review_text = request.json.get('review_text', '').strip()
+        
+        # Validate rating
+        if not rating or not isinstance(rating, int) or rating < 1 or rating > 5:
+            return jsonify({'success': False, 'message': 'Rating must be between 1 and 5'}), 400
+        
+        # Insert review
+        cursor.execute('''
+            INSERT INTO reviews (project_id, contractor_id, homeowner_id, rating, review_text)
+            VALUES (%s, %s, %s, %s, %s)
+        ''', (project_id, contractor_id, homeowner_id, rating, review_text))
+        
+        # Update contractor's average rating and rating count
+        cursor.execute('''
+            SELECT AVG(rating) as avg_rating, COUNT(*) as review_count
+            FROM reviews WHERE contractor_id = %s
+        ''', (contractor_id,))
+        rating_stats = cursor.fetchone()
+        
+        cursor.execute('''
+            UPDATE contractors 
+            SET average_rating = %s, rating_count = %s
+            WHERE id = %s
+        ''', (round(rating_stats['avg_rating'], 1), rating_stats['review_count'], contractor_id))
+        
+        conn.commit()
+        
+        return jsonify({
+            'success': True, 
+            'message': 'Review submitted successfully!',
+            'new_average': round(rating_stats['avg_rating'], 1),
+            'review_count': rating_stats['review_count']
+        })
+        
+    except Exception as e:
+        conn.rollback()
+        return jsonify({'success': False, 'message': f'Error submitting review: {str(e)}'}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
 @app.route('/close_project/<int:project_id>', methods=['POST'])
 @login_required
 def close_project(project_id):
@@ -2296,21 +3422,411 @@ def close_project(project_id):
     flash('Project closed successfully!')
     return redirect(url_for('dashboard'))
 
-@app.route('/uploads/<filename>')
+@app.route('/uploads/<path:filename>')
 def uploaded_file(filename):
-    """Stream uploaded files from the uploads directory"""
+    """Stream uploaded files from the uploads directory or static/uploads"""
     import os
+    import mimetypes
     from flask import Response
-    file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-    if not os.path.exists(file_path):
+    
+    # Try multiple possible paths
+    possible_paths = [
+        os.path.join(app.config['UPLOAD_FOLDER'], filename),  # uploads/filename
+        os.path.join(os.getcwd(), 'static', 'uploads', filename),  # static/uploads/filename
+        os.path.join(os.getcwd(), 'static', filename)  # static/filename (for paths like uploads/projects/filename)
+    ]
+    
+    file_path = None
+    for path in possible_paths:
+        if os.path.exists(path):
+            file_path = path
+            break
+    
+    if not file_path:
         abort(404)
+    
+    # Determine MIME type based on file extension
+    mime_type, _ = mimetypes.guess_type(file_path)
+    if mime_type is None:
+        # Default fallback based on common file extensions
+        ext = filename.lower().split('.')[-1] if '.' in filename else ''
+        if ext in ['jpg', 'jpeg']:
+            mime_type = 'image/jpeg'
+        elif ext == 'png':
+            mime_type = 'image/png'
+        elif ext == 'gif':
+            mime_type = 'image/gif'
+        elif ext == 'webp':
+            mime_type = 'image/webp'
+        elif ext in ['mp3', 'mpeg']:
+            mime_type = 'audio/mpeg'
+        elif ext == 'wav':
+            mime_type = 'audio/wav'
+        elif ext == 'webm':
+            mime_type = 'audio/webm'
+        else:
+            mime_type = 'application/octet-stream'
+    
     def generate():
         with open(file_path, "rb") as f:
             data = f.read(1024)
             while data:
                 yield data
                 data = f.read(1024)
-    return Response(generate(), mimetype="audio/mpeg")
+    return Response(generate(), mimetype=mime_type)
+
+# ============================================================================
+# CONTRACTOR MANAGEMENT SYSTEM ROUTES
+# ============================================================================
+
+@app.route('/contractor/profile')
+@login_required
+def contractor_profile():
+    """Contractor profile management page"""
+    user = session['user']
+    
+    if user['role'] != 'contractor':
+        flash('Access denied. Contractor account required.')
+        return redirect(url_for('dashboard'))
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Get contractor profile with enhanced fields
+    cursor.execute('''
+        SELECT c.*, u.first_name, u.last_name, u.email
+        FROM contractors c
+        JOIN users u ON c.user_id = u.id
+        WHERE c.user_id = %s
+    ''', (user['id'],))
+    contractor = cursor.fetchone()
+    
+    if not contractor:
+        flash('Contractor profile not found.')
+        return redirect(url_for('dashboard'))
+    
+    # Get recent reviews
+    cursor.execute('''
+        SELECT r.*, p.title as project_title,
+               CONCAT(u.first_name, ' ', u.last_name) as homeowner_name
+        FROM reviews r
+        JOIN projects p ON r.project_id = p.id
+        JOIN homeowners h ON r.homeowner_id = h.id
+        JOIN users u ON h.user_id = u.id
+        WHERE r.contractor_id = %s
+        ORDER BY r.created_at DESC
+        LIMIT 10
+    ''', (contractor['id'],))
+    reviews = cursor.fetchall()
+    
+    cursor.close()
+    conn.close()
+    
+    return render_template('contractor/profile.html', contractor=contractor, reviews=reviews)
+
+@app.route('/contractor/profile/update', methods=['POST'])
+@login_required
+def update_contractor_profile():
+    """Update contractor profile information"""
+    user = session['user']
+    
+    if user['role'] != 'contractor':
+        return jsonify({'success': False, 'message': 'Access denied'}), 403
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    try:
+        # Get contractor ID
+        cursor.execute('SELECT id FROM contractors WHERE user_id = %s', (user['id'],))
+        contractor_result = cursor.fetchone()
+        if not contractor_result:
+            return jsonify({'success': False, 'message': 'Contractor profile not found'}), 404
+        contractor_id = contractor_result['id']
+        
+        # Get form data
+        company = request.form.get('company', '').strip()
+        location = request.form.get('location', '').strip()
+        specialties = request.form.get('specialties', '').strip()
+        bio = request.form.get('bio', '').strip()
+        years_experience = request.form.get('years_experience', 0, type=int)
+        business_info = request.form.get('business_info', '').strip()
+        portfolio = request.form.get('portfolio', '').strip()
+        
+        # Update contractor profile
+        cursor.execute('''
+            UPDATE contractors 
+            SET company = %s, location = %s, specialties = %s, bio = %s,
+                years_experience = %s, business_info = %s, portfolio = %s
+            WHERE id = %s
+        ''', (company, location, specialties, bio, years_experience, business_info, portfolio, contractor_id))
+        
+        conn.commit()
+        
+        return jsonify({'success': True, 'message': 'Profile updated successfully!'})
+        
+    except Exception as e:
+        conn.rollback()
+        return jsonify({'success': False, 'message': f'Error updating profile: {str(e)}'}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
+@app.route('/contractor/availability')
+@login_required
+def contractor_availability():
+    """Contractor availability calendar page"""
+    user = session['user']
+    
+    if user['role'] != 'contractor':
+        flash('Access denied. Contractor account required.')
+        return redirect(url_for('dashboard'))
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Get contractor ID
+    cursor.execute('SELECT id FROM contractors WHERE user_id = %s', (user['id'],))
+    contractor_result = cursor.fetchone()
+    if not contractor_result:
+        flash('Contractor profile not found.')
+        return redirect(url_for('dashboard'))
+    contractor_id = contractor_result['id']
+    
+    # Get availability data for the next 3 months
+    from datetime import datetime, timedelta
+    start_date = datetime.now().date()
+    end_date = start_date + timedelta(days=90)
+    
+    cursor.execute('''
+        SELECT * FROM contractor_availability
+        WHERE contractor_id = %s AND available_date BETWEEN %s AND %s
+        ORDER BY available_date
+    ''', (contractor_id, start_date, end_date))
+    availability = cursor.fetchall()
+    
+    cursor.close()
+    conn.close()
+    
+    return render_template('contractor/availability.html', availability=availability)
+
+@app.route('/contractor/availability/update', methods=['POST'])
+@login_required
+def update_contractor_availability():
+    """Update contractor availability for specific dates"""
+    user = session['user']
+    
+    if user['role'] != 'contractor':
+        return jsonify({'success': False, 'message': 'Access denied'}), 403
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    try:
+        # Get contractor ID
+        cursor.execute('SELECT id FROM contractors WHERE user_id = %s', (user['id'],))
+        contractor_result = cursor.fetchone()
+        if not contractor_result:
+            return jsonify({'success': False, 'message': 'Contractor profile not found'}), 404
+        contractor_id = contractor_result['id']
+        
+        # Get form data
+        date = request.json.get('date')
+        status = request.json.get('status', 'available')
+        notes = request.json.get('notes', '').strip()
+        
+        # Validate date
+        from datetime import datetime
+        try:
+            date_obj = datetime.strptime(date, '%Y-%m-%d').date()
+        except ValueError:
+            return jsonify({'success': False, 'message': 'Invalid date format'}), 400
+        
+        # Validate status
+        if status not in ['available', 'busy', 'unavailable']:
+            return jsonify({'success': False, 'message': 'Invalid status'}), 400
+        
+        # Update or insert availability
+        cursor.execute('''
+            INSERT INTO contractor_availability (contractor_id, available_date, status, notes)
+            VALUES (%s, %s, %s, %s)
+            ON DUPLICATE KEY UPDATE status = %s, notes = %s, updated_at = CURRENT_TIMESTAMP
+        ''', (contractor_id, date_obj, status, notes, status, notes))
+        
+        conn.commit()
+        
+        return jsonify({'success': True, 'message': 'Availability updated successfully!'})
+        
+    except Exception as e:
+        conn.rollback()
+        return jsonify({'success': False, 'message': f'Error updating availability: {str(e)}'}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
+@app.route('/contractor/messages')
+@login_required
+def contractor_messages():
+    """Contractor messages page for managing bid conversations"""
+    user = session['user']
+    
+    if user['role'] != 'contractor':
+        flash('Access denied. Contractor account required.')
+        return redirect(url_for('dashboard'))
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Get contractor ID
+    cursor.execute('SELECT id FROM contractors WHERE user_id = %s', (user['id'],))
+    contractor_result = cursor.fetchone()
+    if not contractor_result:
+        flash('Contractor profile not found.')
+        return redirect(url_for('dashboard'))
+    contractor_id = contractor_result['id']
+    
+    cursor.close()
+    conn.close()
+    
+    return render_template('contractor_messages.html', contractor_id=contractor_id)
+
+@app.route('/contractor/<int:contractor_id>/reviews')
+def contractor_reviews(contractor_id):
+    """Public page showing contractor reviews and ratings"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Get contractor info
+    cursor.execute('''
+        SELECT c.*, u.first_name, u.last_name
+        FROM contractors c
+        JOIN users u ON c.user_id = u.id
+        WHERE c.id = %s
+    ''', (contractor_id,))
+    contractor = cursor.fetchone()
+    
+    if not contractor:
+        abort(404)
+    
+    # Get reviews with pagination
+    page = request.args.get('page', 1, type=int)
+    per_page = 10
+    offset = (page - 1) * per_page
+    
+    cursor.execute('''
+        SELECT r.*, p.title as project_title,
+               CONCAT(u.first_name, ' ', u.last_name) as homeowner_name,
+               rr.reply_text, rr.created_at as reply_created_at
+        FROM reviews r
+        JOIN projects p ON r.project_id = p.id
+        JOIN homeowners h ON r.homeowner_id = h.id
+        JOIN users u ON h.user_id = u.id
+        LEFT JOIN review_replies rr ON r.id = rr.review_id
+        WHERE r.contractor_id = %s
+        ORDER BY r.created_at DESC
+        LIMIT %s OFFSET %s
+    ''', (contractor_id, per_page, offset))
+    reviews = cursor.fetchall()
+    
+    # Get total review count
+    cursor.execute('SELECT COUNT(*) as total FROM reviews WHERE contractor_id = %s', (contractor_id,))
+    total_reviews = cursor.fetchone()['total']
+    
+    # Get rating distribution
+    cursor.execute('''
+        SELECT rating, COUNT(*) as count
+        FROM reviews
+        WHERE contractor_id = %s
+        GROUP BY rating
+        ORDER BY rating DESC
+    ''', (contractor_id,))
+    rating_distribution = cursor.fetchall()
+    
+    cursor.close()
+    conn.close()
+    
+    total_pages = (total_reviews + per_page - 1) // per_page
+    
+    return render_template('contractor/reviews.html', 
+                         contractor=contractor, 
+                         reviews=reviews,
+                         rating_distribution=rating_distribution,
+                         page=page,
+                         total_pages=total_pages,
+                         total_reviews=total_reviews)
+
+@app.route('/contractor/reply_review/<int:review_id>', methods=['POST'])
+@login_required
+def reply_to_review(review_id):
+    """Handle contractor reply to a review"""
+    if session['user']['role'] != 'contractor':
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 403
+    
+    data = request.get_json()
+    reply_text = data.get('reply_text', '').strip()
+    
+    if not reply_text:
+        return jsonify({'success': False, 'message': 'Reply text is required'}), 400
+    
+    if len(reply_text) > 1000:
+        return jsonify({'success': False, 'message': 'Reply text is too long (max 1000 characters)'}), 400
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Get contractor ID
+    cursor.execute('SELECT id FROM contractors WHERE user_id = %s', (session['user']['id'],))
+    contractor = cursor.fetchone()
+    if not contractor:
+        cursor.close()
+        conn.close()
+        return jsonify({'success': False, 'message': 'Contractor not found'}), 404
+    
+    contractor_id = contractor['id']
+    
+    # Verify the review exists and belongs to this contractor
+    cursor.execute('SELECT id, contractor_id FROM reviews WHERE id = %s', (review_id,))
+    review = cursor.fetchone()
+    if not review:
+        cursor.close()
+        conn.close()
+        return jsonify({'success': False, 'message': 'Review not found'}), 404
+    
+    if review['contractor_id'] != contractor_id:
+        cursor.close()
+        conn.close()
+        return jsonify({'success': False, 'message': 'Unauthorized to reply to this review'}), 403
+    
+    try:
+        # Check if reply already exists
+        cursor.execute('SELECT id FROM review_replies WHERE review_id = %s', (review_id,))
+        existing_reply = cursor.fetchone()
+        
+        if existing_reply:
+            # Update existing reply
+            cursor.execute('''
+                UPDATE review_replies 
+                SET reply_text = %s, updated_at = CURRENT_TIMESTAMP
+                WHERE review_id = %s AND contractor_id = %s
+            ''', (reply_text, review_id, contractor_id))
+        else:
+            # Insert new reply
+            cursor.execute('''
+                INSERT INTO review_replies (review_id, contractor_id, reply_text)
+                VALUES (%s, %s, %s)
+            ''', (review_id, contractor_id, reply_text))
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        return jsonify({'success': True, 'message': 'Reply submitted successfully'})
+    
+    except Exception as e:
+        conn.rollback()
+        cursor.close()
+        conn.close()
+        return jsonify({'success': False, 'message': 'Failed to submit reply'}), 500
 
 # ============================================================================
 # ADMIN PORTAL ROUTES

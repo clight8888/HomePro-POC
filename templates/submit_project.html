@@ -40,21 +40,13 @@
                 <div class="col">
                     <div class="step-indicator" id="step2">
                         <div class="step-number">
-                            <i class="fas fa-file-audio step-icon"></i>
+                            <i class="fas fa-brain step-icon"></i>
                         </div>
-                        <div class="step-label">Transcription</div>
+                        <div class="step-label">AI Processing</div>
                     </div>
                 </div>
                 <div class="col">
                     <div class="step-indicator" id="step3">
-                        <div class="step-number">
-                            <i class="fas fa-brain step-icon"></i>
-                        </div>
-                        <div class="step-label">AI Analysis</div>
-                    </div>
-                </div>
-                <div class="col">
-                    <div class="step-indicator" id="step4">
                         <div class="step-number">
                             <i class="fas fa-edit step-icon"></i>
                         </div>
@@ -62,7 +54,7 @@
                     </div>
                 </div>
                 <div class="col">
-                    <div class="step-indicator" id="step5">
+                    <div class="step-indicator" id="step4">
                         <div class="step-number">
                             <i class="fas fa-paper-plane step-icon"></i>
                         </div>
@@ -327,6 +319,149 @@
                         <div class="mb-3">
                             <label for="previewTimeline" class="form-label">Timeline</label>
                             <input type="text" class="form-control" id="previewTimeline" name="timeline" placeholder="e.g., Within 2 months">
+                        </div>
+                        
+                        <!-- Project Images Upload Section -->
+                        <div class="mb-4">
+                            <label class="form-label">
+                                <i class="fas fa-images me-2"></i>Project Images (Optional)
+                            </label>
+                            <p class="text-muted small mb-3">Drag & drop up to 4 images or click to browse. Images help contractors better understand your project.</p>
+                            
+                            <div class="row g-3" id="imageUploadContainer">
+                                <div class="col-md-6">
+                                    <div class="image-upload-slot border-2 border-dashed rounded p-3 text-center position-relative" 
+                                         data-slot="1" 
+                                         ondrop="handleDrop(event, 1)" 
+                                         ondragover="handleDragOver(event)" 
+                                         ondragenter="handleDragEnter(event)" 
+                                         ondragleave="handleDragLeave(event)"
+                                         onclick="triggerImageUpload(1)">
+                                        <input type="file" class="d-none" id="projectImage1" accept="image/*" onchange="handleImageUpload(1, this)">
+                                        <div class="upload-placeholder">
+                                            <i class="fas fa-cloud-upload-alt fa-2x text-muted mb-2"></i>
+                                            <p class="mb-1 fw-bold">Image 1</p>
+                                            <p class="small text-muted mb-2">Drag & drop or click to browse</p>
+                                            <span class="btn btn-sm btn-outline-primary">Choose Image</span>
+                                        </div>
+                                        <div class="image-preview d-none">
+                                            <img class="img-fluid rounded shadow-sm" style="max-height: 150px; max-width: 100%;">
+                                            <div class="mt-2">
+                                                <small class="text-muted d-block image-file-name"></small>
+                                                <button type="button" class="btn btn-sm btn-outline-danger mt-1" onclick="removeImage(1); event.stopPropagation();">
+                                                    <i class="fas fa-trash"></i> Remove
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="drag-overlay position-absolute top-0 start-0 w-100 h-100 d-none align-items-center justify-content-center bg-primary bg-opacity-10 rounded">
+                                            <div class="text-center">
+                                                <i class="fas fa-download fa-2x text-primary mb-2"></i>
+                                                <p class="text-primary fw-bold mb-0">Drop image here</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="image-upload-slot border-2 border-dashed rounded p-3 text-center position-relative" 
+                                         data-slot="2" 
+                                         ondrop="handleDrop(event, 2)" 
+                                         ondragover="handleDragOver(event)" 
+                                         ondragenter="handleDragEnter(event)" 
+                                         ondragleave="handleDragLeave(event)"
+                                         onclick="triggerImageUpload(2)">
+                                        <input type="file" class="d-none" id="projectImage2" accept="image/*" onchange="handleImageUpload(2, this)">
+                                        <div class="upload-placeholder">
+                                            <i class="fas fa-cloud-upload-alt fa-2x text-muted mb-2"></i>
+                                            <p class="mb-1 fw-bold">Image 2</p>
+                                            <p class="small text-muted mb-2">Drag & drop or click to browse</p>
+                                            <span class="btn btn-sm btn-outline-primary">Choose Image</span>
+                                        </div>
+                                        <div class="image-preview d-none">
+                                            <img class="img-fluid rounded shadow-sm" style="max-height: 150px; max-width: 100%;">
+                                            <div class="mt-2">
+                                                <small class="text-muted d-block image-file-name"></small>
+                                                <button type="button" class="btn btn-sm btn-outline-danger mt-1" onclick="removeImage(2); event.stopPropagation();">
+                                                    <i class="fas fa-trash"></i> Remove
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="drag-overlay position-absolute top-0 start-0 w-100 h-100 d-none align-items-center justify-content-center bg-primary bg-opacity-10 rounded">
+                                            <div class="text-center">
+                                                <i class="fas fa-download fa-2x text-primary mb-2"></i>
+                                                <p class="text-primary fw-bold mb-0">Drop image here</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="image-upload-slot border-2 border-dashed rounded p-3 text-center position-relative" 
+                                         data-slot="3" 
+                                         ondrop="handleDrop(event, 3)" 
+                                         ondragover="handleDragOver(event)" 
+                                         ondragenter="handleDragEnter(event)" 
+                                         ondragleave="handleDragLeave(event)"
+                                         onclick="triggerImageUpload(3)">
+                                        <input type="file" class="d-none" id="projectImage3" accept="image/*" onchange="handleImageUpload(3, this)">
+                                        <div class="upload-placeholder">
+                                            <i class="fas fa-cloud-upload-alt fa-2x text-muted mb-2"></i>
+                                            <p class="mb-1 fw-bold">Image 3</p>
+                                            <p class="small text-muted mb-2">Drag & drop or click to browse</p>
+                                            <span class="btn btn-sm btn-outline-primary">Choose Image</span>
+                                        </div>
+                                        <div class="image-preview d-none">
+                                            <img class="img-fluid rounded shadow-sm" style="max-height: 150px; max-width: 100%;">
+                                            <div class="mt-2">
+                                                <small class="text-muted d-block image-file-name"></small>
+                                                <button type="button" class="btn btn-sm btn-outline-danger mt-1" onclick="removeImage(3); event.stopPropagation();">
+                                                    <i class="fas fa-trash"></i> Remove
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="drag-overlay position-absolute top-0 start-0 w-100 h-100 d-none align-items-center justify-content-center bg-primary bg-opacity-10 rounded">
+                                            <div class="text-center">
+                                                <i class="fas fa-download fa-2x text-primary mb-2"></i>
+                                                <p class="text-primary fw-bold mb-0">Drop image here</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="image-upload-slot border-2 border-dashed rounded p-3 text-center position-relative" 
+                                         data-slot="4" 
+                                         ondrop="handleDrop(event, 4)" 
+                                         ondragover="handleDragOver(event)" 
+                                         ondragenter="handleDragEnter(event)" 
+                                         ondragleave="handleDragLeave(event)"
+                                         onclick="triggerImageUpload(4)">
+                                        <input type="file" class="d-none" id="projectImage4" accept="image/*" onchange="handleImageUpload(4, this)">
+                                        <div class="upload-placeholder">
+                                            <i class="fas fa-cloud-upload-alt fa-2x text-muted mb-2"></i>
+                                            <p class="mb-1 fw-bold">Image 4</p>
+                                            <p class="small text-muted mb-2">Drag & drop or click to browse</p>
+                                            <span class="btn btn-sm btn-outline-primary">Choose Image</span>
+                                        </div>
+                                        <div class="image-preview d-none">
+                                            <img class="img-fluid rounded shadow-sm" style="max-height: 150px; max-width: 100%;">
+                                            <div class="mt-2">
+                                                <small class="text-muted d-block image-file-name"></small>
+                                                <button type="button" class="btn btn-sm btn-outline-danger mt-1" onclick="removeImage(4); event.stopPropagation();">
+                                                    <i class="fas fa-trash"></i> Remove
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="drag-overlay position-absolute top-0 start-0 w-100 h-100 d-none align-items-center justify-content-center bg-primary bg-opacity-10 rounded">
+                                            <div class="text-center">
+                                                <i class="fas fa-download fa-2x text-primary mb-2"></i>
+                                                <p class="text-primary fw-bold mb-0">Drop image here</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-text">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Supported formats: JPG, PNG, GIF, WebP (max 5MB per image)
+                            </div>
                         </div>
                         
                         <!-- Hidden fields for AI data -->
@@ -789,12 +924,12 @@ function processAudio() {
     });
 }
 
-// Show transcript results (Step 3)
+// Show transcript results (Step 2 - now part of AI processing)
 function showTranscriptResults(data) {
     console.log('showTranscriptResults called with data:', data);
     
     showStep('transcriptStep');
-    updateStepIndicator(3);
+    updateStepIndicator(2);
     
     // Populate transcript content
     if (data.transcript) {
@@ -824,7 +959,7 @@ function showTranscriptResults(data) {
     }
 }
 
-// Proceed to AI Analysis (Step 4)
+// Proceed to AI Analysis (Step 2) - Now simplified to go directly to preview
 function proceedToAIAnalysis() {
     if (!transcriptResults) {
         showToast('No transcript data available.', 'warning');
@@ -833,10 +968,10 @@ function proceedToAIAnalysis() {
     
     // Show processing for AI analysis
     showStep('processingStep');
-    updateStepIndicator(4);
+    updateStepIndicator(2);
     
     // Update processing text for AI analysis
-    document.getElementById('progressStatus').innerHTML = '<i class="fas fa-brain me-1"></i>Analyzing with AI...';
+    document.getElementById('progressStatus').innerHTML = '<i class="fas fa-brain me-1"></i>Analyzing with Claude AI...';
     
     // Start progress animation for AI analysis
     let progress = 0;
@@ -876,7 +1011,7 @@ function proceedToAIAnalysis() {
             // Complete progress
             progressBar.style.width = '100%';
             progressText.textContent = '100%';
-            document.getElementById('progressStatus').innerHTML = '<i class="fas fa-check me-1"></i>AI Analysis complete!';
+            document.getElementById('progressStatus').innerHTML = '<i class="fas fa-check me-1"></i>Analysis complete!';
             
             // Store AI results
             aiResults = data.data;
@@ -888,7 +1023,7 @@ function proceedToAIAnalysis() {
         } else {
             showToast('Error analyzing transcript: ' + (data.error || 'Unknown error'), 'danger');
             showStep('transcriptStep');
-            updateStepIndicator(3);
+            updateStepIndicator(2);
         }
     })
     .catch(error => {
@@ -896,14 +1031,14 @@ function proceedToAIAnalysis() {
         console.error('Error:', error);
         showToast('Error analyzing transcript. Please try again.', 'danger');
         showStep('transcriptStep');
-        updateStepIndicator(3);
+        updateStepIndicator(2);
     });
 }
 
-// Show preview form (Step 5)
+// Show preview form (Step 3)
 function showPreviewForm(data) {
     showStep('previewStep');
-    updateStepIndicator(5);
+    updateStepIndicator(3);
     
     // Populate form with AI results
     document.getElementById('previewTitle').value = data.title || '';
@@ -967,14 +1102,13 @@ function updateStepIndicator(currentStep) {
     // Define step icons
     const stepIcons = {
         1: 'fas fa-microphone',
-        2: 'fas fa-file-audio', 
-        3: 'fas fa-brain',
-        4: 'fas fa-edit',
-        5: 'fas fa-paper-plane'
+        2: 'fas fa-brain',
+        3: 'fas fa-edit',
+        4: 'fas fa-paper-plane'
     };
     
     // Reset all steps
-    for (let i = 1; i <= 5; i++) {
+    for (let i = 1; i <= 4; i++) {
         const stepElement = document.getElementById('step' + i);
         if (stepElement) {
             stepElement.classList.remove('active', 'completed');
@@ -1014,7 +1148,140 @@ function updateStepIndicator(currentStep) {
     }
 }
 
-// Submit preview form (Step 5)
+// Image upload functions
+// Drag and drop handlers
+function handleDragOver(event) {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'copy';
+}
+
+function handleDragEnter(event) {
+    event.preventDefault();
+    const slot = event.currentTarget;
+    const overlay = slot.querySelector('.drag-overlay');
+    if (overlay) {
+        overlay.classList.remove('d-none');
+        overlay.classList.add('d-flex');
+    }
+    slot.classList.add('border-primary', 'bg-light');
+}
+
+function handleDragLeave(event) {
+    event.preventDefault();
+    const slot = event.currentTarget;
+    
+    // Only hide overlay if we're actually leaving the slot (not entering a child element)
+    if (!slot.contains(event.relatedTarget)) {
+        const overlay = slot.querySelector('.drag-overlay');
+        if (overlay) {
+            overlay.classList.add('d-none');
+            overlay.classList.remove('d-flex');
+        }
+        slot.classList.remove('border-primary', 'bg-light');
+    }
+}
+
+function handleDrop(event, slotNumber) {
+    event.preventDefault();
+    const slot = event.currentTarget;
+    const overlay = slot.querySelector('.drag-overlay');
+    
+    // Hide overlay and reset styles
+    if (overlay) {
+        overlay.classList.add('d-none');
+        overlay.classList.remove('d-flex');
+    }
+    slot.classList.remove('border-primary', 'bg-light');
+    
+    const files = event.dataTransfer.files;
+    if (files.length > 0) {
+        const file = files[0];
+        
+        // Validate file type
+        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+        if (!allowedTypes.includes(file.type)) {
+            showToast('Please select a valid image file (JPEG, PNG, GIF, or WebP)', 'danger');
+            return;
+        }
+        
+        // Validate file size (5MB limit)
+        if (file.size > 5 * 1024 * 1024) {
+            showToast('Image size must be less than 5MB', 'danger');
+            return;
+        }
+        
+        // Set the file to the input and display
+        const input = document.getElementById(`projectImage${slotNumber}`);
+        const dt = new DataTransfer();
+        dt.items.add(file);
+        input.files = dt.files;
+        
+        displayImage(slotNumber, file);
+    }
+}
+
+function triggerImageUpload(slotNumber) {
+    document.getElementById(`projectImage${slotNumber}`).click();
+}
+
+function handleImageUpload(slotNumber, input) {
+    const file = input.files[0];
+    if (!file) return;
+    
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+        showToast('Please select a valid image file (JPEG, PNG, GIF, or WebP)', 'danger');
+        input.value = '';
+        return;
+    }
+    
+    // Validate file size (5MB limit)
+    const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+    if (file.size > maxSize) {
+        showToast('Image size must be less than 5MB', 'danger');
+        input.value = '';
+        return;
+    }
+    
+    displayImage(slotNumber, file);
+}
+
+function displayImage(slotNumber, file) {
+    const slot = document.querySelector(`[data-slot="${slotNumber}"]`);
+    const placeholder = slot.querySelector('.upload-placeholder');
+    const preview = slot.querySelector('.image-preview');
+    const img = preview.querySelector('img');
+    const fileName = preview.querySelector('.image-file-name');
+    
+    // Create file reader
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        img.src = e.target.result;
+        if (fileName) {
+            fileName.textContent = file.name;
+        }
+        placeholder.classList.add('d-none');
+        preview.classList.remove('d-none');
+    };
+    reader.readAsDataURL(file);
+}
+
+function removeImage(slotNumber) {
+    const slot = document.querySelector(`[data-slot="${slotNumber}"]`);
+    const placeholder = slot.querySelector('.upload-placeholder');
+    const preview = slot.querySelector('.image-preview');
+    const input = document.getElementById(`projectImage${slotNumber}`);
+    
+    // Clear the input
+    input.value = '';
+    
+    // Reset display
+    placeholder.classList.remove('d-none');
+    preview.classList.add('d-none');
+}
+
+// Submit preview form (Step 4)
 function submitPreview() {
     // Check if user is authenticated
     {% if not user %}
@@ -1025,6 +1292,14 @@ function submitPreview() {
     
     const form = document.getElementById('previewForm');
     const formData = new FormData(form);
+    
+    // Add image files to form data
+    for (let i = 1; i <= 4; i++) {
+        const imageInput = document.getElementById(`projectImage${i}`);
+        if (imageInput && imageInput.files[0]) {
+            formData.append(`project_image_${i}`, imageInput.files[0]);
+        }
+    }
     
     // Disable submit button
     const submitBtn = document.getElementById('submitPreviewBtn');
@@ -1126,7 +1401,7 @@ function checkForSavedProjectData() {
             
             // Show the preview step directly
             showStep('previewStep');
-            updateStepIndicator(5);
+            updateStepIndicator(3);
             
             // Clear the saved data
             sessionStorage.removeItem('pendingProjectData');
