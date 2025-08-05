@@ -2722,28 +2722,75 @@ def view_project(project_id):
     
     bids = []
     show_bids = 'user' in session
+    bid_count = 0
+    user_bid = None
+    
     if show_bids:
-        # Fetch bids with contractor information
-        cursor.execute('''
-            SELECT b.*, u.first_name as contractor_first_name, u.last_name as contractor_last_name, c.location as contractor_location, c.company as contractor_company
-            FROM bids b 
-            JOIN contractors c ON b.contractor_id = c.id
-            JOIN users u ON c.user_id = u.id 
-            WHERE b.project_id = %s 
-            ORDER BY b.amount ASC
-        ''', (project_id,))
-        bids_raw = cursor.fetchall()
+        user = session['user']
         
-        # Create nested structure for contractor data to match template expectations
-        for bid in bids_raw:
-            bid['contractor'] = {
-                'id': bid['contractor_id'],
-                'first_name': bid['contractor_first_name'],
-                'last_name': bid['contractor_last_name'],
-                'location': bid['contractor_location'],
-                'company': bid['contractor_company']
-            }
-            bids.append(bid)
+        # Get total bid count for all users
+        cursor.execute('SELECT COUNT(*) as count FROM bids WHERE project_id = %s', (project_id,))
+        bid_count = cursor.fetchone()['count']
+        
+        if user['role'] == 'homeowner':
+            # Homeowners can see all bid details for their own projects
+            cursor.execute('SELECT id FROM homeowners WHERE user_id = %s', (user['id'],))
+            homeowner_result = cursor.fetchone()
+            
+            if homeowner_result and homeowner_result['id'] == project['homeowner_id']:
+                # This homeowner owns the project, show all bids
+                cursor.execute('''
+                    SELECT b.*, u.first_name as contractor_first_name, u.last_name as contractor_last_name, 
+                           c.location as contractor_location, c.company as contractor_company, c.user_id as contractor_user_id
+                    FROM bids b 
+                    JOIN contractors c ON b.contractor_id = c.id
+                    JOIN users u ON c.user_id = u.id 
+                    WHERE b.project_id = %s 
+                    ORDER BY b.amount ASC
+                ''', (project_id,))
+                bids_raw = cursor.fetchall()
+                
+                # Create nested structure for contractor data
+                for bid in bids_raw:
+                    bid['contractor'] = {
+                        'id': bid['contractor_id'],
+                        'first_name': bid['contractor_first_name'],
+                        'last_name': bid['contractor_last_name'],
+                        'location': bid['contractor_location'],
+                        'company': bid['contractor_company'],
+                        'user_id': bid['contractor_user_id']
+                    }
+                    bids.append(bid)
+        
+        elif user['role'] == 'contractor':
+            # Contractors can only see their own bid details
+            cursor.execute('SELECT id FROM contractors WHERE user_id = %s', (user['id'],))
+            contractor_result = cursor.fetchone()
+            
+            if contractor_result:
+                contractor_id = contractor_result['id']
+                # Get only this contractor's bid
+                cursor.execute('''
+                    SELECT b.*, u.first_name as contractor_first_name, u.last_name as contractor_last_name, 
+                           c.location as contractor_location, c.company as contractor_company, c.user_id as contractor_user_id
+                    FROM bids b 
+                    JOIN contractors c ON b.contractor_id = c.id
+                    JOIN users u ON c.user_id = u.id 
+                    WHERE b.project_id = %s AND b.contractor_id = %s
+                ''', (project_id, contractor_id))
+                user_bid_raw = cursor.fetchone()
+                
+                if user_bid_raw:
+                    user_bid_raw['contractor'] = {
+                        'id': user_bid_raw['contractor_id'],
+                        'first_name': user_bid_raw['contractor_first_name'],
+                        'last_name': user_bid_raw['contractor_last_name'],
+                        'location': user_bid_raw['contractor_location'],
+                        'company': user_bid_raw['contractor_company'],
+                        'user_id': user_bid_raw['contractor_user_id']
+                    }
+                    user_bid = user_bid_raw
+                    bids.append(user_bid_raw)  # Only show their own bid
     
     # Fetch reviews for this project (if completed)
     reviews = []
@@ -2804,6 +2851,8 @@ def view_project(project_id):
                          project=project, 
                          bids=bids, 
                          show_bids=show_bids, 
+                         bid_count=bid_count,
+                         user_bid=user_bid,
                          audio_url=audio_url, 
                          reviews=reviews,
                          project_status=project_status,

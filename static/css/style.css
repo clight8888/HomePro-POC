@@ -1,3 +1,6 @@
+/* Custom CSS for HomePro */
+/* Updated: 2025-01-27 16:30:00 - Updated to professional blue-based color palette */
+
 /* HomePro Custom Styles */
 
 :root {
@@ -102,13 +105,13 @@ body {
 .card {
     border: none;
     border-radius: 12px;
-    box-shadow: var(--shadow);
+    box-shadow: none;
     transition: all 0.3s ease;
-    background: white;
+    background: transparent;
 }
 
 .card:hover {
-    box-shadow: var(--shadow-lg);
+    box-shadow: none;
     transform: translateY(-2px);
 }
 
@@ -127,6 +130,30 @@ body {
     padding: 0.75rem 1.5rem;
     transition: all 0.3s ease;
     border: none;
+}
+
+/* Icon Color Classes */
+.icon-green {
+    color: #28a745 !important;
+}
+
+.icon-dark-red {
+    color: #8b0000 !important;
+}
+
+.icon-dark-yellow {
+    color: #ffd700 !important;
+}
+
+/* Navigation Button Text Consistency */
+.btn.btn-outline-primary strong,
+.btn.btn-outline-success strong,
+.btn.btn-outline-danger strong,
+.btn.btn-outline-warning strong,
+.btn.btn-outline-secondary strong,
+.btn.btn-outline-dark strong {
+    font-size: 1rem !important;
+    font-weight: 600 !important;
 }
 
 .btn-primary {
@@ -155,16 +182,306 @@ body {
     box-shadow: 0 4px 6px -1px rgba(220, 38, 38, 0.3);
 }
 
-.btn-outline-primary {
-    border: 2px solid var(--primary-color);
-    color: var(--primary-color);
+.btn-dark {
+    background: linear-gradient(135deg, #5a6b7d 0%, #4a5a6d 50%, #3a495d 100%) !important;
+    border: 1px solid rgba(255,255,255,0.3) !important;
+    box-shadow: 
+        inset 0 1px 0 rgba(255,255,255,0.2),
+        0 3px 6px rgba(0,0,0,0.3) !important;
+    color: white !important;
+    position: relative;
+    overflow: hidden;
 }
 
-.btn-outline-primary:hover {
-    background: var(--primary-color);
-    border-color: var(--primary-color);
-    color: white;
+.btn-dark::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+    transition: left 0.5s ease;
 }
+
+.btn-dark:hover::before {
+    left: 100%;
+}
+
+/* Enhanced Outline Button Styles with Soft Metallic Effects */
+.btn.btn-outline-primary,
+a.btn.btn-outline-primary {
+    border: none !important;
+    color: var(--primary-color) !important;
+    background: rgba(255, 255, 255, 0.95) !important;
+    text-decoration: none !important;
+    padding: 0.375rem 0.75rem !important;
+    font-size: 0.875rem !important;
+}
+
+/* Smaller Refresh and Filters buttons */
+.btn.btn-primary.refresh-btn,
+.btn.btn-outline-primary.filters-btn {
+    padding: 0.25rem 0.5rem !important;
+    font-size: 0.75rem !important;
+    border: none !important;
+}
+
+/* Light blue metallic View & Bid button - same size as badge */
+.btn.btn-primary.btn-sm.view-bid-btn {
+    padding: 0.375rem 0.75rem !important;
+    font-size: 0.875rem !important;
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 50%, #1d4ed8 100%) !important;
+    border: 1px solid rgba(255,255,255,0.3) !important;
+    box-shadow: 
+        inset 0 1px 0 rgba(255,255,255,0.2),
+        inset 0 -1px 0 rgba(0,0,0,0.15),
+        0 2px 5px rgba(0,0,0,0.25) !important;
+    color: white !important;
+    text-shadow: 0 1px 1px rgba(0,0,0,0.3) !important;
+}
+
+.btn.btn-primary.btn-sm.view-bid-btn:hover {
+    background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 50%, #2563eb 100%) !important;
+    border: 1px solid rgba(255,255,255,0.4) !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 
+        inset 0 1px 0 rgba(255,255,255,0.25),
+        inset 0 -1px 0 rgba(0,0,0,0.1),
+        0 3px 8px rgba(0,0,0,0.3) !important;
+}
+
+/* Category-specific solid colors based on text content */
+/* Default solid blue for any other categories */
+.badge.bg-primary.metallic {
+    background: #87ceeb !important;
+    border: none !important;
+    box-shadow: none !important;
+    color: white !important;
+    text-shadow: none !important;
+}
+
+/* Kitchen Renovation - Solid Light Orange */
+.badge.bg-primary.metallic.category-kitchen {
+    background: #fb923c !important;
+    border: none !important;
+    box-shadow: none !important;
+    color: white !important;
+    text-shadow: none !important;
+}
+
+/* Bathroom Remodeling - Solid Light Teal */
+.badge.bg-primary.metallic.category-bathroom {
+    background: #22d3ee !important;
+    border: none !important;
+    box-shadow: none !important;
+    color: white !important;
+    text-shadow: none !important;
+}
+
+/* Plumbing - Solid Light Blue */
+.badge.bg-primary.metallic.category-plumbing {
+    background: #60a5fa !important;
+    border: none !important;
+    box-shadow: none !important;
+    color: white !important;
+    text-shadow: none !important;
+}
+
+/* Electrical - Solid Light Yellow */
+.badge.bg-primary.metallic.category-electrical {
+    background: #fcd34d !important;
+    border: none !important;
+    box-shadow: none !important;
+    color: #000 !important;
+    text-shadow: none !important;
+}
+
+/* Painting - Solid Light Purple */
+.badge.bg-primary.metallic.category-painting {
+    background: #c084fc !important;
+    border: none !important;
+    box-shadow: none !important;
+    color: white !important;
+    text-shadow: none !important;
+}
+
+/* Flooring - Solid Light Brown */
+.badge.bg-primary.metallic.category-flooring {
+    background: #f59e0b !important;
+    border: none !important;
+    box-shadow: none !important;
+    color: white !important;
+    text-shadow: none !important;
+}
+
+/* Roofing - Solid Light Gray */
+.badge.bg-primary.metallic.category-roofing {
+    background: #9ca3af !important;
+    border: none !important;
+    box-shadow: none !important;
+    color: white !important;
+    text-shadow: none !important;
+}
+
+/* General - Solid Light Green */
+.badge.bg-primary.metallic.category-general {
+    background: #34d399 !important;
+    border: none !important;
+    box-shadow: none !important;
+    color: white !important;
+    text-shadow: none !important;
+}
+
+/* Light blue-green metallic badges */
+.badge.bg-success.metallic {
+    background: #5a8a7a !important;
+    border: 1px solid #6b9b8b !important;
+    box-shadow: 
+        inset 0 1px 0 rgba(255,255,255,0.2),
+        inset 0 -1px 0 rgba(0,0,0,0.15),
+        0 2px 5px rgba(0,0,0,0.25) !important;
+    color: white !important;
+    text-shadow: 0 1px 1px rgba(0,0,0,0.3) !important;
+}
+
+.btn.btn-outline-primary:hover,
+.btn.btn-outline-primary:focus,
+a.btn.btn-outline-primary:hover,
+a.btn.btn-outline-primary:focus {
+    background: linear-gradient(135deg, #e8f2ff 0%, #d1e7ff 30%, #b8dcff 70%, #9fd1ff 100%) !important;
+    border-color: #b8dcff !important;
+    color: #1e40af !important;
+    text-decoration: none !important;
+}
+
+
+
+.btn.btn-outline-success,
+a.btn.btn-outline-success {
+    border: none !important;
+    color: var(--success-color) !important;
+    background: rgba(255, 255, 255, 0.95) !important;
+    text-decoration: none !important;
+    padding: 0.375rem 0.75rem !important;
+    font-size: 0.875rem !important;
+}
+
+.btn.btn-outline-success:hover,
+.btn.btn-outline-success:focus,
+a.btn.btn-outline-success:hover,
+a.btn.btn-outline-success:focus {
+    background: linear-gradient(135deg, #f0f9f0 0%, #e1f5e1 30%, #d2f1d2 70%, #c3edc3 100%) !important;
+    border-color: #d2f1d2 !important;
+    color: #15803d !important;
+    text-decoration: none !important;
+}
+
+
+
+.btn.btn-outline-info,
+a.btn.btn-outline-info {
+    border: none !important;
+    color: var(--info-color) !important;
+    background: rgba(255, 255, 255, 0.95) !important;
+    text-decoration: none !important;
+    padding: 0.375rem 0.75rem !important;
+    font-size: 0.875rem !important;
+}
+
+.btn.btn-outline-info:hover,
+.btn.btn-outline-info:focus,
+a.btn.btn-outline-info:hover,
+a.btn.btn-outline-info:focus {
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 30%, #bae6fd 70%, #93c5fd 100%) !important;
+    border-color: #bae6fd !important;
+    color: #0369a1 !important;
+    text-decoration: none !important;
+}
+
+
+
+.btn.btn-outline-warning,
+a.btn.btn-outline-warning {
+    border: none !important;
+    color: var(--warning-color) !important;
+    background: rgba(255, 255, 255, 0.95) !important;
+    text-decoration: none !important;
+    padding: 0.375rem 0.75rem !important;
+    font-size: 0.875rem !important;
+}
+
+.btn.btn-outline-warning:hover,
+.btn.btn-outline-warning:focus,
+a.btn.btn-outline-warning:hover,
+a.btn.btn-outline-warning:focus {
+    background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 30%, #fde68a 70%, #fcd34d 100%) !important;
+    border-color: #fde68a !important;
+    color: #c2410c !important;
+    text-decoration: none !important;
+}
+
+.btn.btn-outline-secondary,
+a.btn.btn-outline-secondary {
+    border: none !important;
+    color: #6b7280 !important;
+    background: rgba(255, 255, 255, 0.95) !important;
+    text-decoration: none !important;
+    padding: 0.375rem 0.75rem !important;
+    font-size: 0.875rem !important;
+}
+
+.btn.btn-outline-secondary:hover,
+.btn.btn-outline-secondary:focus,
+a.btn.btn-outline-secondary:hover,
+a.btn.btn-outline-secondary:focus {
+    background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 30%, #e5e7eb 70%, #d1d5db 100%) !important;
+    border-color: #e5e7eb !important;
+    color: #374151 !important;
+    text-decoration: none !important;
+}
+
+.btn.btn-outline-dark,
+a.btn.btn-outline-dark {
+    border: none !important;
+    color: #374151 !important;
+    background: rgba(255, 255, 255, 0.95) !important;
+    text-decoration: none !important;
+    padding: 0.375rem 0.75rem !important;
+    font-size: 0.875rem !important;
+}
+
+.btn.btn-outline-dark:hover,
+.btn.btn-outline-dark:focus,
+a.btn.btn-outline-dark:hover,
+a.btn.btn-outline-dark:focus {
+    background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 30%, #d1d5db 70%, #9ca3af 100%) !important;
+    border-color: #d1d5db !important;
+    color: #111827 !important;
+    text-decoration: none !important;
+}
+
+.btn.btn-outline-danger,
+a.btn.btn-outline-danger {
+    border: none !important;
+    color: #dc2626 !important;
+    background: rgba(255, 255, 255, 0.95) !important;
+    text-decoration: none !important;
+    padding: 0.375rem 0.75rem !important;
+    font-size: 0.875rem !important;
+}
+
+.btn.btn-outline-danger:hover,
+.btn.btn-outline-danger:focus,
+a.btn.btn-outline-danger:hover,
+a.btn.btn-outline-danger:focus {
+    background: linear-gradient(135deg, #fef2f2 0%, #fecaca 30%, #fca5a5 70%, #f87171 100%) !important;
+    border-color: #fca5a5 !important;
+    color: #991b1b !important;
+    text-decoration: none !important;
+}
+
+
 
 /* Forms */
 .form-control {
@@ -244,16 +561,162 @@ body {
     letter-spacing: 0.05em;
 }
 
+/* Metallic Summary Cards - High Specificity - Updated 2025-08-04 21:10 */
+.container .row .col-md-3 .card.bg-primary,
+.card.bg-primary.text-white {
+    background: linear-gradient(135deg, #4a5568 0%, #2d3748 50%, #1a202c 100%) !important;
+    border: 1px solid #718096 !important;
+    box-shadow: 
+        0 4px 8px rgba(0,0,0,0.2),
+        inset 0 1px 0 rgba(255,255,255,0.1),
+        inset 0 -1px 0 rgba(0,0,0,0.2) !important;
+    position: relative;
+    overflow: hidden;
+}
+
+.container .row .col-md-3 .card.bg-primary::before,
+.card.bg-primary.text-white::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+    transition: left 0.5s;
+}
+
+.container .row .col-md-3 .card.bg-primary:hover::before,
+.card.bg-primary.text-white:hover::before {
+    left: 100%;
+}
+
+.container .row .col-md-3 .card.bg-success,
+.card.bg-success.text-white {
+    background: linear-gradient(135deg, #38a169 0%, #2f855a 50%, #276749 100%) !important;
+    border: 1px solid #68d391 !important;
+    box-shadow: 
+        0 4px 8px rgba(0,0,0,0.2),
+        inset 0 1px 0 rgba(255,255,255,0.1),
+        inset 0 -1px 0 rgba(0,0,0,0.2) !important;
+    position: relative;
+    overflow: hidden;
+}
+
+.container .row .col-md-3 .card.bg-success::before,
+.card.bg-success.text-white::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+    transition: left 0.5s;
+}
+
+.container .row .col-md-3 .card.bg-success:hover::before,
+.card.bg-success.text-white:hover::before {
+    left: 100%;
+}
+
+.container .row .col-md-3 .card.bg-info,
+.card.bg-info.text-white {
+    background: linear-gradient(135deg, #3182ce 0%, #2c5282 50%, #2a4365 100%) !important;
+    border: 1px solid #63b3ed !important;
+    box-shadow: 
+        0 4px 8px rgba(0,0,0,0.2),
+        inset 0 1px 0 rgba(255,255,255,0.1),
+        inset 0 -1px 0 rgba(0,0,0,0.2) !important;
+    position: relative;
+    overflow: hidden;
+}
+
+.container .row .col-md-3 .card.bg-info::before,
+.card.bg-info.text-white::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+    transition: left 0.5s;
+}
+
+.container .row .col-md-3 .card.bg-info:hover::before,
+.card.bg-info.text-white:hover::before {
+    left: 100%;
+}
+
+.container .row .col-md-3 .card.bg-warning,
+.card.bg-warning.text-white {
+    background: linear-gradient(135deg, #d69e2e 0%, #b7791f 50%, #975a16 100%) !important;
+    border: 1px solid #f6e05e !important;
+    box-shadow: 
+        0 4px 8px rgba(0,0,0,0.2),
+        inset 0 1px 0 rgba(255,255,255,0.1),
+        inset 0 -1px 0 rgba(0,0,0,0.2) !important;
+    position: relative;
+    overflow: hidden;
+}
+
+.container .row .col-md-3 .card.bg-warning::before,
+.card.bg-warning.text-white::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+    transition: left 0.5s;
+}
+
+.container .row .col-md-3 .card.bg-warning:hover::before,
+.card.bg-warning.text-white:hover::before {
+    left: 100%;
+}
+
+/* Enhanced metallic text effects */
+.container .row .col-md-3 .card.bg-primary .card-body h4,
+.container .row .col-md-3 .card.bg-success .card-body h4,
+.container .row .col-md-3 .card.bg-info .card-body h4,
+.container .row .col-md-3 .card.bg-warning .card-body h4,
+.card.bg-primary.text-white .card-body h4,
+.card.bg-success.text-white .card-body h4,
+.card.bg-info.text-white .card-body h4,
+.card.bg-warning.text-white .card-body h4 {
+    text-shadow: 
+        0 1px 0 rgba(255,255,255,0.2),
+        0 -1px 0 rgba(0,0,0,0.3) !important;
+    font-weight: 700 !important;
+}
+
+.container .row .col-md-3 .card.bg-primary .card-body i,
+.container .row .col-md-3 .card.bg-success .card-body i,
+.container .row .col-md-3 .card.bg-info .card-body i,
+.container .row .col-md-3 .card.bg-warning .card-body i,
+.card.bg-primary.text-white .card-body i,
+.card.bg-success.text-white .card-body i,
+.card.bg-info.text-white .card-body i,
+.card.bg-warning.text-white .card-body i {
+    text-shadow: 
+        0 1px 0 rgba(255,255,255,0.1),
+        0 -1px 0 rgba(0,0,0,0.3) !important;
+}
+
 /* Project Cards */
 .project-card {
     transition: all 0.3s ease;
-    border: 1px solid var(--border-color);
+    border: none;
+    background: transparent;
 }
 
 .project-card:hover {
     transform: translateY(-4px);
-    box-shadow: var(--shadow-lg);
-    border-color: var(--primary-color);
+    box-shadow: none;
+    border: none;
 }
 
 .project-type-badge {
@@ -298,7 +761,21 @@ body {
 }
 
 .badge.bg-danger {
-    background: linear-gradient(135deg, var(--danger-color) 0%, #b91c1c 100%) !important;
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 50%, #bd2130 100%) !important;
+    border: 1px solid rgba(255,255,255,0.3) !important;
+    box-shadow: 
+        inset 0 1px 0 rgba(255,255,255,0.2),
+        0 2px 4px rgba(0,0,0,0.3) !important;
+    color: white !important;
+}
+
+.badge.bg-dark {
+    background: linear-gradient(135deg, #5a6b7d 0%, #4a5a6d 50%, #3a495d 100%) !important;
+    border: 1px solid rgba(255,255,255,0.3) !important;
+    box-shadow: 
+        inset 0 1px 0 rgba(255,255,255,0.2),
+        0 2px 4px rgba(0,0,0,0.3) !important;
+    color: white !important;
 }
 
 /* Alerts */
@@ -401,7 +878,73 @@ body {
         padding-left: 1rem;
         padding-right: 1rem;
     }
-}
+    
+    /* Fix notification badge on mobile */
+    #notificationBadge {
+        font-size: 0.75rem !important;
+        padding: 0.25em 0.5em !important;
+        top: -4px !important;
+        right: -10px !important;
+        transform: none !important;
+        position: absolute !important;
+        min-width: 18px !important;
+        height: 18px !important;
+        line-height: 1.2 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+    
+    .nav-link.position-relative {
+        display: inline-block;
+        position: relative;
+    }
+    
+    /* Mobile styling for My Recent Bids table */
+    .table-responsive {
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        overflow-x: auto;
+    }
+    
+    .table {
+        font-size: 0.875rem;
+        margin-bottom: 0;
+    }
+    
+    .table th {
+        font-size: 0.75rem;
+        font-weight: 600;
+        padding: 0.75rem 0.5rem;
+        white-space: nowrap;
+        background-color: var(--light-bg);
+        border-bottom: 2px solid var(--border-color);
+    }
+    
+    .table td {
+        padding: 0.75rem 0.5rem;
+        vertical-align: middle;
+        border-bottom: 1px solid var(--border-color);
+    }
+    
+    .badge {
+         font-size: 0.75rem;
+         padding: 0.35em 0.65em;
+         font-weight: 600;
+     }
+     
+     /* Clickable Available Projects card hover effect */
+     .card.bg-primary[onclick]:hover {
+         transform: translateY(-2px) !important;
+         box-shadow: inset 0 1px 0 rgba(255,255,255,0.2), inset 0 -1px 0 rgba(0,0,0,0.1), 0 6px 16px rgba(0,0,0,0.4) !important;
+     }
+     
+     /* Hover effects for clickable bid cards */
+     .card[onclick="scrollToBids()"]:hover {
+         transform: translateY(-2px);
+         box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+     }
+ }
 
 @media (max-width: 576px) {
     .hero-title {

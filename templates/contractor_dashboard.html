@@ -11,17 +11,17 @@
                 <div>
                     <div class="d-flex align-items-center mb-2">
                         <i class="fas fa-tools text-primary me-2" style="font-size: 1.5rem;"></i>
-                        <span class="badge bg-primary me-2">Contractor</span>
-                        <h1 class="h3 mb-0">Welcome back, {{ user.first_name }}!</h1>
+                        <span class="text-primary fw-bold me-2">Contractor</span>
+                        <span class="text-dark fw-bold fst-italic">{{ user.first_name }}</span>
                     </div>
                     <p class="text-muted mb-0">Find and bid on home improvement projects in your area</p>
                 </div>
                 <div class="d-flex gap-2">
-                    <button class="btn btn-outline-primary" onclick="toggleFilters()">
-                        <i class="fas fa-filter me-2"></i>Filters
+                    <button class="btn btn-outline-primary filters-btn" onclick="toggleFilters()">
+                        <i class="fas fa-filter me-1"></i>Filters
                     </button>
-                    <button class="btn btn-primary" onclick="refreshProjects()">
-                        <i class="fas fa-sync-alt me-2"></i>Refresh
+                    <button class="btn btn-primary refresh-btn" onclick="refreshProjects()">
+                        <i class="fas fa-sync-alt me-1"></i>Refresh
                     </button>
                 </div>
             </div>
@@ -42,22 +42,22 @@
                             </a>
                         </div>
                         <div class="col-md-3">
-                            <a href="{{ url_for('contractor_availability') }}" class="btn btn-outline-success w-100 h-100 d-flex flex-column align-items-center justify-content-center py-3">
-                                <i class="fas fa-calendar-alt fa-2x mb-2"></i>
+                            <a href="{{ url_for('contractor_availability') }}" class="btn btn-outline-danger w-100 h-100 d-flex flex-column align-items-center justify-content-center py-3">
+                                <i class="fas fa-calendar-alt fa-2x mb-2 icon-dark-red"></i>
                                 <strong>Availability Calendar</strong>
                                 <small class="text-muted">Set your work schedule</small>
                             </a>
                         </div>
                         <div class="col-md-3">
-                            <a href="{{ url_for('contractor_messages') }}" class="btn btn-outline-info w-100 h-100 d-flex flex-column align-items-center justify-content-center py-3">
-                                <i class="fas fa-comments fa-2x mb-2"></i>
+                            <a href="{{ url_for('contractor_messages') }}" class="btn btn-outline-success w-100 h-100 d-flex flex-column align-items-center justify-content-center py-3">
+                                <i class="fas fa-comments fa-2x mb-2 icon-green"></i>
                                 <strong>Messages</strong>
                                 <small class="text-muted">Manage bid conversations</small>
                             </a>
                         </div>
                         <div class="col-md-3">
                             <a href="{{ url_for('contractor_reviews', contractor_id=contractor_id) }}" class="btn btn-outline-warning w-100 h-100 d-flex flex-column align-items-center justify-content-center py-3">
-                                <i class="fas fa-star fa-2x mb-2"></i>
+                                <i class="fas fa-star fa-2x mb-2 icon-dark-yellow"></i>
                                 <strong>My Reviews</strong>
                                 <small class="text-muted">View customer feedback</small>
                             </a>
@@ -71,7 +71,7 @@
     <!-- Quick Stats -->
     <div class="row mb-4">
         <div class="col-md-3">
-            <div class="card bg-primary text-white">
+            <div class="card bg-primary text-white" style="background: linear-gradient(135deg, #7ba7d9 0%, #6b94c4 50%, #5a82b0 100%) !important; box-shadow: inset 0 1px 0 rgba(255,255,255,0.2), inset 0 -1px 0 rgba(0,0,0,0.1), 0 4px 8px rgba(0,0,0,0.3) !important; border: 1px solid rgba(255,255,255,0.3) !important; cursor: pointer; transition: transform 0.2s ease;" onclick="scrollToProjects()">
                 <div class="card-body">
                     <div class="d-flex justify-content-between">
                         <div>
@@ -84,7 +84,7 @@
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card bg-success text-white">
+            <div class="card bg-success text-white" style="background: linear-gradient(135deg, #8bb5d1 0%, #7aa5c1 50%, #6995b1 100%) !important; box-shadow: inset 0 1px 0 rgba(255,255,255,0.2), inset 0 -1px 0 rgba(0,0,0,0.1), 0 4px 8px rgba(0,0,0,0.3) !important; border: 1px solid rgba(255,255,255,0.3) !important; cursor: pointer; transition: transform 0.2s ease;" onclick="scrollToBids()">
                 <div class="card-body">
                     <div class="d-flex justify-content-between">
                         <div>
@@ -97,7 +97,7 @@
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card bg-info text-white">
+            <div class="card bg-info text-white" style="background: linear-gradient(135deg, #9bc2d7 0%, #8ab2c7 50%, #79a2b7 100%) !important; box-shadow: inset 0 1px 0 rgba(255,255,255,0.2), inset 0 -1px 0 rgba(0,0,0,0.1), 0 4px 8px rgba(0,0,0,0.3) !important; border: 1px solid rgba(255,255,255,0.3) !important; cursor: pointer; transition: transform 0.2s ease;" onclick="scrollToBids()">
                 <div class="card-body">
                     <div class="d-flex justify-content-between">
                         <div>
@@ -110,7 +110,7 @@
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card bg-warning text-white">
+            <div class="card bg-info text-white" style="background: linear-gradient(135deg, #87ceeb 0%, #6bb8db 50%, #4fa2cb 100%) !important; box-shadow: inset 0 1px 0 rgba(255,255,255,0.2), inset 0 -1px 0 rgba(0,0,0,0.1), 0 4px 8px rgba(0,0,0,0.3) !important; border: 1px solid rgba(255,255,255,0.3) !important; cursor: pointer; transition: transform 0.2s ease;" onclick="scrollToBids()">
                 <div class="card-body">
                     <div class="d-flex justify-content-between">
                         <div>
@@ -174,7 +174,7 @@
     </div>
     
     <!-- Projects List -->
-    <div class="row">
+    <div class="row" id="projectsSection">
         <div class="col-12">
             {% if projects %}
                 <div class="row g-4" id="projectsList">
@@ -189,7 +189,7 @@
                             <div class="card-body">
                                 <div class="d-flex justify-content-between align-items-start mb-3">
                                     <h5 class="card-title mb-0">{{ project.title }}{% if project.original_file_path %} <i class="fas fa-microphone ms-2 text-primary" title="Audio recording available"></i>{% endif %}</h5>
-                                    <span class="badge bg-primary">{{ project.project_type }}</span>
+                                    <span class="badge bg-primary metallic">{{ project.project_type }}</span>
                                 </div>
                                 
                                 <p class="card-text text-muted">{{ project.description|truncate(150) }}</p>
@@ -230,11 +230,11 @@
                                     </small>
                                     
                                     {% if project.has_user_bid > 0 %}
-                                        <span class="badge bg-success">
+                                        <span class="badge bg-success metallic">
                                             <i class="fas fa-check me-1"></i>Bid Submitted
                                         </span>
                                     {% else %}
-                                        <a href="{{ url_for('view_project', project_id=project.id) }}" class="btn btn-primary btn-sm">
+                                        <a href="{{ url_for('view_project', project_id=project.id) }}" class="btn btn-primary btn-sm view-bid-btn">
                                             <i class="fas fa-eye me-1"></i>View & Bid
                                         </a>
                                     {% endif %}
@@ -250,8 +250,8 @@
                         <i class="fas fa-search fa-3x text-muted mb-3"></i>
                         <h5>No Projects Available</h5>
                         <p class="text-muted mb-4">There are currently no active projects matching your criteria. Check back later for new opportunities.</p>
-                        <button class="btn btn-primary" onclick="refreshProjects()">
-                            <i class="fas fa-sync-alt me-2"></i>Refresh Projects
+                        <button class="btn btn-primary refresh-btn" onclick="refreshProjects()">
+                            <i class="fas fa-sync-alt me-1"></i>Refresh Projects
                         </button>
                     </div>
                 </div>
@@ -261,7 +261,7 @@
     
     <!-- My Bids Section -->
     {% if bids %}
-    <div class="row mt-5">
+    <div class="row mt-5" id="bidsSection">
         <div class="col-12">
             <div class="card">
                 <div class="card-header">
@@ -498,6 +498,30 @@ function withdrawBid(bidId) {
 
 // Filter functionality
 document.addEventListener('DOMContentLoaded', function() {
+    // Categorize project type badges based on their text content
+    const projectTypeBadges = document.querySelectorAll('.badge.bg-primary.metallic');
+    projectTypeBadges.forEach(badge => {
+        const text = badge.textContent.trim().toLowerCase();
+        
+        if (text.includes('kitchen')) {
+            badge.classList.add('category-kitchen');
+        } else if (text.includes('bathroom')) {
+            badge.classList.add('category-bathroom');
+        } else if (text.includes('plumbing')) {
+            badge.classList.add('category-plumbing');
+        } else if (text.includes('electrical')) {
+            badge.classList.add('category-electrical');
+        } else if (text.includes('painting')) {
+            badge.classList.add('category-painting');
+        } else if (text.includes('flooring')) {
+            badge.classList.add('category-flooring');
+        } else if (text.includes('roofing')) {
+            badge.classList.add('category-roofing');
+        } else if (text.includes('general')) {
+            badge.classList.add('category-general');
+        }
+    });
+    
     const typeFilter = document.getElementById('projectTypeFilter');
     const budgetFilter = document.getElementById('budgetFilter');
     const locationFilter = document.getElementById('locationFilter');
@@ -640,5 +664,45 @@ document.addEventListener('DOMContentLoaded', function() {
     if (budgetFilter) budgetFilter.addEventListener('change', applyFilters);
     if (locationFilter) locationFilter.addEventListener('input', applyFilters);
 });
+
+// Smooth scroll to projects section
+function scrollToProjects() {
+    const projectsSection = document.getElementById('projectsSection');
+    if (projectsSection) {
+        projectsSection.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start'
+        });
+        
+        // Add a subtle animation effect to the card
+        const availableProjectsCard = event.target.closest('.card');
+        if (availableProjectsCard) {
+            availableProjectsCard.style.transform = 'scale(0.98)';
+            setTimeout(() => {
+                availableProjectsCard.style.transform = 'scale(1)';
+            }, 150);
+        }
+    }
+}
+
+// Smooth scroll to bids section
+function scrollToBids() {
+    const bidsSection = document.getElementById('bidsSection');
+    if (bidsSection) {
+        bidsSection.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start'
+        });
+        
+        // Add a subtle animation effect to the card
+        const clickedCard = event.target.closest('.card');
+        if (clickedCard) {
+            clickedCard.style.transform = 'scale(0.98)';
+            setTimeout(() => {
+                clickedCard.style.transform = 'scale(1)';
+            }, 150);
+        }
+    }
+}
 </script>
 {% endblock %}

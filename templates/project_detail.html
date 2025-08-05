@@ -334,10 +334,17 @@
                     <div class="row g-3 text-center">
                         <div class="col-6">
                             <div class="border rounded p-3">
-                                <h4 class="text-primary mb-1">{{ bids|length }}</h4>
+                                <h4 class="text-primary mb-1">
+                                    {% if user and user.role == 'homeowner' and user.id == project.homeowner_id %}
+                                        {{ bids|length }}
+                                    {% else %}
+                                        {{ bid_count }}
+                                    {% endif %}
+                                </h4>
                                 <small class="text-muted">Total Bids</small>
                             </div>
                         </div>
+                        {% if user and user.role == 'homeowner' and user.id == project.homeowner_id %}
                         <div class="col-6">
                             <div class="border rounded p-3">
                                 <h4 class="text-success mb-1">
@@ -362,12 +369,14 @@
                                 <small class="text-muted">Average Bid</small>
                             </div>
                         </div>
+                        {% else %}
                         <div class="col-6">
                             <div class="border rounded p-3">
                                 <h4 class="text-info mb-1">{{ (project.created_at.now() - project.created_at).days }}</h4>
                                 <small class="text-muted">Days Active</small>
                             </div>
                         </div>
+                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -418,7 +427,14 @@
             <div class="card shadow">
                 <div class="card-header">
                     <div class="d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0"><i class="fas fa-handshake me-2"></i>Bids{% if show_bids %} ({{ bids|length }}){% endif %}</h5>
+                        <h5 class="mb-0">
+                            <i class="fas fa-handshake me-2"></i>
+                            {% if user and user.role == 'homeowner' and user.id == project.homeowner_id %}
+                                Bids{% if show_bids %} ({{ bids|length }}){% endif %}
+                            {% else %}
+                                Bids ({{ bid_count }})
+                            {% endif %}
+                        </h5>
                         {% if show_bids and bids %}
                         <div class="d-flex gap-2">
                             <!-- View Toggle -->
@@ -479,6 +495,57 @@
                             <a href="{{ url_for('login') }}" class="btn btn-primary">
                                 <i class="fas fa-sign-in-alt me-2"></i>Login to View Bids
                             </a>
+                        </div>
+                    {% elif user and user.role == 'contractor' %}
+                        <!-- Contractor View - Only show bid count and their own bid -->
+                        <div class="text-center py-4">
+                            <i class="fas fa-users fa-3x text-primary mb-3"></i>
+                            <h5 class="text-primary">{{ bid_count }} Contractor{{ 's' if bid_count != 1 else '' }} Interested</h5>
+                            <p class="text-muted">This project has received {{ bid_count }} bid{{ 's' if bid_count != 1 else '' }} from qualified contractors.</p>
+                            
+                            {% if user_bid %}
+                                <div class="card mt-4 border-success">
+                                    <div class="card-header bg-success text-white">
+                                        <h6 class="mb-0"><i class="fas fa-check me-2"></i>Your Bid</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row g-3">
+                                            <div class="col-md-4">
+                                                <strong class="text-success">${{ "%.0f"|format(user_bid.amount) }}</strong>
+                                                <br>
+                                                <small class="text-muted">Your Bid Amount</small>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <strong>{{ user_bid.timeline }}</strong>
+                                                <br>
+                                                <small class="text-muted">Timeline</small>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <span class="badge {% if user_bid.status == 'Accepted' %}bg-success{% elif user_bid.status == 'Rejected' %}bg-danger{% elif user_bid.status == 'Withdrawn' %}bg-secondary{% else %}bg-warning{% endif %}">
+                                                    {{ user_bid.status }}
+                                                </span>
+                                                <br>
+                                                <small class="text-muted">Status</small>
+                                            </div>
+                                        </div>
+                                        <p class="mt-3 mb-2">{{ user_bid.description }}</p>
+                                        <small class="text-muted">
+                                            <i class="fas fa-calendar me-1"></i>Submitted {{ user_bid.created_at.strftime('%m/%d/%Y at %I:%M %p') }}
+                                        </small>
+                                        
+                                        {% if user_bid.status == 'Submitted' %}
+                                        <div class="mt-3">
+                                            <button class="btn btn-outline-warning btn-sm me-2" onclick="showWithdrawConfirmation({{ user_bid.id }})" title="Withdraw Bid">
+                                                <i class="fas fa-minus-circle me-1"></i>Withdraw Bid
+                                            </button>
+                                            <button class="btn btn-outline-info btn-sm" onclick="openBidMessaging({{ user_bid.id }}, '{{ user.first_name }} {{ user.last_name }}', {{ user_bid.amount }})" title="Discuss Bid">
+                                                <i class="fas fa-comments me-1"></i>Discuss
+                                            </button>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            {% endif %}
                         </div>
                     {% elif show_bids and bids %}
                         <!-- Card View (Default) -->
@@ -696,7 +763,11 @@
                         <div class="text-center py-4">
                             <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
                             <h5 class="text-muted">No bids yet</h5>
-                            <p class="text-muted">Be the first contractor to bid on this project!</p>
+                            {% if user and user.role == 'contractor' %}
+                                <p class="text-muted">Be the first contractor to bid on this project!</p>
+                            {% else %}
+                                <p class="text-muted">No contractors have submitted bids for this project yet.</p>
+                            {% endif %}
                         </div>
                     {% endif %}
                 </div>
