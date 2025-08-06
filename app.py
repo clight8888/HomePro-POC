@@ -2160,15 +2160,80 @@ def dashboard():
             return redirect(url_for('login'))
         contractor_id = contractor_result['id']
         
-        cursor.execute('''
+        # Get pagination parameters
+        page = request.args.get('page', 1, type=int)
+        per_page = 6  # Show 6 projects per page
+        offset = (page - 1) * per_page
+        
+        # Get filter parameters
+        project_type_filter = request.args.get('type', '')
+        budget_filter = request.args.get('budget', '')
+        location_filter = request.args.get('location', '')
+        sort_by = request.args.get('sort', 'newest')
+        
+        # Build WHERE clause for filters
+        where_conditions = ["status = 'Active'"]
+        params = [contractor_id]
+        
+        if project_type_filter:
+            where_conditions.append("p.project_type = %s")
+            params.append(project_type_filter)
+        
+        if budget_filter:
+            if budget_filter == '0-5000':
+                where_conditions.append("(p.budget_max <= 5000 OR (p.budget_min <= 5000 AND p.budget_max IS NULL))")
+            elif budget_filter == '5000-15000':
+                where_conditions.append("((p.budget_min >= 5000 AND p.budget_max <= 15000) OR (p.budget_min <= 15000 AND p.budget_max >= 5000))")
+            elif budget_filter == '15000-50000':
+                where_conditions.append("((p.budget_min >= 15000 AND p.budget_max <= 50000) OR (p.budget_min <= 50000 AND p.budget_max >= 15000))")
+            elif budget_filter == '50000+':
+                where_conditions.append("(p.budget_min >= 50000 OR p.budget_max >= 50000)")
+        
+        if location_filter:
+            where_conditions.append("h.location LIKE %s")
+            params.append(f'%{location_filter}%')
+        
+        # Build ORDER BY clause
+        if sort_by == 'oldest':
+            order_by = "p.created_at ASC"
+        elif sort_by == 'budget_high':
+            order_by = "COALESCE(p.budget_max, p.budget_min, 0) DESC"
+        elif sort_by == 'budget_low':
+            order_by = "COALESCE(p.budget_min, p.budget_max, 999999) ASC"
+        elif sort_by == 'bids':
+            order_by = "bid_count DESC"
+        else:  # newest
+            order_by = "p.created_at DESC"
+        
+        where_clause = " AND ".join(where_conditions)
+        
+        # Get total count for pagination
+        count_query = f'''
+            SELECT COUNT(*) as total
+            FROM projects p 
+            JOIN homeowners h ON p.homeowner_id = h.id
+            WHERE {where_clause}
+        '''
+        cursor.execute(count_query, params[1:])  # Skip contractor_id for count query
+        total_projects = cursor.fetchone()['total']
+        
+        # Calculate pagination info
+        total_pages = (total_projects + per_page - 1) // per_page
+        has_prev = page > 1
+        has_next = page < total_pages
+        
+        # Get projects with pagination
+        projects_query = f'''
             SELECT p.*, h.location,
                    (SELECT COUNT(*) FROM bids b WHERE b.project_id = p.id) as bid_count, 
                    (SELECT COUNT(*) FROM bids b WHERE b.project_id = p.id AND b.contractor_id = %s) as has_user_bid 
             FROM projects p 
             JOIN homeowners h ON p.homeowner_id = h.id
-            WHERE status = 'Active' 
-            ORDER BY created_at DESC
-        ''', (contractor_id,))
+            WHERE {where_clause}
+            ORDER BY {order_by}
+            LIMIT %s OFFSET %s
+        '''
+        cursor.execute(projects_query, params + [per_page, offset])
         projects = cursor.fetchall()
         
         cursor.execute('''
@@ -2179,8 +2244,29 @@ def dashboard():
             ORDER BY b.created_at DESC
         ''', (contractor_id,))
         bids = cursor.fetchall()
+        
         template = 'contractor_dashboard.html'
-        render_args = {'projects': projects, 'bids': bids, 'contractor_id': contractor_id}
+        render_args = {
+            'projects': projects, 
+            'bids': bids, 
+            'contractor_id': contractor_id,
+            'pagination': {
+                'page': page,
+                'per_page': per_page,
+                'total': total_projects,
+                'total_pages': total_pages,
+                'has_prev': has_prev,
+                'has_next': has_next,
+                'prev_num': page - 1 if has_prev else None,
+                'next_num': page + 1 if has_next else None
+            },
+            'filters': {
+                'type': project_type_filter,
+                'budget': budget_filter,
+                'location': location_filter,
+                'sort': sort_by
+            }
+        }
     
     cursor.close()
     conn.close()
