@@ -268,63 +268,43 @@
     <!-- Footer -->
     <footer class="footer">
         <div class="container">
-            <div class="row g-4">
-                <div class="col-lg-4 col-md-6">
-                    <h5><i class="fas fa-home me-2"></i>HomePro</h5>
-                    <p class="mb-3">Transform your home with confidence. Our AI-powered platform connects you with verified, skilled contractors who bring your vision to life.</p>
-                    <div class="d-flex gap-3">
-                        <a href="#" class="text-light"><i class="fab fa-facebook-f"></i></a>
-                        <a href="#" class="text-light"><i class="fab fa-twitter"></i></a>
-                        <a href="#" class="text-light"><i class="fab fa-linkedin-in"></i></a>
-                        <a href="#" class="text-light"><i class="fab fa-instagram"></i></a>
+            <div class="row align-items-center">
+                <div class="col-lg-3 col-md-6 mb-3 mb-lg-0">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-home me-2 text-primary" style="font-size: 1.5rem;"></i>
+                        <h5 class="mb-0 text-white">HomePro</h5>
+                    </div>
+                    <p class="small text-muted mt-2 mb-0">Connecting homeowners with trusted contractors</p>
+                </div>
+                
+                <div class="col-lg-6 col-md-6 mb-3 mb-lg-0">
+                    <div class="row text-center text-lg-start">
+                        <div class="col-4">
+                            <h6 class="footer-heading">Homeowners</h6>
+                            <ul class="footer-links">
+                                <li><a href="{{ url_for('submit_project') }}">Submit Project</a></li>
+                                <li><a href="#">How It Works</a></li>
+                            </ul>
+                        </div>
+                        <div class="col-4">
+                            <h6 class="footer-heading">Contractors</h6>
+                            <ul class="footer-links">
+                                <li><a href="{{ url_for('register') }}">Join as Pro</a></li>
+                                <li><a href="#">Find Projects</a></li>
+                            </ul>
+                        </div>
+                        <div class="col-4">
+                            <h6 class="footer-heading">Support</h6>
+                            <ul class="footer-links">
+                                <li><a href="#">Help Center</a></li>
+                                <li><a href="#">Contact Us</a></li>
+                            </ul>
+                        </div>
                     </div>
                 </div>
-                <div class="col-lg-2 col-md-6">
-                    <h6>For Homeowners</h6>
-                    <ul class="list-unstyled">
-                        <li><a href="{{ url_for('submit_project') }}" class="text-light text-decoration-none">Submit Project</a></li>
-                        <li><a href="#" class="text-light text-decoration-none">How It Works</a></li>
-                        <li><a href="#" class="text-light text-decoration-none">Success Stories</a></li>
-                        <li><a href="#" class="text-light text-decoration-none">Safety & Trust</a></li>
-                    </ul>
-                </div>
-                <div class="col-lg-2 col-md-6">
-                    <h6>For Contractors</h6>
-                    <ul class="list-unstyled">
-                        <li><a href="{{ url_for('register') }}" class="text-light text-decoration-none">Join as Pro</a></li>
-                        <li><a href="#" class="text-light text-decoration-none">Find Projects</a></li>
-                        <li><a href="#" class="text-light text-decoration-none">Grow Business</a></li>
-                        <li><a href="#" class="text-light text-decoration-none">Resources</a></li>
-                    </ul>
-                </div>
-                <div class="col-lg-2 col-md-6">
-                    <h6>Support</h6>
-                    <ul class="list-unstyled">
-                        <li><a href="#" class="text-light text-decoration-none">Help Center</a></li>
-                        <li><a href="#" class="text-light text-decoration-none">Contact Us</a></li>
-                        <li><a href="#" class="text-light text-decoration-none">Privacy Policy</a></li>
-                        <li><a href="#" class="text-light text-decoration-none">Terms of Service</a></li>
-                    </ul>
-                </div>
-                <div class="col-lg-2 col-md-12">
-                    <h6>Get Started Today</h6>
-                    <p class="small mb-3">Ready to transform your space? Start your project in minutes.</p>
-                    <a href="{{ url_for('submit_project') }}" class="btn btn-light btn-sm">
-                        <i class="fas fa-plus me-1"></i>Start Project
-                    </a>
-                </div>
-            </div>
-            <hr class="my-4 opacity-25">
-            <div class="row align-items-center">
-                <div class="col-md-6">
-                    <p class="mb-0">&copy; 2024 HomePro. All rights reserved.</p>
-                </div>
-                <div class="col-md-6 text-md-end">
-                    <p class="mb-0 small">
-                        <i class="fas fa-shield-alt me-1"></i>Trusted by thousands of homeowners
-                        <span class="mx-2">•</span>
-                        <i class="fas fa-star me-1"></i>4.9/5 average rating
-                    </p>
+                
+                <div class="col-lg-3 col-md-12 text-center text-lg-end">
+                    <p class="footer-copyright">&copy; 2024 HomePro. All rights reserved.</p>
                 </div>
             </div>
         </div>

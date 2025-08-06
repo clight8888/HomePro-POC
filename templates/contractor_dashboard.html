@@ -69,61 +69,55 @@
     </div>
     
     <!-- Quick Stats -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card shadow project-stats-card">
-                <div class="card-header">
-                    <div class="stats-icon">
-                        <i class="fas fa-chart-bar"></i>
+    <div class="row mb-4 g-3">
+        <div class="col-lg-3 col-md-6">
+            <div class="card text-white h-100" onclick="scrollToProjects()" style="cursor: pointer; background-color: #26A69A;">
+                <div class="card-body d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <h2 class="mb-0 fw-bold">{{ projects|length }}</h2>
+                        <p class="mb-0">Available Projects</p>
                     </div>
-                    <h6 class="mb-0">Contractor Overview</h6>
+                    <div class="ms-3">
+                        <i class="fas fa-project-diagram fa-2x opacity-75"></i>
+                    </div>
                 </div>
-                <div class="card-body p-3">
-                    <div class="row g-3">
-                        <div class="col-md-3">
-                            <div class="stat-item" onclick="scrollToProjects()" style="cursor: pointer;">
-                                <div class="stat-icon-wrapper location-icon">
-                                    <i class="fas fa-project-diagram"></i>
-                                </div>
-                                <div class="stat-content">
-                                    <div class="stat-value">{{ projects|length }}</div>
-                                    <div class="stat-label">Available Projects</div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="stat-item" onclick="scrollToBids()" style="cursor: pointer;">
-                                <div class="stat-icon-wrapper bids-icon">
-                                    <i class="fas fa-handshake"></i>
-                                </div>
-                                <div class="stat-content">
-                                    <div class="stat-value">{{ bids|length }}</div>
-                                    <div class="stat-label">Your Bids</div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="stat-item" onclick="scrollToBids()" style="cursor: pointer;">
-                                <div class="stat-icon-wrapper timeline-icon">
-                                    <i class="fas fa-check-circle"></i>
-                                </div>
-                                <div class="stat-content">
-                                    <div class="stat-value">{{ bids|selectattr('status', 'equalto', 'Accepted')|list|length }}</div>
-                                    <div class="stat-label">Accepted Bids</div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="stat-item" onclick="scrollToBids()" style="cursor: pointer;">
-                                <div class="stat-icon-wrapper budget-icon">
-                                    <i class="fas fa-dollar-sign"></i>
-                                </div>
-                                <div class="stat-content">
-                                    <div class="stat-value">${{ "%.0f"|format(bids|selectattr('status', 'equalto', 'Accepted')|map(attribute='amount')|sum or 0) }}</div>
-                                    <div class="stat-label">Total Earnings</div>
-                                </div>
-                            </div>
-                        </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="card text-white h-100" onclick="scrollToBids()" style="cursor: pointer; background-color: #1976D2;">
+                <div class="card-body d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <h2 class="mb-0 fw-bold">{{ bids|length }}</h2>
+                        <p class="mb-0">Your Bids</p>
+                    </div>
+                    <div class="ms-3">
+                        <i class="fas fa-handshake fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="card bg-success text-white h-100" onclick="scrollToBids()" style="cursor: pointer;">
+                <div class="card-body d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <h2 class="mb-0 fw-bold">{{ bids|selectattr('status', 'equalto', 'Accepted')|list|length }}</h2>
+                        <p class="mb-0">Accepted Bids</p>
+                    </div>
+                    <div class="ms-3">
+                        <i class="fas fa-check-circle fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="card text-white h-100" onclick="scrollToBids()" style="cursor: pointer; background-color: #F9A825;">
+                <div class="card-body d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <h2 class="mb-0 fw-bold">${{ "%.0f"|format(bids|selectattr('status', 'equalto', 'Accepted')|map(attribute='amount')|sum or 0) }}</h2>
+                        <p class="mb-0">Total Earnings</p>
+                    </div>
+                    <div class="ms-3">
+                        <i class="fas fa-dollar-sign fa-2x opacity-75"></i>
                     </div>
                 </div>
             </div>
