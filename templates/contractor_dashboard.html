@@ -70,54 +70,60 @@
     
     <!-- Quick Stats -->
     <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="card bg-primary text-white" style="background: linear-gradient(135deg, #7ba7d9 0%, #6b94c4 50%, #5a82b0 100%) !important; box-shadow: inset 0 1px 0 rgba(255,255,255,0.2), inset 0 -1px 0 rgba(0,0,0,0.1), 0 4px 8px rgba(0,0,0,0.3) !important; border: 1px solid rgba(255,255,255,0.3) !important; cursor: pointer; transition: transform 0.2s ease;" onclick="scrollToProjects()">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between">
-                        <div>
-                            <h4 class="mb-0">{{ projects|length }}</h4>
-                            <p class="mb-0">Available Projects</p>
-                        </div>
-                        <i class="fas fa-project-diagram fa-2x opacity-75"></i>
+        <div class="col-12">
+            <div class="card shadow project-stats-card">
+                <div class="card-header">
+                    <div class="stats-icon">
+                        <i class="fas fa-chart-bar"></i>
                     </div>
+                    <h6 class="mb-0">Contractor Overview</h6>
                 </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card bg-success text-white" style="background: linear-gradient(135deg, #8bb5d1 0%, #7aa5c1 50%, #6995b1 100%) !important; box-shadow: inset 0 1px 0 rgba(255,255,255,0.2), inset 0 -1px 0 rgba(0,0,0,0.1), 0 4px 8px rgba(0,0,0,0.3) !important; border: 1px solid rgba(255,255,255,0.3) !important; cursor: pointer; transition: transform 0.2s ease;" onclick="scrollToBids()">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between">
-                        <div>
-                            <h4 class="mb-0">{{ bids|length }}</h4>
-                            <p class="mb-0">Your Bids</p>
+                <div class="card-body p-3">
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <div class="stat-item" onclick="scrollToProjects()" style="cursor: pointer;">
+                                <div class="stat-icon-wrapper location-icon">
+                                    <i class="fas fa-project-diagram"></i>
+                                </div>
+                                <div class="stat-content">
+                                    <div class="stat-value">{{ projects|length }}</div>
+                                    <div class="stat-label">Available Projects</div>
+                                </div>
+                            </div>
                         </div>
-                        <i class="fas fa-handshake fa-2x opacity-75"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card bg-info text-white" style="background: linear-gradient(135deg, #9bc2d7 0%, #8ab2c7 50%, #79a2b7 100%) !important; box-shadow: inset 0 1px 0 rgba(255,255,255,0.2), inset 0 -1px 0 rgba(0,0,0,0.1), 0 4px 8px rgba(0,0,0,0.3) !important; border: 1px solid rgba(255,255,255,0.3) !important; cursor: pointer; transition: transform 0.2s ease;" onclick="scrollToBids()">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between">
-                        <div>
-                            <h4 class="mb-0">{{ bids|selectattr('status', 'equalto', 'Accepted')|list|length }}</h4>
-                            <p class="mb-0">Accepted Bids</p>
+                        <div class="col-md-3">
+                            <div class="stat-item" onclick="scrollToBids()" style="cursor: pointer;">
+                                <div class="stat-icon-wrapper bids-icon">
+                                    <i class="fas fa-handshake"></i>
+                                </div>
+                                <div class="stat-content">
+                                    <div class="stat-value">{{ bids|length }}</div>
+                                    <div class="stat-label">Your Bids</div>
+                                </div>
+                            </div>
                         </div>
-                        <i class="fas fa-check-circle fa-2x opacity-75"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card bg-info text-white" style="background: linear-gradient(135deg, #87ceeb 0%, #6bb8db 50%, #4fa2cb 100%) !important; box-shadow: inset 0 1px 0 rgba(255,255,255,0.2), inset 0 -1px 0 rgba(0,0,0,0.1), 0 4px 8px rgba(0,0,0,0.3) !important; border: 1px solid rgba(255,255,255,0.3) !important; cursor: pointer; transition: transform 0.2s ease;" onclick="scrollToBids()">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between">
-                        <div>
-                            <h4 class="mb-0">${{ "%.0f"|format(bids|selectattr('status', 'equalto', 'Accepted')|map(attribute='amount')|sum or 0) }}</h4>
-                            <p class="mb-0">Total Earnings</p>
+                        <div class="col-md-3">
+                            <div class="stat-item" onclick="scrollToBids()" style="cursor: pointer;">
+                                <div class="stat-icon-wrapper timeline-icon">
+                                    <i class="fas fa-check-circle"></i>
+                                </div>
+                                <div class="stat-content">
+                                    <div class="stat-value">{{ bids|selectattr('status', 'equalto', 'Accepted')|list|length }}</div>
+                                    <div class="stat-label">Accepted Bids</div>
+                                </div>
+                            </div>
                         </div>
-                        <i class="fas fa-dollar-sign fa-2x opacity-75"></i>
+                        <div class="col-md-3">
+                            <div class="stat-item" onclick="scrollToBids()" style="cursor: pointer;">
+                                <div class="stat-icon-wrapper budget-icon">
+                                    <i class="fas fa-dollar-sign"></i>
+                                </div>
+                                <div class="stat-content">
+                                    <div class="stat-value">${{ "%.0f"|format(bids|selectattr('status', 'equalto', 'Accepted')|map(attribute='amount')|sum or 0) }}</div>
+                                    <div class="stat-label">Total Earnings</div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -421,6 +427,168 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block styles %}
+<style>
+/* Project Stats Card Styling */
+.project-stats-card {
+    border: none;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    overflow: hidden;
+}
+
+.project-stats-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+}
+
+.project-stats-card .card-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    padding: 1rem 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.stats-icon {
+    width: 40px;
+    height: 40px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.2rem;
+}
+
+.project-stats-card .card-header h6 {
+    color: white;
+    font-weight: 600;
+    margin: 0;
+    font-size: 1.1rem;
+}
+
+.stat-item {
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: 12px;
+    padding: 1.25rem;
+    text-align: center;
+    transition: all 0.3s ease;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(5px);
+    animation: fadeInUp 0.6s ease forwards;
+    opacity: 0;
+    transform: translateY(20px);
+}
+
+.stat-item:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+    background: rgba(255, 255, 255, 0.95);
+}
+
+.stat-icon-wrapper {
+    width: 50px;
+    height: 50px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 0.75rem;
+    color: white;
+    font-size: 1.3rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.stat-icon-wrapper.location-icon {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.stat-icon-wrapper.budget-icon {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+.stat-icon-wrapper.timeline-icon {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
+
+.stat-icon-wrapper.bids-icon {
+    background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+}
+
+.stat-content {
+    text-align: center;
+}
+
+.stat-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #2d3748;
+    margin-bottom: 0.25rem;
+    line-height: 1.2;
+}
+
+.stat-label {
+    font-size: 0.875rem;
+    color: #718096;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Animation delays for staggered effect */
+.stat-item:nth-child(1) { animation-delay: 0.1s; }
+.stat-item:nth-child(2) { animation-delay: 0.2s; }
+.stat-item:nth-child(3) { animation-delay: 0.3s; }
+.stat-item:nth-child(4) { animation-delay: 0.4s; }
+
+@keyframes fadeInUp {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Mobile optimizations */
+@media (max-width: 768px) {
+    .project-stats-card .card-header {
+        padding: 0.75rem 1rem;
+    }
+    
+    .stats-icon {
+        width: 35px;
+        height: 35px;
+        font-size: 1rem;
+    }
+    
+    .stat-item {
+        padding: 1rem;
+        margin-bottom: 0.75rem;
+    }
+    
+    .stat-icon-wrapper {
+        width: 45px;
+        height: 45px;
+        font-size: 1.1rem;
+    }
+    
+    .stat-value {
+        font-size: 1.3rem;
+    }
+    
+    .stat-label {
+        font-size: 0.8rem;
+    }
+}
+</style>
 {% endblock %}
 
 {% block scripts %}

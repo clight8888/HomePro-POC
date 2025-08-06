@@ -1308,6 +1308,149 @@ def send_bid_message_api():
         cursor.close()
         conn.close()
 
+@app.route('/api/project_messages/<int:project_id>')
+@login_required
+def get_project_messages(project_id):
+    """Get all general messages for a project between homeowner and contractors"""
+    user = session['user']
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Verify access to project
+    cursor.execute('''
+        SELECT p.*, h.user_id as homeowner_user_id
+        FROM projects p
+        JOIN homeowners h ON p.homeowner_id = h.id
+        WHERE p.id = %s
+    ''', (project_id,))
+    
+    project = cursor.fetchone()
+    if not project:
+        cursor.close()
+        conn.close()
+        return jsonify({'success': False, 'message': 'Project not found'}), 404
+    
+    # Check access - homeowner or any contractor (contractors can message about any project)
+    has_access = False
+    if user['role'] == 'homeowner' and project['homeowner_user_id'] == user['id']:
+        has_access = True
+    elif user['role'] == 'contractor':
+        # Verify user is actually a contractor
+        cursor.execute('''
+            SELECT c.id FROM contractors c
+            WHERE c.user_id = %s
+        ''', (user['id'],))
+        if cursor.fetchone():
+            has_access = True
+    
+    if not has_access:
+        cursor.close()
+        conn.close()
+        return jsonify({'success': False, 'message': 'Access denied'}), 403
+    
+    # Get messages
+    cursor.execute('''
+        SELECT pm.*, 
+               u.first_name, u.last_name, u.role
+        FROM project_messages pm
+        JOIN users u ON pm.sender_id = u.id
+        WHERE pm.project_id = %s
+        ORDER BY pm.created_at ASC
+    ''', (project_id,))
+    
+    messages = cursor.fetchall()
+    
+    # Mark messages as read for current user
+    cursor.execute('''
+        UPDATE project_messages 
+        SET is_read = TRUE 
+        WHERE project_id = %s AND receiver_id = %s AND is_read = FALSE
+    ''', (project_id, user['id']))
+    
+    conn.commit()
+    cursor.close()
+    conn.close()
+    
+    return jsonify({'success': True, 'messages': messages})
+
+@app.route('/api/project_messages', methods=['POST'])
+@login_required
+def send_project_message():
+    """Send a general project message"""
+    user = session['user']
+    data = request.get_json()
+    
+    project_id = data.get('project_id')
+    message = data.get('message', '').strip()
+    message_type = data.get('message_type', 'general')
+    receiver_id = data.get('receiver_id')
+    
+    if not project_id or not message or not receiver_id:
+        return jsonify({'success': False, 'error': 'Project ID, message, and receiver are required'}), 400
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    try:
+        # Verify access to project
+        cursor.execute('''
+            SELECT p.*, h.user_id as homeowner_user_id
+            FROM projects p
+            JOIN homeowners h ON p.homeowner_id = h.id
+            WHERE p.id = %s
+        ''', (project_id,))
+        
+        project = cursor.fetchone()
+        if not project:
+            return jsonify({'success': False, 'error': 'Project not found'}), 404
+        
+        # Check access
+        has_access = False
+        if user['role'] == 'homeowner' and project['homeowner_user_id'] == user['id']:
+            has_access = True
+        elif user['role'] == 'contractor':
+            # Verify user is actually a contractor
+            cursor.execute('''
+                SELECT c.id FROM contractors c
+                WHERE c.user_id = %s
+            ''', (user['id'],))
+            if cursor.fetchone():
+                has_access = True
+        
+        if not has_access:
+            return jsonify({'success': False, 'error': 'Access denied'}), 403
+        
+        # Insert message
+        cursor.execute('''
+            INSERT INTO project_messages (project_id, sender_id, receiver_id, message_text, message_type)
+            VALUES (%s, %s, %s, %s, %s)
+        ''', (project_id, user['id'], receiver_id, message, message_type))
+        
+        message_id = cursor.lastrowid
+        
+        # Create notification for receiver
+        cursor.execute('''
+            INSERT INTO notifications (user_id, title, message, type, related_id)
+            VALUES (%s, %s, %s, %s, %s)
+        ''', (receiver_id, 'New Project Message', 
+              f'New message about project: {project["title"]}', 'project_message', project_id))
+        
+        conn.commit()
+        
+        return jsonify({
+            'success': True, 
+            'message': 'Message sent successfully',
+            'message_id': message_id
+        })
+        
+    except Exception as e:
+        conn.rollback()
+        return jsonify({'success': False, 'error': f'Error sending message: {str(e)}'}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
 @app.route('/api/expire_bids', methods=['POST'])
 @login_required
 def manual_expire_bids():
@@ -1775,6 +1918,47 @@ def init_database():
                 INDEX idx_contractor (contractor_id),
                 INDEX idx_date (available_date),
                 INDEX idx_status (status)
+            )
+        ''')
+        
+        # Create project_messages table for general messaging between homeowners and contractors
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS project_messages (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                project_id INT NOT NULL,
+                sender_id INT NOT NULL,
+                receiver_id INT NOT NULL,
+                message_text TEXT NOT NULL,
+                message_type ENUM('general', 'question', 'update', 'clarification') DEFAULT 'general',
+                is_read BOOLEAN DEFAULT FALSE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+                FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE,
+                FOREIGN KEY (receiver_id) REFERENCES users(id) ON DELETE CASCADE,
+                INDEX idx_project (project_id),
+                INDEX idx_sender (sender_id),
+                INDEX idx_receiver (receiver_id),
+                INDEX idx_read (is_read),
+                INDEX idx_created (created_at)
+            )
+        ''')
+        
+        # Create notifications table for general system notifications
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS notifications (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                title VARCHAR(255) NOT NULL,
+                message TEXT NOT NULL,
+                type VARCHAR(50) DEFAULT 'general',
+                related_id INT,
+                is_read BOOLEAN DEFAULT FALSE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                INDEX idx_user (user_id),
+                INDEX idx_type (type),
+                INDEX idx_read (is_read),
+                INDEX idx_created (created_at)
             )
         ''')
         

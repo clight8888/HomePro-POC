@@ -3,63 +3,64 @@
 {% block title %}{{ project.title }} - HomePro{% endblock %}
 
 {% block content %}
-<div class="container py-4">
+<div class="container py-2">
     <!-- Breadcrumb -->
-    <nav aria-label="breadcrumb" class="mb-4">
-        <ol class="breadcrumb">
+    <nav aria-label="breadcrumb" class="mb-2">
+        <ol class="breadcrumb mb-0">
             <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}">Dashboard</a></li>
             <li class="breadcrumb-item active">{{ project.title }}</li>
         </ol>
     </nav>
     
-    <div class="row">
+    <div class="row g-3">
         <!-- Project Details -->
         <div class="col-lg-8">
-            <div class="card shadow mb-4">
-                <div class="card-body">
+            <div class="card shadow mb-3">
+                <div class="card-body p-3">
                     <!-- Project Header -->
-                    <div class="d-flex justify-content-between align-items-start mb-4">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
                         <div>
-                            <h1 class="h3 mb-2">{{ project.title }}</h1>
-                            <div class="d-flex align-items-center gap-3">
-                                <span class="badge bg-primary fs-6">{{ project.project_type }}</span>
-                                <span class="badge {% if project.status == 'Active' %}bg-success{% elif project.status == 'Closed' %}bg-secondary{% else %}bg-warning{% endif %} fs-6">
-                                    {{ project.status }}
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="bg-primary bg-opacity-10 rounded-circle p-2 me-3" style="width: 42px; height: 42px; display: flex; align-items: center; justify-content: center;">
+                                    <i class="fas fa-tools text-primary" style="font-size: 1.3rem;"></i>
+                                </div>
+                                <h1 class="h2 mb-0 me-2">{{ project.title }}</h1>
+                                {% if audio_url %}
+                                    <i class="fas fa-microphone text-primary ms-2" title="Audio recording available" style="font-size: 1.4rem;"></i>
+                                {% endif %}
+                            </div>
+                            <div class="d-flex align-items-center gap-2 flex-wrap ms-5">
+                                <span class="badge bg-primary" style="font-size: 0.9rem;">{{ project.project_type }}</span>
+                                <span class="text-muted" style="font-size: 1rem;">
+                                    <i class="fas fa-calendar me-1"></i>{{ project.created_at.strftime('%b %d, %Y') }}
                                 </span>
-                                <small class="text-muted">
-                                    <i class="fas fa-calendar me-1"></i>Posted {{ project.created_at.strftime('%B %d, %Y') }}
-                                </small>
                             </div>
                         </div>
                         {% if user and user.role == 'homeowner' and user.id == project.homeowner_id and project.status == 'Active' %}
-                            <button class="btn btn-outline-danger" onclick="closeProject({{ project.id }})">
-                                <i class="fas fa-times me-2"></i>Close Project
+                            <button class="btn btn-outline-danger btn-sm" onclick="closeProject({{ project.id }})">
+                                <i class="fas fa-times me-1"></i><span class="d-none d-sm-inline">Close Project</span>
                             </button>
                         {% endif %}
                     </div>
                     
                     <!-- Project Info Grid -->
-                    <div class="row g-4 mb-4">
-                        <div class="col-md-6">
+                    <div class="row g-2 mb-3">
+                        <div class="col-6 col-md-3">
                             <div class="d-flex align-items-center">
-                                <div class="bg-primary bg-opacity-10 rounded-circle p-3 me-3">
-                                    <i class="fas fa-map-marker-alt text-primary"></i>
-                                </div>
+                                <i class="fas fa-map-marker-alt text-primary me-2" style="width: 22px; font-size: 1.3rem;"></i>
                                 <div>
-                                    <h6 class="mb-1">Location</h6>
-                                    <p class="mb-0 text-muted">{{ project.location }}</p>
+                                    <div class="fw-semibold" style="font-size: 1rem;">Location</div>
+                                    <div class="text-muted" style="font-size: 0.95rem;">{{ project.location }}</div>
                                 </div>
                             </div>
                         </div>
                         
-                        <div class="col-md-6">
+                        <div class="col-6 col-md-3">
                             <div class="d-flex align-items-center">
-                                <div class="bg-success bg-opacity-10 rounded-circle p-3 me-3">
-                                    <i class="fas fa-dollar-sign text-success"></i>
-                                </div>
+                                <i class="fas fa-dollar-sign text-success me-2" style="width: 22px; font-size: 1.3rem;"></i>
                                 <div>
-                                    <h6 class="mb-1">Budget</h6>
-                                    <p class="mb-0 text-muted">
+                                    <div class="fw-semibold" style="font-size: 1rem;">Budget</div>
+                                    <div class="text-muted" style="font-size: 0.95rem;">
                                         {% if project.budget_min and project.budget_max %}
                                             ${{ "%.0f"|format(project.budget_min) }} - ${{ "%.0f"|format(project.budget_max) }}
                                         {% elif project.budget_max %}
@@ -69,45 +70,27 @@
                                         {% else %}
                                             Negotiable
                                         {% endif %}
-                                    </p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                         
-                        <div class="col-md-6">
+                        <div class="col-6 col-md-3">
                             <div class="d-flex align-items-center">
-                                <div class="bg-info bg-opacity-10 rounded-circle p-3 me-3">
-                                    <i class="fas fa-clock text-info"></i>
-                                </div>
+                                <i class="fas fa-clock text-info me-2" style="width: 22px; font-size: 1.3rem;"></i>
                                 <div>
-                                    <h6 class="mb-1">Timeline</h6>
-                                    <p class="mb-0 text-muted">{{ project.timeline or 'Flexible' }}</p>
+                                    <div class="fw-semibold" style="font-size: 1rem;">Timeline</div>
+                                    <div class="text-muted" style="font-size: 0.95rem;">{{ project.timeline or 'Flexible' }}</div>
                                 </div>
                             </div>
                         </div>
                         
-                        <div class="col-md-6">
+                        <div class="col-6 col-md-3">
                             <div class="d-flex align-items-center">
-                                <div class="bg-warning bg-opacity-10 rounded-circle p-3 me-3">
-                                    <i class="fas fa-handshake text-warning"></i>
-                                </div>
+                                <i class="fas fa-handshake text-warning me-2" style="width: 22px; font-size: 1.3rem;"></i>
                                 <div>
-                                    <h6 class="mb-1">Bids Received</h6>
-                                    <p class="mb-0 text-muted">{{ bids|length }} contractor{{ 's' if bids|length != 1 else '' }}</p>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="col-md-6">
-                            <div class="d-flex align-items-center">
-                                <div class="{% if project.status == 'Active' %}bg-primary{% elif project.status == 'Completed' %}bg-success{% elif project.status == 'Closed' %}bg-secondary{% else %}bg-info{% endif %} bg-opacity-10 rounded-circle p-3 me-3">
-                                    <i class="fas {% if project.status == 'Active' %}fa-play{% elif project.status == 'Completed' %}fa-check-circle{% elif project.status == 'Closed' %}fa-lock{% else %}fa-info-circle{% endif %} {% if project.status == 'Active' %}text-primary{% elif project.status == 'Completed' %}text-success{% elif project.status == 'Closed' %}text-secondary{% else %}text-info{% endif %}"></i>
-                                </div>
-                                <div>
-                                    <h6 class="mb-1">Status</h6>
-                                    <p class="mb-0">
-                                        <span class="badge {% if project.status == 'Active' %}bg-primary{% elif project.status == 'Completed' %}bg-success{% elif project.status == 'Closed' %}bg-secondary{% else %}bg-info{% endif %}">{{ project.status }}</span>
-                                    </p>
+                                    <div class="fw-semibold" style="font-size: 1rem;">Bids</div>
+                                    <div class="text-muted" style="font-size: 0.95rem;">{{ bids|length }} received</div>
                                 </div>
                             </div>
                         </div>
@@ -193,74 +176,130 @@
                     
                     <!-- Project Description -->
                     <div class="mb-4">
-                        <h5><i class="fas fa-file-alt me-2"></i>Project Description</h5>
-                        <div class="bg-light p-4 rounded">
-                            <p class="mb-0">{{ project.description }}</p>
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
+                                <i class="fas fa-file-alt text-white" style="font-size: 1.1rem;"></i>
+                            </div>
+                            <h5 class="mb-0 text-primary fw-bold">Project Description</h5>
                         </div>
-                    </div>
-                    
-                    <!-- Project Images -->
-                    {% if project_images %}
-                    <div class="mb-4">
-                        <h5><i class="fas fa-images me-2"></i>Project Images ({{ project_images|length }})</h5>
-                        <div class="row g-3">
-                            {% for image in project_images %}
-                            <div class="col-md-6 col-lg-3">
-                                <div class="card shadow-sm">
-                                    <div class="position-relative">
-                                        <img src="{{ url_for('uploaded_file', filename=image.image_path) }}" 
-                                             class="card-img-top" 
-                                             alt="Project Image {{ loop.index }}"
-                                             style="height: 200px; object-fit: cover; cursor: pointer; transition: transform 0.2s;"
-                                             onclick="openImageSlideshow({{ loop.index0 }})"
-                                             onmouseover="this.style.transform='scale(1.05)'"
-                                             onmouseout="this.style.transform='scale(1)'">
-                                        <div class="position-absolute top-0 end-0 m-2">
-                                            <span class="badge bg-dark bg-opacity-75">{{ loop.index }}/{{ project_images|length }}</span>
-                                        </div>
-                                        <div class="position-absolute bottom-0 start-0 end-0 bg-dark bg-opacity-50 text-white p-2">
-                                            <i class="fas fa-search-plus me-1"></i>Click to view
-                                        </div>
-                                    </div>
-                                    <div class="card-body p-2">
-                                        <small class="text-muted">
-                                            <i class="fas fa-calendar me-1"></i>
-                                            {{ image.created_at.strftime('%m/%d/%Y') }}
-                                        </small>
+                        <div class="card border-0 shadow-sm">
+                             <div class="card-body p-4" style="background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);">
+                                 <div class="position-relative">
+                                     <p class="mb-0 text-dark" style="font-size: 1.1rem; line-height: 1.7; font-weight: 400;">
+                                         {{ project.description }}
+                                     </p>
+                                 </div>
+                                <div class="mt-3 pt-3 border-top border-light">
+                                    <div class="d-flex align-items-center text-muted">
+                                        <i class="fas fa-calendar-alt me-2"></i>
+                                        <small>Posted on {{ project.created_at.strftime('%B %d, %Y') }}</small>
+                                        <span class="mx-2">•</span>
+                                        <i class="fas fa-clock me-2"></i>
+                                        <small>{{ (project.created_at.now() - project.created_at).days }} days ago</small>
                                     </div>
                                 </div>
                             </div>
-                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <!-- Audio Recording -->
+                    {% if audio_url %}
+                    <div class="mb-3">
+                        <div class="d-flex align-items-center mb-2">
+                            <div class="bg-success rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 32px; height: 32px;">
+                                <i class="fas fa-microphone text-white" style="font-size: 0.9rem;"></i>
+                            </div>
+                            <h6 class="mb-0 text-success fw-bold">Original Audio Recording</h6>
+                        </div>
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-body p-3" style="background: linear-gradient(135deg, #f0f8f0 0%, #ffffff 100%);">
+                                <div class="d-flex align-items-center mb-2">
+                                    <i class="fas fa-headphones text-success me-2" style="font-size: 1rem;"></i>
+                                    <small class="text-muted">Listen to the homeowner's original description</small>
+                                </div>
+                                <audio controls class="w-100" style="max-width: 400px; height: 40px;">
+                                    <source src="{{ audio_url }}" type="audio/mpeg">
+                                    <source src="{{ audio_url }}" type="audio/wav">
+                                    <source src="{{ audio_url }}" type="audio/mp4">
+                                    <source src="{{ audio_url }}" type="audio/webm">
+                                    Your browser does not support the audio element.
+                                </audio>
+                            </div>
                         </div>
                     </div>
                     {% endif %}
                     
-                    {% if audio_url %}
-                    <div class="mb-4">
-                        <h5><i class="fas fa-microphone me-2"></i>Original Audio Recording</h5>
-                        <div class="bg-light p-3 rounded">
-                            <audio controls preload="metadata" class="w-100" style="height: 40px;">
-                                <source src="{{ audio_url }}" type="audio/mpeg">
-                                <source src="{{ audio_url }}" type="audio/webm">
-                                <source src="{{ audio_url }}" type="audio/wav">
-                                Your browser does not support the audio element.
-                            </audio>
+                    <!-- Project Images -->
+                    {% if project_images %}
+                    <div class="mb-3">
+                        <div class="d-flex align-items-center mb-2">
+                            <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 32px; height: 32px;">
+                                <i class="fas fa-camera text-white" style="font-size: 0.9rem;"></i>
+                            </div>
+                            <h6 class="mb-0 text-primary fw-bold">Project Gallery</h6>
+                        </div>
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-body p-0" style="background: linear-gradient(135deg, #f0f8ff 0%, #ffffff 100%);">
+                                <div class="d-flex align-items-center justify-content-end p-3 pb-0">
+                                    <button class="btn btn-outline-primary btn-sm gallery-action-btn" onclick="openImageSlideshow(0)">
+                                        <i class="fas fa-expand me-1"></i>View All
+                                    </button>
+                                </div>
+                                
+                                <!-- Enhanced Image Grid -->
+                                <div class="gallery-container">
+                                    <div class="gallery-grid">
+                                {% for image in project_images %}
+                                <div class="gallery-item" data-index="{{ loop.index0 }}">
+                                         <div class="image-container" onclick="openImageSlideshow({{ loop.index0 }})">
+                                             <img src="{{ url_for('uploaded_file', filename=image.image_path) }}" 
+                                                  class="gallery-image" 
+                                                  alt="Project Image {{ loop.index }}"
+                                                  loading="lazy">
+                                            
+                                            <!-- Image Overlay -->
+                                            <div class="image-overlay">
+                                                <div class="overlay-content">
+                                                    <div class="overlay-icon">
+                                                        <i class="fas fa-search-plus"></i>
+                                                    </div>
+                                                    <div class="overlay-text">View Full Size</div>
+                                                </div>
+                                            </div>
+                                            
+                                        </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     {% endif %}
+                    
+
                     
                     <!-- Homeowner Info -->
-                    <div class="border-top pt-4">
+                    <div class="border-top pt-3">
                         <h6><i class="fas fa-user me-2"></i>Posted by</h6>
-                        <div class="d-flex align-items-center">
-                            <div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 50px; height: 50px;">
-                                <i class="fas fa-user text-white"></i>
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div class="d-flex align-items-center">
+                                <div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 48px; height: 48px;">
+                                    <i class="fas fa-user text-white" style="font-size: 1.3rem;"></i>
+                                </div>
+                                <div>
+                                    <strong style="font-size: 1.1rem;">{{ project.homeowner.first_name }} {{ project.homeowner.last_name[0] }}.</strong>
+                                    <br>
+                                    <span class="text-muted" style="font-size: 1rem;">{{ project.homeowner.location or 'Location not specified' }}</span>
+                                </div>
                             </div>
+                            {% if user and user.role == 'contractor' %}
                             <div>
-                                <strong>{{ project.homeowner.first_name }} {{ project.homeowner.last_name[0] }}.</strong>
-                                <br>
-                                <small class="text-muted">{{ project.homeowner.location or 'Location not specified' }}</small>
+                                <button class="btn btn-primary btn-sm" onclick="contactHomeowner()">
+                                    <i class="fas fa-envelope me-2"></i>Contact
+                                </button>
                             </div>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
@@ -273,44 +312,81 @@
             {% if user and user.role == 'contractor' and project.status == 'Active' %}
                 {% set user_bid = bids|selectattr('contractor_id', 'equalto', user.id)|first %}
                 {% if not user_bid %}
-                    <div class="card shadow mb-4">
-                        <div class="card-header bg-primary text-white">
-                            <h5 class="mb-0"><i class="fas fa-handshake me-2"></i>Submit Your Bid</h5>
+                    <div class="card shadow-lg mb-4 bid-submission-card">
+                        <div class="card-header bg-gradient-primary text-white py-2">
+                            <div class="d-flex align-items-center">
+                                <div class="bid-icon me-2">
+                                    <i class="fas fa-handshake"></i>
+                                </div>
+                                <div>
+                                    <h6 class="mb-0 fw-bold">Submit Your Bid</h6>
+                                </div>
+                            </div>
                         </div>
-                        <div class="card-body">
-                            <form method="POST" action="{{ url_for('submit_bid', project_id=project.id) }}">
-                                <div class="mb-3">
-                                    <label for="amount" class="form-label">Bid Amount *</label>
-                                    <div class="input-group">
-                                        <span class="input-group-text">$</span>
-                                        <input type="number" class="form-control" id="amount" name="amount" required min="1" step="0.01">
+                        <div class="card-body p-4">
+                            <form method="POST" action="{{ url_for('submit_bid', project_id=project.id) }}" class="bid-form">
+                                <!-- Bid Amount Section -->
+                                <div class="mb-4">
+                                    <label for="amount" class="form-label fw-semibold">
+                                        <i class="fas fa-dollar-sign text-success me-2"></i>Bid Amount *
+                                    </label>
+                                    <div class="input-group input-group-lg">
+                                        <span class="input-group-text bg-light border-end-0">
+                                            <i class="fas fa-dollar-sign text-success"></i>
+                                        </span>
+                                        <input type="number" class="form-control border-start-0 ps-0" id="amount" name="amount" 
+                                               required min="1" step="0.01" placeholder="0.00">
+                                    </div>
+                                    <div class="form-text">
+                                        <i class="fas fa-info-circle me-1"></i>Enter your competitive bid amount
                                     </div>
                                 </div>
                                 
-                                <div class="mb-3">
-                                    <label for="timeline" class="form-label">Timeline *</label>
-                                    <input type="text" class="form-control" id="timeline" name="timeline" 
-                                           placeholder="e.g., 2 weeks, 1 month" required>
+                                <!-- Timeline Section -->
+                                <div class="mb-4">
+                                    <label for="timeline" class="form-label fw-semibold">
+                                        <i class="fas fa-clock text-primary me-2"></i>Project Timeline *
+                                    </label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-light">
+                                            <i class="fas fa-calendar-alt text-primary"></i>
+                                        </span>
+                                        <input type="text" class="form-control" id="timeline" name="timeline" 
+                                               placeholder="e.g., 2 weeks, 1 month, 3-5 days" required>
+                                    </div>
+                                    <div class="form-text">
+                                        <i class="fas fa-lightbulb me-1"></i>Be specific about your completion timeframe
+                                    </div>
                                 </div>
                                 
-                                <div class="mb-3">
-                                    <label for="description" class="form-label">Work Description *</label>
-                                    <textarea class="form-control" id="description" name="description" rows="4" 
-                                              placeholder="Describe your approach, materials, and what's included in your bid" required></textarea>
+                                <!-- Work Description Section -->
+                                <div class="mb-4">
+                                    <label for="description" class="form-label fw-semibold">
+                                        <i class="fas fa-clipboard-list text-info me-2"></i>Work Description *
+                                    </label>
+                                    <textarea class="form-control" id="description" name="description" rows="5" 
+                                              placeholder="Describe your approach, materials you'll use, what's included in your bid, and any additional services you offer..." required></textarea>
+                                    <div class="form-text">
+                                        <i class="fas fa-star me-1"></i>Detailed descriptions help you stand out from other contractors
+                                    </div>
                                 </div>
                                 
-                                <button type="submit" class="btn btn-primary w-100">
-                                    <i class="fas fa-paper-plane me-2"></i>Submit Bid
-                                </button>
+                                <!-- Submit Button -->
+                                <div class="d-grid">
+                                    <button type="submit" class="btn btn-primary submit-bid-btn">
+                                        <i class="fas fa-paper-plane me-2"></i>
+                                        <span>Submit Bid</span>
+                                    </button>
+                                </div>
                             </form>
                         </div>
                     </div>
                 {% else %}
-                    <div class="card shadow mb-4 border-success">
-                        <div class="card-header bg-success text-white">
-                            <h5 class="mb-0"><i class="fas fa-check me-2"></i>Your Bid</h5>
+                    <div class="card shadow mb-3 border-success">
+                        <div class="card-header bg-success text-white py-2">
+                            <h6 class="mb-0"><i class="fas fa-check me-2"></i>Your Bid</h6>
                         </div>
-                        <div class="card-body">
+                        <div class="card-body p-3">
                             <div class="text-center mb-3">
                                 <h4 class="text-success">${{ "%.0f"|format(user_bid.amount) }}</h4>
                                 <p class="mb-0">Timeline: {{ user_bid.timeline }}</p>
@@ -326,12 +402,12 @@
             {% endif %}
             
             <!-- Project Stats -->
-            <div class="card shadow mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Project Stats</h5>
+            <div class="card shadow mb-3">
+                <div class="card-header py-2">
+                    <h6 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Project Stats</h6>
                 </div>
-                <div class="card-body">
-                    <div class="row g-3 text-center">
+                <div class="card-body p-3">
+                    <div class="row g-2 text-center">
                         <div class="col-6">
                             <div class="border rounded p-3">
                                 <h4 class="text-primary mb-1">
@@ -341,7 +417,7 @@
                                         {{ bid_count }}
                                     {% endif %}
                                 </h4>
-                                <small class="text-muted">Total Bids</small>
+                                <span class="text-muted" style="font-size: 0.85rem;">Total Bids</span>
                             </div>
                         </div>
                         {% if user and user.role == 'homeowner' and user.id == project.homeowner_id %}
@@ -354,7 +430,7 @@
                                         -
                                     {% endif %}
                                 </h4>
-                                <small class="text-muted">Lowest Bid</small>
+                                <span class="text-muted" style="font-size: 0.85rem;">Lowest Bid</span>
                             </div>
                         </div>
                         <div class="col-6">
@@ -366,14 +442,14 @@
                                         -
                                     {% endif %}
                                 </h4>
-                                <small class="text-muted">Average Bid</small>
+                                <span class="text-muted" style="font-size: 0.85rem;">Average Bid</span>
                             </div>
                         </div>
                         {% else %}
                         <div class="col-6">
                             <div class="border rounded p-3">
                                 <h4 class="text-info mb-1">{{ (project.created_at.now() - project.created_at).days }}</h4>
-                                <small class="text-muted">Days Active</small>
+                                <span class="text-muted" style="font-size: 0.85rem;">Days Active</span>
                             </div>
                         </div>
                         {% endif %}
@@ -382,52 +458,45 @@
             </div>
             
             <!-- Quick Actions -->
-            <div class="card shadow">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="fas fa-tools me-2"></i>Quick Actions</h5>
+            <div class="card shadow mb-3">
+                <div class="card-header py-2">
+                    <h6 class="mb-0"><i class="fas fa-bolt me-2"></i>Quick Actions</h6>
                 </div>
-                <div class="card-body">
+                <div class="card-body p-3">
                     <div class="d-grid gap-2">
-                        {% set accepted_bid = bids|selectattr('status', 'equalto', 'Accepted')|first %}
-                        
                         {% if user and user.role == 'homeowner' and user.id == project.homeowner_id %}
-                            {% if accepted_bid and project.status == 'Active' %}
-                                <button class="btn btn-success" onclick="completeProject({{ project.id }})">
-                                    <i class="fas fa-check-circle me-2"></i>Mark as Completed
-                                </button>
+                            {% if project.status == 'Active' %}
+                            <button class="btn btn-success btn-sm" onclick="markAsCompleted()">
+                                <i class="fas fa-check me-2"></i>Mark as Completed
+                            </button>
                             {% endif %}
-                            <button class="btn btn-outline-primary" onclick="contactContractors()">
-                                <i class="fas fa-envelope me-2"></i>Contact Contractors
+                            <button class="btn btn-info btn-sm" onclick="contactContractors()">
+                                <i class="fas fa-users me-2"></i>Contact Contractors
                             </button>
-                            <button class="btn btn-outline-info" onclick="shareProject()">
-                                <i class="fas fa-share me-2"></i>Share Project
-                            </button>
-                        {% else %}
-                            {% if accepted_bid and user and user.id == accepted_bid.contractor_id and project.status == 'Active' %}
-                                <button class="btn btn-success" onclick="completeProject({{ project.id }})">
-                                    <i class="fas fa-check-circle me-2"></i>Mark as Completed
-                                </button>
-                            {% endif %}
-                            <button class="btn btn-outline-primary" onclick="contactHomeowner()">
-                                <i class="fas fa-envelope me-2"></i>Contact Homeowner
-                            </button>
-                            <button class="btn btn-outline-info" onclick="saveProject()">
-                                <i class="fas fa-bookmark me-2"></i>Save Project
-                            </button>
+                        {% endif %}
+                        
+                        {% if user %}
+                        <button class="btn btn-outline-secondary btn-sm" onclick="shareProject()">
+                            <i class="fas fa-share me-2"></i>Share Project
+                        </button>
+                        <button class="btn btn-outline-primary btn-sm" onclick="saveProject()">
+                            <i class="fas fa-bookmark me-2"></i>Save Project
+                        </button>
                         {% endif %}
                     </div>
                 </div>
             </div>
+
         </div>
     </div>
     
     <!-- Bids Section -->
-    <div class="row mt-4">
+    <div class="row mt-3">
         <div class="col-12">
             <div class="card shadow">
-                <div class="card-header">
+                <div class="card-header py-2">
                     <div class="d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">
+                        <h6 class="mb-0">
                             <i class="fas fa-handshake me-2"></i>
                             {% if user and user.role == 'homeowner' and user.id == project.homeowner_id %}
                                 Bids{% if show_bids %} ({{ bids|length }}){% endif %}
@@ -486,7 +555,7 @@
                         {% endif %}
                     </div>
                 </div>
-                <div class="card-body">
+                <div class="card-body p-3">
                     {% if not user %}
                         <div class="text-center py-4">
                             <i class="fas fa-lock fa-3x text-muted mb-3"></i>
@@ -549,7 +618,7 @@
                         </div>
                     {% elif show_bids and bids %}
                         <!-- Card View (Default) -->
-                        <div class="row g-4" id="bidsContainer">
+                        <div class="row g-3" id="bidsContainer">
                             {% for bid in bids %}
                             <div class="col-md-6 bid-item" data-amount="{{ bid.amount }}" data-date="{{ bid.created_at.timestamp() }}" data-timeline="{{ bid.timeline }}" data-status="{{ bid.status }}">
                                 <div class="card bid-card h-100 {% if bid.status == 'Accepted' %}border-success{% elif bid.status == 'Rejected' %}border-danger{% endif %}">
@@ -1125,6 +1194,62 @@
         </div>
     </div>
 </div>
+
+<!-- Homeowner Messaging Modal -->
+<div class="modal fade" id="homeownerMessagingModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-home me-2"></i>Contact Homeowner
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <h6 id="homeownerInfo" class="text-muted">
+                        <i class="fas fa-user me-2"></i>{{ project.homeowner_first_name }} {{ project.homeowner_last_name }}
+                    </h6>
+                    <p class="text-muted small mb-0">
+                        <i class="fas fa-project-diagram me-2"></i>Project: {{ project.title }}
+                    </p>
+                </div>
+                
+                <!-- Messages Container -->
+                <div id="homeownerMessagesContainer" class="border rounded p-3 mb-3" style="height: 300px; overflow-y: auto;">
+                    <div class="text-center text-muted">
+                        <i class="fas fa-spinner fa-spin"></i> Loading messages...
+                    </div>
+                </div>
+                
+                <!-- Message Form -->
+                <form id="homeownerMessageForm">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="homeownerMessageType" class="form-label">Message Type</label>
+                            <select class="form-select" id="homeownerMessageType" required>
+                                <option value="general">General Message</option>
+                                <option value="question">Question</option>
+                                <option value="update">Project Update</option>
+                                <option value="clarification">Clarification</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="homeownerMessageText" class="form-label">Message</label>
+                        <textarea class="form-control" id="homeownerMessageText" rows="3" required 
+                                  placeholder="Type your message to the homeowner here..."></textarea>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-paper-plane me-2"></i>Send Message
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -1472,7 +1597,11 @@ function contactContractor(contractorId) {
 }
 
 function contactHomeowner() {
-    alert('Contact homeowner functionality would be implemented here');
+    // Load existing messages
+    loadHomeownerMessages({{ project.id }});
+    
+    // Show modal
+    new bootstrap.Modal(document.getElementById('homeownerMessagingModal')).show();
 }
 
 function contactContractors() {
@@ -1564,7 +1693,7 @@ function displayMessages(messages) {
     
     let html = '';
     messages.forEach(message => {
-        const isCurrentUser = message.sender_id === {{ session.user.id }};
+        const isCurrentUser = message.sender_id === {{ user.id if user else 'null' }};
         const messageClass = isCurrentUser ? 'bg-primary text-white ms-auto' : 'bg-light';
         const alignment = isCurrentUser ? 'text-end' : 'text-start';
         
@@ -1735,6 +1864,110 @@ function shareProject() {
 function saveProject() {
     alert('Save project functionality would be implemented here');
 }
+
+// Homeowner messaging functions
+function loadHomeownerMessages(projectId) {
+    const container = document.getElementById('homeownerMessagesContainer');
+    container.innerHTML = '<div class="text-center text-muted"><i class="fas fa-spinner fa-spin"></i> Loading messages...</div>';
+    
+    fetch(`/api/project_messages/${projectId}`)
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            displayHomeownerMessages(data.messages);
+        } else {
+            container.innerHTML = '<div class="text-center text-danger">Error loading messages</div>';
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        container.innerHTML = '<div class="text-center text-danger">Error loading messages</div>';
+    });
+}
+
+function displayHomeownerMessages(messages) {
+    const container = document.getElementById('homeownerMessagesContainer');
+    
+    if (messages.length === 0) {
+        container.innerHTML = '<div class="text-center text-muted">No messages yet. Start the conversation!</div>';
+        return;
+    }
+    
+    let html = '';
+    messages.forEach(message => {
+        const isCurrentUser = message.sender_id === {{ user.id if user else 'null' }};
+        const messageClass = isCurrentUser ? 'bg-primary text-white ms-auto' : 'bg-light';
+        const alignment = isCurrentUser ? 'text-end' : 'text-start';
+        
+        html += `
+            <div class="mb-3 ${alignment}">
+                <div class="d-inline-block p-3 rounded ${messageClass}" style="max-width: 70%;">
+                    <div class="fw-bold small mb-1">
+                        ${message.first_name} ${message.last_name} (${message.role})
+                        <span class="badge bg-secondary ms-2">${message.message_type}</span>
+                    </div>
+                    <div>${message.message_text}</div>
+                    <div class="small mt-2 opacity-75">
+                        ${new Date(message.created_at).toLocaleString()}
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html;
+    container.scrollTop = container.scrollHeight;
+}
+
+// Handle homeowner message form submission
+document.addEventListener('DOMContentLoaded', function() {
+    const homeownerMessageForm = document.getElementById('homeownerMessageForm');
+    
+    if (homeownerMessageForm) {
+        homeownerMessageForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const projectId = {{ project.id }};
+            const homeownerUserId = {{ project.homeowner_user_id if project.homeowner_user_id else 'null' }};
+            
+            if (!homeownerUserId) {
+                alert('Unable to determine homeowner for messaging');
+                return;
+            }
+            
+            const formData = {
+                project_id: projectId,
+                receiver_id: homeownerUserId,
+                message: document.getElementById('homeownerMessageText').value,
+                message_type: document.getElementById('homeownerMessageType').value
+            };
+            
+            fetch('/api/project_messages', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(formData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Clear form
+                    homeownerMessageForm.reset();
+                    
+                    // Reload messages
+                    loadHomeownerMessages(projectId);
+                } else {
+                    alert('Error sending message: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while sending the message.');
+            });
+        });
+    }
+});
 
 
 
@@ -2022,6 +2255,470 @@ function submitProgressUpdate() {
     });
 }
 </script>
+
+<style>
+/* ============================================================================
+   ENHANCED PROJECT GALLERY STYLES
+   ============================================================================ */
+
+
+
+/* Gallery Header Styles */
+.gallery-header {
+    position: relative;
+    z-index: 2;
+}
+
+.gallery-action-btn {
+    border-radius: 25px;
+    padding: 0.5rem 1.2rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    border: 2px solid #007bff;
+    background: transparent;
+    color: #007bff;
+}
+
+.gallery-action-btn:hover {
+    background: #007bff;
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 123, 255, 0.3);
+}
+
+/* Gallery Container */
+.gallery-container {
+    position: relative;
+    z-index: 1;
+}
+
+.gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1rem;
+    max-width: 100%;
+}
+
+/* Gallery Item Styles */
+.gallery-item {
+    position: relative;
+    animation: fadeInUp 0.6s ease forwards;
+    opacity: 0;
+    transform: translateY(30px);
+}
+
+.gallery-item:nth-child(1) { animation-delay: 0.1s; }
+.gallery-item:nth-child(2) { animation-delay: 0.2s; }
+.gallery-item:nth-child(3) { animation-delay: 0.3s; }
+.gallery-item:nth-child(4) { animation-delay: 0.4s; }
+.gallery-item:nth-child(n+5) { animation-delay: 0.5s; }
+
+@keyframes fadeInUp {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.gallery-card {
+    background: transparent;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    border: none;
+    position: relative;
+    cursor: pointer;
+    width: 100%;
+    height: 100%;
+}
+
+.gallery-card:hover {
+    transform: translateY(-10px) scale(1.02);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+}
+
+/* Image Container */
+.image-container {
+    position: relative;
+    aspect-ratio: 1;
+    overflow: hidden;
+    background: transparent;
+    cursor: pointer;
+    border-radius: 12px;
+    width: 100%;
+    height: 100%;
+}
+
+.gallery-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: all 0.4s ease;
+    cursor: pointer;
+    filter: brightness(1) saturate(1);
+    display: block;
+    border-radius: 12px;
+}
+
+.image-container:hover .gallery-image {
+    transform: scale(1.1);
+    filter: brightness(1.1) saturate(1.2);
+}
+
+/* Image Overlay */
+.image-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(0, 123, 255, 0.8), rgba(40, 167, 69, 0.8));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(2px);
+}
+
+.image-container:hover .image-overlay {
+    opacity: 1;
+}
+
+.overlay-content {
+    text-align: center;
+    color: white;
+    transform: translateY(20px);
+    transition: all 0.3s ease;
+}
+
+.image-container:hover .overlay-content {
+    transform: translateY(0);
+}
+
+.overlay-icon {
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+
+.overlay-text {
+    font-size: 1.1rem;
+    font-weight: 600;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+
+
+/* Tablet and smaller desktop optimizations */
+@media (max-width: 992px) {
+    .gallery-grid {
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 1rem;
+    }
+}
+
+/* Mobile Optimizations */
+@media (max-width: 768px) {
+    .project-gallery-section {
+        padding: 1.5rem;
+        margin: 0 -15px;
+        border-radius: 0;
+    }
+    
+    .gallery-grid {
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 0.8rem;
+    }
+    
+    .image-container {
+        max-height: 200px;
+    }
+    
+    .gallery-title {
+        font-size: 1.5rem;
+    }
+    
+    .gallery-icon {
+        width: 50px;
+        height: 50px;
+        font-size: 1.2rem;
+    }
+    
+    .gallery-action-btn {
+        padding: 0.4rem 1rem;
+        font-size: 0.9rem;
+    }
+    
+    /* Mobile hover effects - hide overlay */
+    .image-overlay {
+        display: none !important;
+    }
+}
+
+/* Touch device optimizations */
+@media (hover: none) and (pointer: coarse) {
+    .image-container:hover .gallery-image {
+        transform: none;
+        filter: brightness(1) saturate(1);
+    }
+    
+    .image-overlay {
+        display: none !important;
+    }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .image-container {
+        border: 2px solid #000;
+    }
+    
+    .image-overlay {
+        background: rgba(0, 0, 0, 0.8);
+    }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    .gallery-item {
+        animation: none;
+        opacity: 1;
+        transform: none;
+    }
+    
+    .gallery-card,
+    .gallery-image,
+    .overlay-content {
+        transition: none;
+    }
+    
+    .overlay-icon {
+        animation: none;
+    }
+}
+
+/* Print styles */
+@media print {
+    .image-overlay,
+    .gallery-actions {
+        display: none;
+    }
+    
+    .gallery-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* ===== BID SUBMISSION FORM STYLES ===== */
+.bid-submission-card {
+    border: none;
+    border-radius: 20px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+}
+
+.bid-submission-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 20px 40px rgba(0, 123, 255, 0.15) !important;
+}
+
+.bg-gradient-primary {
+    background: linear-gradient(135deg, #007bff 0%, #0056b3 100%) !important;
+    position: relative;
+    overflow: hidden;
+}
+
+.bg-gradient-primary::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(45deg, rgba(255, 255, 255, 0.1) 0%, transparent 100%);
+    pointer-events: none;
+}
+
+.bid-icon {
+    width: 35px;
+    height: 35px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.bid-form .form-label {
+    color: #2c3e50;
+    font-size: 1rem;
+    margin-bottom: 0.75rem;
+}
+
+.bid-form .input-group-text {
+    border: 2px solid #e9ecef;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.bid-form .form-control {
+    border: 2px solid #e9ecef;
+    border-radius: 12px;
+    padding: 0.75rem 1rem;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    background: #ffffff;
+}
+
+.bid-form .form-control:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.15);
+    background: #ffffff;
+}
+
+.bid-form .input-group .form-control:focus + .input-group-text,
+.bid-form .input-group-text:has(+ .form-control:focus) {
+    border-color: #007bff;
+    background: rgba(0, 123, 255, 0.1);
+}
+
+.bid-form .input-group-lg .form-control {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #28a745;
+}
+
+.bid-form .form-text {
+    color: #6c757d;
+    font-size: 0.875rem;
+    margin-top: 0.5rem;
+    display: flex;
+    align-items: center;
+}
+
+.submit-bid-btn {
+    background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+    border: none;
+    border-radius: 15px;
+    font-weight: 600;
+    font-size: 1.1rem;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.submit-bid-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s ease;
+}
+
+.submit-bid-btn:hover::before {
+    left: 100%;
+}
+
+.submit-bid-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(0, 123, 255, 0.3);
+    background: linear-gradient(135deg, #0056b3 0%, #004085 100%);
+}
+
+.submit-bid-btn:active {
+    transform: translateY(0);
+}
+
+/* Form validation styles */
+.bid-form .form-control:invalid {
+    border-color: #e9ecef;
+}
+
+.bid-form .form-control:valid {
+    border-color: #e9ecef;
+}
+
+/* Mobile optimizations for bid form */
+@media (max-width: 768px) {
+    .bid-submission-card {
+        margin: 0 -15px;
+        border-radius: 0;
+    }
+    
+    .bid-form .input-group-lg .form-control {
+        font-size: 1.1rem;
+    }
+    
+    .submit-bid-btn {
+        font-size: 1rem;
+        padding: 0.75rem 1.5rem !important;
+    }
+    
+    .bid-icon {
+        width: 40px;
+        height: 40px;
+        font-size: 1.2rem;
+    }
+}
+
+/* Animation for form elements */
+@keyframes slideInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.bid-form > div {
+    animation: slideInUp 0.6s ease forwards;
+}
+
+.bid-form > div:nth-child(1) { animation-delay: 0.1s; }
+.bid-form > div:nth-child(2) { animation-delay: 0.2s; }
+.bid-form > div:nth-child(3) { animation-delay: 0.3s; }
+.bid-form > div:nth-child(4) { animation-delay: 0.4s; }
+.bid-form > div:nth-child(5) { animation-delay: 0.5s; }
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    .bid-submission-card,
+    .submit-bid-btn,
+    .bid-form .form-control,
+    .bid-form > div {
+        animation: none;
+        transition: none;
+    }
+    
+    .bid-submission-card:hover {
+        transform: none;
+    }
+    
+    .submit-bid-btn:hover {
+        transform: none;
+    }
+}
+</style>
 
 <!-- Image Slideshow Modal -->
 <div class="modal fade" id="imageSlideshowModal" tabindex="-1" aria-labelledby="slideshowModalLabel" aria-hidden="true">

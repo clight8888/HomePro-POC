@@ -19,66 +19,61 @@
         </div>
     </div>
 
-    <!-- Key Metrics Cards -->
+    <!-- Main Statistics Cards -->
     <div class="row mb-4">
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-left-primary shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Total Users</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.total_users }}</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-users fa-2x text-gray-300"></i>
-                        </div>
+        <div class="col-12">
+            <div class="card shadow project-stats-card">
+                <div class="card-header">
+                    <div class="stats-icon">
+                        <i class="fas fa-tachometer-alt"></i>
                     </div>
+                    <h6 class="mb-0">Admin Dashboard Overview</h6>
                 </div>
-            </div>
-        </div>
-
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-left-success shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Active Projects</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.active_projects }}</div>
+                <div class="card-body p-3">
+                    <div class="row g-3">
+                        <div class="col-xl-3 col-md-6">
+                            <div class="stat-item">
+                                <div class="stat-icon-wrapper location-icon">
+                                    <i class="fas fa-users"></i>
+                                </div>
+                                <div class="stat-content">
+                                    <div class="stat-value">{{ stats.total_users }}</div>
+                                    <div class="stat-label">Total Users</div>
+                                </div>
+                            </div>
                         </div>
-                        <div class="col-auto">
-                            <i class="fas fa-project-diagram fa-2x text-gray-300"></i>
+                        <div class="col-xl-3 col-md-6">
+                            <div class="stat-item">
+                                <div class="stat-icon-wrapper bids-icon">
+                                    <i class="fas fa-project-diagram"></i>
+                                </div>
+                                <div class="stat-content">
+                                    <div class="stat-value">{{ stats.active_projects }}</div>
+                                    <div class="stat-label">Active Projects</div>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-left-info shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Total Revenue</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">${{ "{:,.2f}".format(stats.total_revenue) }}</div>
+                        <div class="col-xl-3 col-md-6">
+                            <div class="stat-item">
+                                <div class="stat-icon-wrapper budget-icon">
+                                    <i class="fas fa-dollar-sign"></i>
+                                </div>
+                                <div class="stat-content">
+                                    <div class="stat-value">${{ "{:,.0f}".format(stats.total_revenue) }}</div>
+                                    <div class="stat-label">Total Revenue</div>
+                                </div>
+                            </div>
                         </div>
-                        <div class="col-auto">
-                            <i class="fas fa-dollar-sign fa-2x text-gray-300"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-left-warning shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Pending Reviews</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.pending_verifications + stats.pending_moderation }}</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-clock fa-2x text-gray-300"></i>
+                        <div class="col-xl-3 col-md-6">
+                            <div class="stat-item">
+                                <div class="stat-icon-wrapper timeline-icon">
+                                    <i class="fas fa-clock"></i>
+                                </div>
+                                <div class="stat-content">
+                                    <div class="stat-value">{{ stats.pending_verifications + stats.pending_moderation }}</div>
+                                    <div class="stat-label">Pending Reviews</div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -89,38 +84,79 @@
     <!-- Detailed Statistics -->
     <div class="row mb-4">
         <div class="col-lg-6">
-            <div class="card shadow mb-4">
-                <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold text-primary">Platform Overview</h6>
+            <div class="card shadow project-stats-card mb-4">
+                <div class="card-header">
+                    <div class="stats-icon">
+                        <i class="fas fa-chart-pie"></i>
+                    </div>
+                    <h6 class="mb-0">Platform Overview</h6>
                 </div>
-                <div class="card-body">
-                    <div class="row">
+                <div class="card-body p-3">
+                    <div class="row g-2">
                         <div class="col-6">
-                            <div class="mb-3">
-                                <small class="text-muted">Homeowners</small>
-                                <div class="h6">{{ stats.total_homeowners }}</div>
-                            </div>
-                            <div class="mb-3">
-                                <small class="text-muted">Contractors</small>
-                                <div class="h6">{{ stats.total_contractors }}</div>
-                            </div>
-                            <div class="mb-3">
-                                <small class="text-muted">Total Projects</small>
-                                <div class="h6">{{ stats.total_projects }}</div>
+                            <div class="stat-item-small">
+                                <div class="stat-icon-wrapper-small location-icon">
+                                    <i class="fas fa-home"></i>
+                                </div>
+                                <div class="stat-content-small">
+                                    <div class="stat-value-small">{{ stats.total_homeowners }}</div>
+                                    <div class="stat-label-small">Homeowners</div>
+                                </div>
                             </div>
                         </div>
                         <div class="col-6">
-                            <div class="mb-3">
-                                <small class="text-muted">Completed Projects</small>
-                                <div class="h6">{{ stats.completed_projects }}</div>
+                            <div class="stat-item-small">
+                                <div class="stat-icon-wrapper-small bids-icon">
+                                    <i class="fas fa-hard-hat"></i>
+                                </div>
+                                <div class="stat-content-small">
+                                    <div class="stat-value-small">{{ stats.total_contractors }}</div>
+                                    <div class="stat-label-small">Contractors</div>
+                                </div>
                             </div>
-                            <div class="mb-3">
-                                <small class="text-muted">Total Bids</small>
-                                <div class="h6">{{ stats.total_bids }}</div>
+                        </div>
+                        <div class="col-6">
+                            <div class="stat-item-small">
+                                <div class="stat-icon-wrapper-small timeline-icon">
+                                    <i class="fas fa-tasks"></i>
+                                </div>
+                                <div class="stat-content-small">
+                                    <div class="stat-value-small">{{ stats.total_projects }}</div>
+                                    <div class="stat-label-small">Total Projects</div>
+                                </div>
                             </div>
-                            <div class="mb-3">
-                                <small class="text-muted">Accepted Bids</small>
-                                <div class="h6">{{ stats.accepted_bids }}</div>
+                        </div>
+                        <div class="col-6">
+                            <div class="stat-item-small">
+                                <div class="stat-icon-wrapper-small budget-icon">
+                                    <i class="fas fa-check-circle"></i>
+                                </div>
+                                <div class="stat-content-small">
+                                    <div class="stat-value-small">{{ stats.completed_projects }}</div>
+                                    <div class="stat-label-small">Completed</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="stat-item-small">
+                                <div class="stat-icon-wrapper-small location-icon">
+                                    <i class="fas fa-handshake"></i>
+                                </div>
+                                <div class="stat-content-small">
+                                    <div class="stat-value-small">{{ stats.total_bids }}</div>
+                                    <div class="stat-label-small">Total Bids</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="stat-item-small">
+                                <div class="stat-icon-wrapper-small bids-icon">
+                                    <i class="fas fa-thumbs-up"></i>
+                                </div>
+                                <div class="stat-content-small">
+                                    <div class="stat-value-small">{{ stats.accepted_bids }}</div>
+                                    <div class="stat-label-small">Accepted Bids</div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -231,6 +267,261 @@
 </div>
 
 <style>
+/* Project Stats Card Styling */
+.project-stats-card {
+    border: none;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    overflow: hidden;
+}
+
+.project-stats-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+}
+
+.project-stats-card .card-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    padding: 1rem 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.stats-icon {
+    width: 40px;
+    height: 40px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.2rem;
+}
+
+.project-stats-card .card-header h6 {
+    color: white;
+    font-weight: 600;
+    margin: 0;
+    font-size: 1.1rem;
+}
+
+.stat-item {
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: 12px;
+    padding: 1.25rem;
+    text-align: center;
+    transition: all 0.3s ease;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(5px);
+    animation: fadeInUp 0.6s ease forwards;
+    opacity: 0;
+    transform: translateY(20px);
+}
+
+.stat-item:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+    background: rgba(255, 255, 255, 0.95);
+}
+
+.stat-icon-wrapper {
+    width: 50px;
+    height: 50px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 0.75rem;
+    color: white;
+    font-size: 1.3rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.stat-icon-wrapper.location-icon {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.stat-icon-wrapper.budget-icon {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+.stat-icon-wrapper.timeline-icon {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
+
+.stat-icon-wrapper.bids-icon {
+    background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+}
+
+.stat-content {
+    text-align: center;
+}
+
+.stat-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #2d3748;
+    margin-bottom: 0.25rem;
+    line-height: 1.2;
+}
+
+.stat-label {
+    font-size: 0.875rem;
+    color: #718096;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Small stat items for Platform Overview */
+.stat-item-small {
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: 8px;
+    padding: 0.75rem;
+    text-align: center;
+    transition: all 0.3s ease;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(5px);
+    margin-bottom: 0.5rem;
+    animation: fadeInUp 0.6s ease forwards;
+    opacity: 0;
+    transform: translateY(20px);
+}
+
+.stat-item-small:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    background: rgba(255, 255, 255, 0.95);
+}
+
+.stat-icon-wrapper-small {
+    width: 35px;
+    height: 35px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 0.5rem;
+    color: white;
+    font-size: 1rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.stat-icon-wrapper-small.location-icon {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.stat-icon-wrapper-small.budget-icon {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+.stat-icon-wrapper-small.timeline-icon {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
+
+.stat-icon-wrapper-small.bids-icon {
+    background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+}
+
+.stat-content-small {
+    text-align: center;
+}
+
+.stat-value-small {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #2d3748;
+    margin-bottom: 0.15rem;
+    line-height: 1.2;
+}
+
+.stat-label-small {
+    font-size: 0.75rem;
+    color: #718096;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+/* Animation delays for staggered effect */
+.stat-item:nth-child(1) { animation-delay: 0.1s; }
+.stat-item:nth-child(2) { animation-delay: 0.2s; }
+.stat-item:nth-child(3) { animation-delay: 0.3s; }
+.stat-item:nth-child(4) { animation-delay: 0.4s; }
+
+.stat-item-small:nth-child(1) { animation-delay: 0.1s; }
+.stat-item-small:nth-child(2) { animation-delay: 0.15s; }
+.stat-item-small:nth-child(3) { animation-delay: 0.2s; }
+.stat-item-small:nth-child(4) { animation-delay: 0.25s; }
+.stat-item-small:nth-child(5) { animation-delay: 0.3s; }
+.stat-item-small:nth-child(6) { animation-delay: 0.35s; }
+
+@keyframes fadeInUp {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Mobile optimizations */
+@media (max-width: 768px) {
+    .project-stats-card .card-header {
+        padding: 0.75rem 1rem;
+    }
+    
+    .stats-icon {
+        width: 35px;
+        height: 35px;
+        font-size: 1rem;
+    }
+    
+    .stat-item {
+        padding: 1rem;
+        margin-bottom: 0.75rem;
+    }
+    
+    .stat-icon-wrapper {
+        width: 45px;
+        height: 45px;
+        font-size: 1.1rem;
+    }
+    
+    .stat-value {
+        font-size: 1.3rem;
+    }
+    
+    .stat-label {
+        font-size: 0.8rem;
+    }
+    
+    .stat-item-small {
+        padding: 0.5rem;
+    }
+    
+    .stat-icon-wrapper-small {
+        width: 30px;
+        height: 30px;
+        font-size: 0.9rem;
+    }
+    
+    .stat-value-small {
+        font-size: 1rem;
+    }
+    
+    .stat-label-small {
+        font-size: 0.7rem;
+    }
+}
+
+/* Legacy styles for compatibility */
 .border-left-primary {
     border-left: 0.25rem solid #4e73df !important;
 }
