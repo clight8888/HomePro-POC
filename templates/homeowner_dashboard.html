@@ -7,16 +7,16 @@
     <!-- Welcome Header -->
     <div class="row mb-4">
         <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                <div class="flex-grow-1">
                     <div class="d-flex align-items-center mb-2">
                         <i class="fas fa-home text-success me-2" style="font-size: 1.5rem;"></i>
-                        <span class="badge bg-success me-2">Homeowner</span>
-                        <h1 class="h3 mb-0">Welcome back, {{ user.first_name }}!</h1>
+                        <span class="text-success fw-bold me-2">Homeowner</span>
+                        <span class="text-dark fw-bold fst-italic">{{ user.first_name }}</span>
                     </div>
                     <p class="text-muted mb-0">Manage your home improvement projects and review contractor bids</p>
                 </div>
-                <a href="{{ url_for('submit_project') }}" class="btn btn-primary">
+                <a href="{{ url_for('submit_project') }}" class="btn btn-primary new-project-btn">
                     <i class="fas fa-plus me-2"></i>New Project
                 </a>
             </div>
@@ -670,6 +670,24 @@
     transform: translateY(-1px);
 }
 
+/* New Project Button Styling */
+.new-project-btn {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    border-radius: 10px;
+    padding: 12px 20px;
+    font-weight: 600;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+    transition: all 0.3s ease;
+    white-space: nowrap;
+}
+
+.new-project-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+    background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%);
+}
+
 /* Mobile Optimization */
 @media (max-width: 768px) {
     .stat-item {
@@ -716,6 +734,14 @@
         font-size: 0.85rem;
         padding: 8px 12px;
     }
+
+    /* Mobile New Project Button */
+    .new-project-btn {
+        padding: 10px 16px;
+        font-size: 0.9rem;
+        min-width: 140px;
+        text-align: center;
+    }
 }
 
 /* Extra small devices */
@@ -761,6 +787,28 @@
     .project-actions .btn {
         font-size: 0.8rem;
         padding: 6px 10px;
+    }
+
+    /* Extra small mobile New Project Button */
+    .new-project-btn {
+        padding: 8px 14px;
+        font-size: 0.85rem;
+        min-width: 120px;
+        border-radius: 8px;
+    }
+
+    /* Make header responsive on very small screens */
+    .d-flex.justify-content-between.align-items-center.flex-wrap {
+        flex-direction: column;
+        align-items: flex-start !important;
+        gap: 15px !important;
+    }
+
+    .new-project-btn {
+        align-self: stretch;
+        text-align: center;
+        width: 100%;
+        max-width: 200px;
     }
 }
 </style>
