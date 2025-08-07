@@ -342,6 +342,29 @@ def send_bid_notification(bid_id, action, recipient_email=None, recipient_name=N
         return False
 
 # Routes
+@app.route('/health')
+def health_check():
+    """Health check endpoint for mobile app and monitoring"""
+    try:
+        # Test database connection
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute('SELECT 1')
+        cursor.close()
+        conn.close()
+        
+        return jsonify({
+            'status': 'healthy',
+            'timestamp': datetime.now().isoformat(),
+            'database': 'connected'
+        }), 200
+    except Exception as e:
+        return jsonify({
+            'status': 'unhealthy',
+            'timestamp': datetime.now().isoformat(),
+            'error': str(e)
+        }), 503
+
 @app.route('/')
 def index():
     return render_template('index.html')

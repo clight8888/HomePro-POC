@@ -10,8 +10,8 @@
             <div class="col-lg-6">
                 <h1 class="display-4 fw-bold mb-4">Find the Perfect Contractor for Your Home Project</h1>
                 <p class="lead mb-4">Submit your project using voice, video, or text. Our AI processes your requirements and connects you with qualified contractors who bid on your project.</p>
-                <div class="d-flex gap-3">
-                    <a href="{{ url_for('register') }}" class="btn btn-light btn-lg px-4">
+                <div class="hero-buttons d-flex gap-3">
+                    <a href="/submit_project" class="btn btn-hero btn-lg px-4" onclick="console.log('Get Started clicked!'); console.log('URL:', this.href); window.location.href = this.href; return false;">
                         <i class="fas fa-user-plus me-2"></i>Get Started
                     </a>
                     <a href="#how-it-works" class="btn btn-outline-light btn-lg px-4">

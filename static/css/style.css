@@ -88,6 +88,11 @@ body {
     z-index: 1;
 }
 
+.hero-buttons {
+    position: relative;
+    z-index: 15;
+}
+
 .hero-title {
     font-size: 3.5rem;
     font-weight: 800;
@@ -206,6 +211,28 @@ body {
 
 .btn-dark:hover::before {
     left: 100%;
+}
+
+/* Hero Button Styles */
+.btn-hero {
+    background: rgba(255, 255, 255, 0.95) !important;
+    color: var(--primary-color) !important;
+    border: 2px solid rgba(255, 255, 255, 0.3) !important;
+    font-weight: 600 !important;
+    text-decoration: none !important;
+    transition: all 0.3s ease !important;
+    pointer-events: auto !important;
+    cursor: pointer !important;
+    position: relative !important;
+    z-index: 10 !important;
+}
+
+.btn-hero:hover {
+    background: rgba(255, 255, 255, 1) !important;
+    color: var(--primary-dark) !important;
+    border-color: rgba(255, 255, 255, 0.5) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15) !important;
 }
 
 /* Enhanced Outline Button Styles with Soft Metallic Effects */

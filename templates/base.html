@@ -110,27 +110,7 @@
             color: #6c757d;
         }
         
-        /* Mobile Submit Button */
-        .mobile-submit-btn {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            z-index: 1000;
-            border-radius: 50px;
-            padding: 15px 25px;
-            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
-            display: none;
-        }
-        
-        @media (max-width: 768px) {
-            .mobile-submit-btn {
-                display: block;
-            }
-            
-            .footer {
-                padding-bottom: 80px; /* Add space for mobile button */
-            }
-        }
+
     </style>
 </head>
 <body>
@@ -258,12 +238,7 @@
         {% block content %}{% endblock %}
     </main>
 
-    <!-- Mobile Submit Button -->
-    {% if not user or user.role != 'contractor' %}
-    <a href="{{ url_for('submit_project') }}" class="btn btn-primary mobile-submit-btn">
-        <i class="fas fa-plus me-2"></i>Submit Project
-    </a>
-    {% endif %}
+
 
     <!-- Footer -->
     <footer class="footer">
