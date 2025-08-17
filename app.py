@@ -286,6 +286,71 @@ def expire_old_bids():
             SELECT id, status FROM bids 
             WHERE expires_at < NOW() AND status = 'Submitted'
         ''')
+        
+        # Create quotes table for contractor quotes
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS quotes (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                quote_number VARCHAR(50) UNIQUE NOT NULL,
+                project_id INT NOT NULL,
+                contractor_id INT NOT NULL,
+                title VARCHAR(255) NOT NULL,
+                description TEXT,
+                labor_cost DECIMAL(10,2) DEFAULT 0,
+                materials_cost DECIMAL(10,2) DEFAULT 0,
+                other_costs DECIMAL(10,2) DEFAULT 0,
+                tax_rate DECIMAL(5,2) DEFAULT 0,
+                total_amount DECIMAL(10,2) NOT NULL,
+                status ENUM('draft', 'sent', 'accepted', 'rejected', 'expired') DEFAULT 'draft',
+                valid_until DATE,
+                notes TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                sent_at TIMESTAMP NULL,
+                FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+                FOREIGN KEY (contractor_id) REFERENCES contractors(id) ON DELETE CASCADE,
+                INDEX idx_project (project_id),
+                INDEX idx_contractor (contractor_id),
+                INDEX idx_status (status),
+                INDEX idx_created (created_at)
+            )
+        ''')
+        
+        # Create invoices table for contractor invoices
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS invoices (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                invoice_number VARCHAR(50) UNIQUE NOT NULL,
+                project_id INT NOT NULL,
+                contractor_id INT NOT NULL,
+                quote_id INT NULL,
+                title VARCHAR(255) NOT NULL,
+                description TEXT,
+                labor_cost DECIMAL(10,2) DEFAULT 0,
+                materials_cost DECIMAL(10,2) DEFAULT 0,
+                other_costs DECIMAL(10,2) DEFAULT 0,
+                tax_rate DECIMAL(5,2) DEFAULT 0,
+                subtotal DECIMAL(10,2) NOT NULL,
+                tax_amount DECIMAL(10,2) DEFAULT 0,
+                final_amount DECIMAL(10,2) NOT NULL,
+                status ENUM('draft', 'sent', 'paid', 'overdue', 'cancelled') DEFAULT 'draft',
+                due_date DATE,
+                paid_date DATE NULL,
+                notes TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                sent_at TIMESTAMP NULL,
+                FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+                FOREIGN KEY (contractor_id) REFERENCES contractors(id) ON DELETE CASCADE,
+                FOREIGN KEY (quote_id) REFERENCES quotes(id) ON DELETE SET NULL,
+                INDEX idx_project (project_id),
+                INDEX idx_contractor (contractor_id),
+                INDEX idx_quote (quote_id),
+                INDEX idx_status (status),
+                INDEX idx_due_date (due_date),
+                INDEX idx_created (created_at)
+            )
+        ''')
         expired_bids = cursor.fetchall()
         
         # Update expired bids
@@ -369,6 +434,80 @@ def health_check():
 def index():
     return render_template('index.html')
 
+@app.route('/contact', methods=['GET', 'POST'])
+def contact():
+    """Contact us page with form submission"""
+    if request.method == 'POST':
+        try:
+            # Get form data
+            name = request.form.get('name', '').strip()
+            email = request.form.get('email', '').strip()
+            subject = request.form.get('subject', '').strip()
+            message = request.form.get('message', '').strip()
+            user_type = request.form.get('user_type', '').strip()
+            
+            # Validate required fields
+            if not all([name, email, subject, message]):
+                return jsonify({
+                    'success': False,
+                    'message': 'Please fill in all required fields.'
+                }), 400
+            
+            # Basic email validation
+            import re
+            email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+            if not re.match(email_pattern, email):
+                return jsonify({
+                    'success': False,
+                    'message': 'Please enter a valid email address.'
+                }), 400
+            
+            # Store contact submission in database
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            
+            # Get user ID if logged in
+            user_id = session.get('user', {}).get('id')
+            
+            cursor.execute('''
+                INSERT INTO contact_submissions 
+                (user_id, name, email, subject, message, user_type, ip_address, user_agent, created_at)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, NOW())
+            ''', (
+                user_id,
+                name,
+                email,
+                subject,
+                message,
+                user_type,
+                request.environ.get('HTTP_X_FORWARDED_FOR', request.environ.get('REMOTE_ADDR')),
+                request.environ.get('HTTP_USER_AGENT', '')
+            ))
+            
+            submission_id = cursor.lastrowid
+            conn.commit()
+            cursor.close()
+            conn.close()
+            
+            # Here you could add email sending functionality
+            # For now, we'll just log the submission
+            print(f"Contact form submission {submission_id}: {name} ({email}) - {subject}")
+            
+            return jsonify({
+                'success': True,
+                'message': 'Thank you for your message! We\'ll get back to you within 24 hours at support@proprojects.pro.'
+            })
+            
+        except Exception as e:
+            print(f"Error processing contact form: {e}")
+            return jsonify({
+                'success': False,
+                'message': 'Sorry, there was an error sending your message. Please try again or email us directly at support@proprojects.pro.'
+            }), 500
+    
+    # GET request - show the contact form
+    return render_template('contact.html')
+
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     # If there's a guest project in session, redirect to guest registration
@@ -428,9 +567,16 @@ def register():
                 business_info = request.form.get('business_info', '')
                 
                 cursor.execute('''
-                    INSERT INTO contractors (user_id, location, company, specialties, business_info)
-                    VALUES (%s, %s, %s, %s, %s)
-                ''', (user_id, location, company, specialties, business_info))
+                    INSERT INTO contractors (user_id, location, company, specialties, business_info, onboarding_completed)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                ''', (user_id, location, company, specialties, business_info, False))
+            
+            # Check onboarding status for contractors before committing
+            onboarding_completed = False
+            if user_type == 'contractor':
+                cursor.execute('SELECT onboarding_completed FROM contractors WHERE user_id = %s', (user_id,))
+                contractor = cursor.fetchone()
+                onboarding_completed = contractor.get('onboarding_completed', False) if contractor else False
             
             conn.commit()
             cursor.close()
@@ -449,8 +595,25 @@ def register():
                 flash('Registration successful! You can now submit your project.')
                 return redirect(url_for('submit_project'))
             else:
-                flash('Registration successful! You can now log in.')
-                return redirect(url_for('login'))
+                # Redirect based on user type and onboarding status
+                if user_type == 'contractor':
+                    if not onboarding_completed:
+                        # Log the user in automatically for onboarding
+                        session['user'] = {
+                            'id': user_id,
+                            'email': email,
+                            'first_name': first_name,
+                            'last_name': last_name,
+                            'role': user_type
+                        }
+                        flash('Registration successful! Complete your profile setup to get started.')
+                        return redirect(url_for('contractor_onboarding'))
+                    else:
+                        flash('Registration successful! You can now log in.')
+                        return redirect(url_for('login'))
+                else:
+                    flash('Registration successful! You can now log in.')
+                    return redirect(url_for('login'))
         except Exception as e:
             flash(f'Registration failed: {str(e)}')
             return redirect(url_for('register'))
@@ -549,7 +712,24 @@ def logout():
 
 @app.context_processor
 def inject_user():
-    return dict(user=session.get('user'))
+    user = session.get('user')
+    context = {'user': user}
+    
+    # Add contractor_id for contractors
+    if user and user.get('role') == 'contractor':
+        try:
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            cursor.execute('SELECT id FROM contractors WHERE user_id = %s', (user['id'],))
+            contractor_result = cursor.fetchone()
+            if contractor_result:
+                context['contractor_id'] = contractor_result['id']
+            cursor.close()
+            conn.close()
+        except Exception:
+            context['contractor_id'] = None
+    
+    return context
 
 
 @app.route('/guest_register', methods=['GET', 'POST'])
@@ -1576,26 +1756,36 @@ def expire_old_bids():
 #     """Adapted for Cognito - run manually or via script"""
 
 def get_db_connection():
-    # Try MySQL first (for production)
+    # MySQL only. Fail fast if misconfigured or unreachable.
+    required = ['DB_HOST', 'DB_USERNAME', 'DB_PASSWORD', 'DB_NAME']
+    missing = [k for k in required if not os.getenv(k)]
+    if missing:
+        raise RuntimeError(f"Missing required DB env vars: {', '.join(missing)}")
+    return pymysql.connect(
+        host=os.getenv('DB_HOST'),
+        user=os.getenv('DB_USERNAME'),
+        password=os.getenv('DB_PASSWORD'),
+        db=os.getenv('DB_NAME'),
+        port=int(os.getenv('DB_PORT', 3306)),
+        cursorclass=pymysql.cursors.DictCursor
+    )
+
+def safe_close(cursor=None, conn=None):
+    """Close DB cursor/connection safely without raising if already closed."""
     try:
-        if os.getenv('DB_HOST'):
-            return pymysql.connect(
-                host=os.getenv('DB_HOST'),
-                user=os.getenv('DB_USERNAME'),
-                password=os.getenv('DB_PASSWORD'),
-                db=os.getenv('DB_NAME'),
-                port=int(os.getenv('DB_PORT', 3306)),
-                cursorclass=pymysql.cursors.DictCursor
-            )
-    except Exception as e:
-        print(f"MySQL connection failed: {e}")
-        print("Falling back to SQLite for local development...")
-    
-    # Fallback to SQLite for local development
-    import sqlite3
-    conn = sqlite3.connect('homepro.db')
-    conn.row_factory = sqlite3.Row  # This makes it return dict-like objects
-    return conn
+        if cursor:
+            cursor.close()
+    except Exception:
+        pass
+    try:
+        if conn:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+            conn.close()
+    except Exception:
+        pass
 
 def init_database():
     """Initialize database tables if they don't exist"""
@@ -1656,6 +1846,19 @@ def init_database():
                 company VARCHAR(255),
                 specialties TEXT,
                 business_info TEXT,
+                onboarding_completed BOOLEAN DEFAULT FALSE,
+                service_area_lat DECIMAL(10, 8) NULL,
+                service_area_lng DECIMAL(11, 8) NULL,
+                service_radius INT DEFAULT 25,
+                portfolio_images JSON NULL,
+                license_number VARCHAR(100) NULL,
+                license_state VARCHAR(2) NULL,
+                insurance_provider VARCHAR(255) NULL,
+                insurance_policy VARCHAR(100) NULL,
+                profile_completion_score INT DEFAULT 0,
+                bio TEXT NULL,
+                years_experience INT DEFAULT 0,
+                portfolio TEXT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
                 INDEX idx_user_id (user_id)
@@ -1944,6 +2147,71 @@ def init_database():
             )
         ''')
         
+        # Create quotes table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS quotes (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                contractor_id INT NOT NULL,
+                project_id INT NOT NULL,
+                quote_number VARCHAR(50) UNIQUE NOT NULL,
+                title VARCHAR(255) NOT NULL,
+                description TEXT,
+                labor_cost DECIMAL(10,2) DEFAULT 0.00,
+                materials_cost DECIMAL(10,2) DEFAULT 0.00,
+                other_costs DECIMAL(10,2) DEFAULT 0.00,
+                total_amount DECIMAL(10,2) NOT NULL,
+                tax_rate DECIMAL(5,2) DEFAULT 0.00,
+                tax_amount DECIMAL(10,2) DEFAULT 0.00,
+                final_amount DECIMAL(10,2) NOT NULL,
+                status ENUM('draft', 'sent', 'accepted', 'rejected', 'expired') DEFAULT 'draft',
+                valid_until DATE,
+                notes TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                FOREIGN KEY (contractor_id) REFERENCES contractors(id) ON DELETE CASCADE,
+                FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+                INDEX idx_contractor (contractor_id),
+                INDEX idx_project (project_id),
+                INDEX idx_status (status),
+                INDEX idx_quote_number (quote_number)
+            )
+        ''')
+        
+        # Create invoices table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS invoices (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                contractor_id INT NOT NULL,
+                project_id INT NOT NULL,
+                quote_id INT NULL,
+                invoice_number VARCHAR(50) UNIQUE NOT NULL,
+                title VARCHAR(255) NOT NULL,
+                description TEXT,
+                labor_cost DECIMAL(10,2) DEFAULT 0.00,
+                materials_cost DECIMAL(10,2) DEFAULT 0.00,
+                other_costs DECIMAL(10,2) DEFAULT 0.00,
+                total_amount DECIMAL(10,2) NOT NULL,
+                tax_rate DECIMAL(5,2) DEFAULT 0.00,
+                tax_amount DECIMAL(10,2) DEFAULT 0.00,
+                final_amount DECIMAL(10,2) NOT NULL,
+                status ENUM('draft', 'sent', 'paid', 'overdue', 'cancelled') DEFAULT 'draft',
+                due_date DATE,
+                paid_date DATE NULL,
+                payment_method VARCHAR(100) NULL,
+                notes TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                FOREIGN KEY (contractor_id) REFERENCES contractors(id) ON DELETE CASCADE,
+                FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+                FOREIGN KEY (quote_id) REFERENCES quotes(id) ON DELETE SET NULL,
+                INDEX idx_contractor (contractor_id),
+                INDEX idx_project (project_id),
+                INDEX idx_quote (quote_id),
+                INDEX idx_status (status),
+                INDEX idx_invoice_number (invoice_number)
+            )
+        ''')
+        
         # Create project_messages table for general messaging between homeowners and contractors
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS project_messages (
@@ -1994,7 +2262,8 @@ def init_database():
                     "ADD COLUMN years_experience INT DEFAULT 0 AFTER bio",
                     "ADD COLUMN profile_picture VARCHAR(500) AFTER years_experience",
                     "ADD COLUMN portfolio TEXT AFTER profile_picture",
-                    "ADD COLUMN average_rating DECIMAL(3,1) DEFAULT 0.0 AFTER portfolio",
+                    "ADD COLUMN hourly_rate DECIMAL(6,2) NULL AFTER portfolio",
+                    "ADD COLUMN average_rating DECIMAL(3,1) DEFAULT 0.0 AFTER hourly_rate",
                     "ADD COLUMN rating_count INTEGER DEFAULT 0 AFTER average_rating",
                     "ADD COLUMN verified BOOLEAN DEFAULT FALSE AFTER rating_count"
                 ]
@@ -2022,6 +2291,30 @@ def init_database():
                 print("Updated projects status column with new options")
         except Exception as e:
             print(f"Projects status migration error: {e}")
+        
+        # Create contact_submissions table for contact form submissions
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS contact_submissions (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NULL,
+                name VARCHAR(255) NOT NULL,
+                email VARCHAR(255) NOT NULL,
+                subject VARCHAR(255) NOT NULL,
+                message TEXT NOT NULL,
+                user_type VARCHAR(50),
+                ip_address VARCHAR(45),
+                user_agent TEXT,
+                status ENUM('new', 'in_progress', 'resolved', 'closed') DEFAULT 'new',
+                admin_notes TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
+                INDEX idx_user_id (user_id),
+                INDEX idx_email (email),
+                INDEX idx_status (status),
+                INDEX idx_created (created_at)
+            )
+        ''')
         
         conn.commit()
         cursor.close()
@@ -2960,6 +3253,7 @@ def simple_audio_test():
     return render_template('simple_audio_test.html')
 
 @app.route('/project/<int:project_id>')
+@login_required
 def view_project(project_id):
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -3150,7 +3444,8 @@ def view_project(project_id):
                          reviews=reviews,
                          project_status=project_status,
                          accepted_bid=accepted_bid,
-                         project_images=project_images)
+                         project_images=project_images,
+                         user=session['user'])
 
 @app.route('/submit_bid/<int:project_id>', methods=['POST'])
 @login_required
@@ -3821,10 +4116,115 @@ def uploaded_file(filename):
 # CONTRACTOR MANAGEMENT SYSTEM ROUTES
 # ============================================================================
 
+@app.route('/contractor/onboarding')
+@login_required
+def contractor_onboarding():
+    """Simple contractor onboarding flow"""
+    user = session['user']
+    
+    if user['role'] != 'contractor':
+        flash('Access denied. Contractor account required.')
+        return redirect(url_for('dashboard'))
+    
+    # Check if contractor has already completed onboarding
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute('SELECT onboarding_completed FROM contractors WHERE user_id = %s', (user['id'],))
+        contractor = cursor.fetchone()
+        
+        if contractor and contractor.get('onboarding_completed'):
+            return redirect(url_for('dashboard'))
+        
+        return render_template('contractor/simple_onboarding.html')
+    
+    except Exception as e:
+        flash(f'Error loading onboarding: {str(e)}')
+        return redirect(url_for('dashboard'))
+    finally:
+        cursor.close()
+        conn.close()
+
+@app.route('/contractor/onboarding/complete', methods=['POST'])
+@login_required
+def complete_simple_onboarding():
+    """Complete the simple contractor onboarding process"""
+    user = session['user']
+    
+    if user['role'] != 'contractor':
+        return jsonify({'success': False, 'message': 'Access denied'}), 403
+    
+    try:
+        # Get form data
+        company = request.form.get('company', '').strip()
+        years_experience = request.form.get('years_experience', 0, type=int)
+        location = request.form.get('location', '').strip()
+        skills = request.form.getlist('skills')
+        bio = request.form.get('bio', '').strip()
+        
+        # Validation
+        if not location or not skills or len(skills) < 1 or not years_experience:
+            return jsonify({'success': False, 'message': 'Please fill in all required fields and select at least 1 service.'}), 400
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Update contractor profile with onboarding data
+        cursor.execute('''
+            UPDATE contractors SET 
+                company = %s,
+                location = %s,
+                specialties = %s,
+                bio = %s,
+                years_experience = %s,
+                onboarding_completed = TRUE,
+                profile_completion_score = %s
+            WHERE user_id = %s
+        ''', (
+            company if company else None,
+            location,
+            ','.join(skills),
+            bio if bio else None,
+            years_experience,
+            calculate_simple_profile_completion_score(company, location, skills, bio, years_experience),
+            user['id']
+        ))
+        
+        conn.commit()
+        
+        return jsonify({'success': True, 'message': 'Profile completed successfully!', 'redirect': '/dashboard'})
+    
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Error completing profile: {str(e)}'}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
+def calculate_simple_profile_completion_score(company, location, skills, bio, years_experience):
+    """Calculate profile completion score for simple onboarding"""
+    score = 0
+    
+    # Required fields (60 points total)
+    if location:
+        score += 20
+    if skills and len(skills) >= 3:
+        score += 30
+    if years_experience:
+        score += 10
+    
+    # Optional fields (40 points total)
+    if company:
+        score += 15
+    if bio:
+        score += 25
+    
+    return min(100, score)
+
 @app.route('/contractor/profile')
 @login_required
 def contractor_profile():
-    """Contractor profile management page"""
+    """Contractor profile management page with enhanced onboarding check"""
     user = session['user']
     
     if user['role'] != 'contractor':
@@ -3833,6 +4233,15 @@ def contractor_profile():
     
     conn = get_db_connection()
     cursor = conn.cursor()
+    
+    # Check if contractor has completed onboarding
+    cursor.execute('SELECT onboarding_completed FROM contractors WHERE user_id = %s', (user['id'],))
+    contractor_check = cursor.fetchone()
+    
+    if contractor_check and not contractor_check.get('onboarding_completed', False):
+        cursor.close()
+        conn.close()
+        return redirect(url_for('contractor_onboarding'))
     
     # Get contractor profile with enhanced fields
     cursor.execute('''
@@ -3889,19 +4298,20 @@ def update_contractor_profile():
         # Get form data
         company = request.form.get('company', '').strip()
         location = request.form.get('location', '').strip()
-        specialties = request.form.get('specialties', '').strip()
+        specialties = request.form.get('specialties', '').strip()  # This will be the selected categories
         bio = request.form.get('bio', '').strip()
         years_experience = request.form.get('years_experience', 0, type=int)
         business_info = request.form.get('business_info', '').strip()
         portfolio = request.form.get('portfolio', '').strip()
+        hourly_rate = request.form.get('hourly_rate', type=float)
         
         # Update contractor profile
         cursor.execute('''
             UPDATE contractors 
             SET company = %s, location = %s, specialties = %s, bio = %s,
-                years_experience = %s, business_info = %s, portfolio = %s
+                years_experience = %s, business_info = %s, portfolio = %s, hourly_rate = %s
             WHERE id = %s
-        ''', (company, location, specialties, bio, years_experience, business_info, portfolio, contractor_id))
+        ''', (company, location, specialties, bio, years_experience, business_info, portfolio, hourly_rate, contractor_id))
         
         conn.commit()
         
@@ -4031,6 +4441,110 @@ def contractor_messages():
     conn.close()
     
     return render_template('contractor_messages.html', contractor_id=contractor_id)
+
+@app.route('/contractor/quotes')
+@login_required
+def contractor_quotes():
+    """Contractor quotes management page"""
+    user = session['user']
+    
+    if user['role'] != 'contractor':
+        flash('Access denied. Contractor account required.')
+        return redirect(url_for('dashboard'))
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Get contractor ID
+    cursor.execute('SELECT id FROM contractors WHERE user_id = %s', (user['id'],))
+    contractor_result = cursor.fetchone()
+    if not contractor_result:
+        flash('Contractor profile not found.')
+        return redirect(url_for('dashboard'))
+    contractor_id = contractor_result['id']
+    
+    # Get quotes for this contractor
+    cursor.execute('''
+        SELECT q.*, p.title as project_title, p.description as project_description,
+               CONCAT(u.first_name, ' ', u.last_name) as client_name,
+               u.email as client_email, h.location as client_location
+        FROM quotes q
+        JOIN projects p ON q.project_id = p.id
+        JOIN homeowners h ON p.homeowner_id = h.id
+        JOIN users u ON h.user_id = u.id
+        WHERE q.contractor_id = %s
+        ORDER BY q.created_at DESC
+    ''', (contractor_id,))
+    quotes = cursor.fetchall()
+    
+    cursor.close()
+    conn.close()
+    
+    return render_template('contractor/quotes.html', quotes=quotes)
+
+@app.route('/contractor/invoices')
+@login_required
+def contractor_invoices():
+    """Contractor invoices management page"""
+    user = session['user']
+    
+    if user['role'] != 'contractor':
+        flash('Access denied. Contractor account required.')
+        return redirect(url_for('dashboard'))
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Get contractor ID
+    cursor.execute('SELECT id FROM contractors WHERE user_id = %s', (user['id'],))
+    contractor_result = cursor.fetchone()
+    if not contractor_result:
+        flash('Contractor profile not found.')
+        return redirect(url_for('dashboard'))
+    contractor_id = contractor_result['id']
+    
+    # Get invoices for this contractor
+    cursor.execute('''
+        SELECT i.*, p.title as project_title, p.description as project_description,
+               CONCAT(u.first_name, ' ', u.last_name) as client_name,
+               u.email as client_email, h.location as client_location
+        FROM invoices i
+        JOIN projects p ON i.project_id = p.id
+        JOIN homeowners h ON p.homeowner_id = h.id
+        JOIN users u ON h.user_id = u.id
+        WHERE i.contractor_id = %s
+        ORDER BY i.created_at DESC
+    ''', (contractor_id,))
+    invoices = cursor.fetchall()
+    
+    # Calculate summary data
+    cursor.execute('''
+        SELECT 
+            SUM(CASE WHEN status IN ('sent', 'overdue') THEN final_amount ELSE 0 END) as total_outstanding,
+            SUM(CASE WHEN status = 'paid' THEN final_amount ELSE 0 END) as total_paid,
+            SUM(CASE WHEN status = 'overdue' THEN final_amount ELSE 0 END) as total_overdue,
+            SUM(CASE WHEN status IN ('sent', 'paid') AND MONTH(created_at) = MONTH(CURRENT_DATE()) 
+                     AND YEAR(created_at) = YEAR(CURRENT_DATE()) THEN final_amount ELSE 0 END) as this_month
+        FROM invoices
+        WHERE contractor_id = %s
+    ''', (contractor_id,))
+    summary_result = cursor.fetchone()
+    
+    summary = {
+        'total_outstanding': summary_result['total_outstanding'] or 0,
+        'total_paid': summary_result['total_paid'] or 0,
+        'total_overdue': summary_result['total_overdue'] or 0,
+        'this_month': summary_result['this_month'] or 0
+    }
+    
+    cursor.close()
+    conn.close()
+    
+    # Add current date for template
+    from datetime import date
+    current_date = date.today()
+    
+    return render_template('contractor/invoices.html', invoices=invoices, summary=summary, current_date=current_date)
 
 @app.route('/contractor/<int:contractor_id>/reviews')
 def contractor_reviews(contractor_id):
@@ -4169,6 +4683,607 @@ def reply_to_review(review_id):
         cursor.close()
         conn.close()
         return jsonify({'success': False, 'message': 'Failed to submit reply'}), 500
+
+# ============================================================================
+# QUOTE MANAGEMENT ROUTES
+# ============================================================================
+
+@app.route('/api/contractor/projects_with_bids')
+@login_required
+def get_contractor_projects_with_bids():
+    """Get projects that the contractor has bid on for quote creation"""
+    if session['user']['role'] != 'contractor':
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 403
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Get contractor ID
+    cursor.execute('SELECT id FROM contractors WHERE user_id = %s', (session['user']['id'],))
+    contractor = cursor.fetchone()
+    if not contractor:
+        cursor.close()
+        conn.close()
+        return jsonify({'success': False, 'message': 'Contractor not found'}), 404
+    
+    contractor_id = contractor['id']
+    
+    # Get projects where this contractor has submitted bids
+    cursor.execute('''
+        SELECT DISTINCT p.id, p.title, p.description, p.location, p.budget_min, p.budget_max, 
+               p.timeline, p.status, u.first_name, u.last_name
+        FROM projects p
+        JOIN bids b ON p.id = b.project_id
+        JOIN homeowners h ON p.homeowner_id = h.id
+        JOIN users u ON h.user_id = u.id
+        WHERE b.contractor_id = %s AND p.status IN ('Active', 'In Progress')
+        ORDER BY p.created_at DESC
+    ''', (contractor_id,))
+    
+    projects = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    
+    return jsonify({
+        'success': True,
+        'projects': [{
+            'id': project['id'],
+            'title': project['title'],
+            'description': project['description'],
+            'location': project['location'],
+            'budget_range': f"${project['budget_min']:,.0f} - ${project['budget_max']:,.0f}" if project['budget_min'] and project['budget_max'] else 'Budget TBD',
+            'timeline': project['timeline'],
+            'status': project['status'],
+            'homeowner_name': f"{project['first_name']} {project['last_name']}"
+        } for project in projects]
+    })
+
+@app.route('/api/contractor/create_quote', methods=['POST'])
+@login_required
+def create_quote():
+    """Create a new quote for a project"""
+    if session['user']['role'] != 'contractor':
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 403
+    
+    data = request.get_json()
+    project_id = data.get('project_id')
+    title = data.get('title')
+    description = data.get('description')
+    cost_breakdown = data.get('cost_breakdown', {})
+    additional_info = data.get('additional_info', '')
+    valid_until = data.get('valid_until')
+    status = data.get('status', 'draft')  # 'draft' or 'sent'
+    
+    if not all([project_id, title, description]):
+        return jsonify({'success': False, 'message': 'Missing required fields'}), 400
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    try:
+        # Get contractor ID
+        cursor.execute('SELECT id FROM contractors WHERE user_id = %s', (session['user']['id'],))
+        contractor = cursor.fetchone()
+        if not contractor:
+            return jsonify({'success': False, 'message': 'Contractor not found'}), 404
+        
+        contractor_id = contractor['id']
+        
+        # Verify contractor has bid on this project
+        cursor.execute('SELECT id FROM bids WHERE project_id = %s AND contractor_id = %s', 
+                      (project_id, contractor_id))
+        bid = cursor.fetchone()
+        if not bid:
+            return jsonify({'success': False, 'message': 'You can only create quotes for projects you have bid on'}), 403
+        
+        # Extract individual cost components
+        labor_cost = float(cost_breakdown.get('labor', 0))
+        materials_cost = float(cost_breakdown.get('materials', 0))
+        other_costs = float(cost_breakdown.get('other', 0))
+        
+        # Calculate total amount
+        total_amount = labor_cost + materials_cost + other_costs
+        
+        # Generate quote number
+        cursor.execute('SELECT COUNT(*) as count FROM quotes WHERE contractor_id = %s', (contractor_id,))
+        quote_count = cursor.fetchone()['count'] + 1
+        quote_number = f"Q{contractor_id:04d}-{quote_count:04d}"
+        
+        # Insert quote
+        cursor.execute('''
+            INSERT INTO quotes (quote_number, project_id, contractor_id, title, description, 
+                              labor_cost, materials_cost, other_costs, total_amount, 
+                              final_amount, valid_until, notes, status)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        ''', (quote_number, project_id, contractor_id, title, description, 
+              labor_cost, materials_cost, other_costs, total_amount, total_amount, 
+              valid_until, additional_info, status))
+        
+        quote_id = cursor.lastrowid
+        conn.commit()
+        
+        cursor.close()
+        conn.close()
+        
+        return jsonify({
+            'success': True, 
+            'message': 'Quote created successfully',
+            'quote_id': quote_id,
+            'quote_number': quote_number
+        })
+        
+    except Exception as e:
+        conn.rollback()
+        cursor.close()
+        conn.close()
+        return jsonify({'success': False, 'message': f'Failed to create quote: {str(e)}'}), 500
+
+@app.route('/api/contractor/quotes/<int:quote_id>/send', methods=['POST'])
+@login_required
+def send_quote(quote_id):
+    """Send a quote to the homeowner"""
+    if session['user']['role'] != 'contractor':
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 403
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    try:
+        # Get contractor ID
+        cursor.execute('SELECT id FROM contractors WHERE user_id = %s', (session['user']['id'],))
+        contractor = cursor.fetchone()
+        if not contractor:
+            return jsonify({'success': False, 'message': 'Contractor not found'}), 404
+        
+        contractor_id = contractor['id']
+        
+        # Verify quote belongs to contractor
+        cursor.execute('SELECT id FROM quotes WHERE id = %s AND contractor_id = %s', 
+                      (quote_id, contractor_id))
+        quote = cursor.fetchone()
+        if not quote:
+            return jsonify({'success': False, 'message': 'Quote not found'}), 404
+        
+        # Update quote status to sent
+        cursor.execute('UPDATE quotes SET status = %s, sent_at = CURRENT_TIMESTAMP WHERE id = %s', 
+                      ('sent', quote_id))
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        return jsonify({'success': True, 'message': 'Quote sent successfully'})
+        
+    except Exception as e:
+        conn.rollback()
+        cursor.close()
+        conn.close()
+        return jsonify({'success': False, 'message': f'Failed to send quote: {str(e)}'}), 500
+
+@app.route('/contractor/quotes/<int:quote_id>/edit')
+@login_required
+def edit_quote(quote_id):
+    """Edit quote page"""
+    if session['user']['role'] != 'contractor':
+        flash('Access denied. Contractor account required.')
+        return redirect(url_for('dashboard'))
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    try:
+        # Get contractor ID
+        cursor.execute('SELECT id FROM contractors WHERE user_id = %s', (session['user']['id'],))
+        contractor = cursor.fetchone()
+        if not contractor:
+            flash('Contractor not found')
+            return redirect(url_for('dashboard'))
+        
+        contractor_id = contractor['id']
+        
+        # Get quote details
+        cursor.execute('''
+            SELECT q.*, p.title as project_title, p.description as project_description,
+                   CONCAT(u.first_name, ' ', u.last_name) as client_name,
+                   u.email as client_email, h.location as client_location
+            FROM quotes q
+            JOIN projects p ON q.project_id = p.id
+            JOIN homeowners h ON p.homeowner_id = h.id
+            JOIN users u ON h.user_id = u.id
+            WHERE q.id = %s AND q.contractor_id = %s
+        ''', (quote_id, contractor_id))
+        quote = cursor.fetchone()
+        
+        if not quote:
+            flash('Quote not found')
+            return redirect(url_for('contractor_quotes'))
+        
+        cursor.close()
+        conn.close()
+        
+        # For now, redirect back to quotes page with a message
+        flash('Quote editing feature coming soon!')
+        return redirect(url_for('contractor_quotes'))
+        
+    except Exception as e:
+        cursor.close()
+        conn.close()
+        flash(f'Error loading quote: {str(e)}')
+        return redirect(url_for('contractor_quotes'))
+
+@app.route('/api/contractor/quotes/<int:quote_id>', methods=['DELETE'])
+@login_required
+def delete_quote(quote_id):
+    """Delete a quote"""
+    if session['user']['role'] != 'contractor':
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 403
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    try:
+        # Get contractor ID
+        cursor.execute('SELECT id FROM contractors WHERE user_id = %s', (session['user']['id'],))
+        contractor = cursor.fetchone()
+        if not contractor:
+            return jsonify({'success': False, 'message': 'Contractor not found'}), 404
+        
+        contractor_id = contractor['id']
+        
+        # Verify quote belongs to contractor and can be deleted
+        cursor.execute('SELECT status FROM quotes WHERE id = %s AND contractor_id = %s', 
+                      (quote_id, contractor_id))
+        quote = cursor.fetchone()
+        if not quote:
+            return jsonify({'success': False, 'message': 'Quote not found'}), 404
+        
+        if quote['status'] not in ['draft', 'sent']:
+            return jsonify({'success': False, 'message': 'Cannot delete accepted or completed quotes'}), 400
+        
+        # Delete quote
+        cursor.execute('DELETE FROM quotes WHERE id = %s', (quote_id,))
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        return jsonify({'success': True, 'message': 'Quote deleted successfully'})
+        
+    except Exception as e:
+        conn.rollback()
+        cursor.close()
+        conn.close()
+        return jsonify({'success': False, 'message': f'Failed to delete quote: {str(e)}'}), 500
+
+@app.route('/api/contractor/quotes/<int:quote_id>/pdf')
+@login_required
+def download_quote_pdf(quote_id):
+    """Generate and download quote PDF"""
+    if session['user']['role'] != 'contractor':
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 403
+    
+    conn = None
+    cursor = None
+    
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Get contractor ID and info
+        cursor.execute('''
+            SELECT c.*, u.first_name, u.last_name, u.email
+            FROM contractors c
+            JOIN users u ON c.user_id = u.id
+            WHERE c.user_id = %s
+        ''', (session['user']['id'],))
+        contractor = cursor.fetchone()
+        if not contractor:
+            return jsonify({'success': False, 'message': 'Contractor not found'}), 404
+        
+        # Get quote details with project and client info
+        cursor.execute('''
+            SELECT q.*, p.title as project_title, p.description as project_description,
+                   p.location as project_location,
+                   CONCAT(u.first_name, ' ', u.last_name) as client_name,
+                   u.email as client_email,
+                   h.location as client_location
+            FROM quotes q
+            JOIN projects p ON q.project_id = p.id
+            JOIN homeowners h ON p.homeowner_id = h.id
+            JOIN users u ON h.user_id = u.id
+            WHERE q.id = %s AND q.contractor_id = %s
+        ''', (quote_id, contractor['id']))
+        quote = cursor.fetchone()
+        
+        if not quote:
+            return jsonify({'success': False, 'message': 'Quote not found'}), 404
+        
+        # Close database connections before PDF generation
+        safe_close(cursor, conn)
+        cursor, conn = None, None
+        
+        # Generate PDF using reportlab
+        from reportlab.lib.pagesizes import letter
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image, KeepTogether
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib.units import inch
+        from reportlab.lib import colors
+        from io import BytesIO
+        from xml.sax.saxutils import escape
+        import datetime
+
+        def _xml_escape(s):
+            return escape(s or '')
+
+        def _pdf_safe(s):
+            try:
+                return _xml_escape(s).encode('latin-1', 'replace').decode('latin-1')
+            except Exception:
+                return _xml_escape(str(s))
+
+        def _br(s):
+            return _pdf_safe(s).replace('\n', '<br/>')
+        
+        buffer = BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=50, leftMargin=50, topMargin=50, bottomMargin=50)
+        
+        # Container for the 'Flowable' objects
+        elements = []
+        styles = getSampleStyleSheet()
+        
+        # Professional color scheme
+        primary_color = colors.HexColor('#2C3E50')  # Dark blue-gray
+        secondary_color = colors.HexColor('#34495E')  # Lighter blue-gray
+        accent_color = colors.HexColor('#3498DB')  # Blue
+        light_gray = colors.HexColor('#ECF0F1')  # Light gray
+        dark_gray = colors.HexColor('#7F8C8D')  # Medium gray
+        
+        # Custom styles for professional document
+        title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Heading1'],
+            fontSize=32,
+            spaceAfter=8,
+            alignment=0,  # Left alignment
+            textColor=primary_color,
+            fontName='Helvetica-Bold',
+            letterSpacing=3
+        )
+        
+        subtitle_style = ParagraphStyle(
+            'CustomSubtitle',
+            parent=styles['Normal'],
+            fontSize=16,
+            spaceAfter=30,
+            alignment=0,  # Left alignment
+            textColor=dark_gray,
+            fontName='Helvetica',
+            letterSpacing=2
+        )
+
+        project_title_style = ParagraphStyle(
+            'ProjectTitle',
+            parent=styles['Heading2'],
+            fontSize=16,
+            leading=18,
+            spaceAfter=0,
+            alignment=0,
+            textColor=dark_gray,
+            fontName='Helvetica-Bold'
+        )
+        
+        header_style = ParagraphStyle(
+            'CustomHeader',
+            parent=styles['Heading2'],
+            fontSize=12,
+            spaceAfter=8,
+            spaceBefore=15,
+            textColor=secondary_color,
+            fontName='Helvetica-Bold',
+            letterSpacing=1
+        )
+        
+        info_style = ParagraphStyle(
+            'InfoStyle',
+            parent=styles['Normal'],
+            fontSize=11,
+            spaceAfter=6,
+            textColor=primary_color,
+            fontName='Helvetica'
+        )
+        
+        bold_info_style = ParagraphStyle(
+            'BoldInfoStyle',
+            parent=styles['Normal'],
+            fontSize=11,
+            spaceAfter=6,
+            textColor=primary_color,
+            fontName='Helvetica-Bold'
+        )
+        
+        # Professional header with logo placeholder and title
+        # Compose left header with big 'Quote' and a separate, smaller project title below
+        left_header = KeepTogether([
+            Paragraph('<b>Quote</b>', title_style),
+            Spacer(1, 2),
+            Paragraph(_br(quote['project_title']), project_title_style),
+        ])
+
+        header_data = [[
+            left_header,
+            Paragraph('<b>Your Company</b><br/><font size="10">LOGO HERE</font>', ParagraphStyle(
+                'LogoStyle',
+                parent=styles['Normal'],
+                fontSize=20,
+                alignment=2,  # Right alignment
+                textColor=dark_gray,
+                fontName='Helvetica-Bold'
+            ))
+        ]]
+        
+        header_table = Table(header_data, colWidths=[4*inch, 3*inch])
+        header_table.setStyle(TableStyle([
+            ('ALIGN', (0, 0), (0, 0), 'LEFT'),
+            ('ALIGN', (1, 0), (1, 0), 'RIGHT'),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 20),
+        ]))
+        elements.append(header_table)
+        elements.append(Spacer(1, 20))
+        
+        # Client and Business Information Section
+        client_info = f"""
+        <b>CLIENT NAME INFORMATION:</b><br/><br/>
+        Client Name: {_pdf_safe(quote['client_name'])}<br/><br/>
+        Address: {_pdf_safe((quote['client_location'] or quote['project_location']))}<br/><br/>
+        Phone: ___________________________
+        """
+        
+        business_info = f"""
+        <b>YOUR BUSINESS NAME HERE</b><br/><br/>
+        Company Address Here<br/>
+        City, Province/State<br/>
+        Phone: 555-555-5555<br/>
+        www.yourbusinessnamehere.com
+        """
+        
+        info_data = [[
+            Paragraph(client_info, info_style),
+            Paragraph(business_info, info_style)
+        ]]
+        
+        info_table = Table(info_data, colWidths=[3.5*inch, 3.5*inch])
+        info_table.setStyle(TableStyle([
+            ('ALIGN', (0, 0), (0, 0), 'LEFT'),
+            ('ALIGN', (1, 0), (1, 0), 'RIGHT'),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 20),
+        ]))
+        elements.append(info_table)
+        elements.append(Spacer(1, 30))
+        
+        # Professional Service Details Table
+        service_data = [
+            ['SERVICE', 'PRICE', 'QTY', 'TOTAL'],
+            ['ITEM ONE', '$1000.00', '1', '$1000.00'],
+            ['ITEM TWO', '$1000.00', '1', '$1000.00'],
+            ['ITEM THREE', '$1000.00', '1', '$1000.00'],
+            ['ITEM FOUR', '$1000.00', '1', '$1000.00'],
+            ['ITEM FIVE', '$1000.00', '1', '$1000.00']
+        ]
+        
+        service_table = Table(service_data, colWidths=[2.8*inch, 1.3*inch, 0.7*inch, 1.2*inch])
+        service_table.setStyle(TableStyle([
+            # Header row styling
+            ('BACKGROUND', (0, 0), (-1, 0), secondary_color),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 11),
+            ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+            
+            # Data rows styling
+            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 1), (-1, -1), 10),
+            ('ALIGN', (0, 1), (0, -1), 'LEFT'),  # Service column left-aligned
+            ('ALIGN', (1, 1), (-1, -1), 'CENTER'),  # Price, Qty, Total centered
+            
+            # Table styling
+            ('GRID', (0, 0), (-1, -1), 1, colors.HexColor('#BDC3C7')),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('TOPPADDING', (0, 0), (-1, -1), 12),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
+            ('LEFTPADDING', (0, 0), (-1, -1), 8),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+            
+            # Alternating row colors
+            ('BACKGROUND', (0, 1), (-1, 1), light_gray),
+            ('BACKGROUND', (0, 3), (-1, 3), light_gray),
+            ('BACKGROUND', (0, 5), (-1, 5), light_gray),
+        ]))
+        elements.append(service_table)
+        elements.append(Spacer(1, 25))
+        
+        # Quote details and totals section
+        quote_details_data = [[
+            Paragraph(f'Quote Number: ___________________________<br/><br/>Quote Prepared By: ___________________________<br/><br/>Quote Date: ___________________________<br/><br/>Valid Until Date: ___________________________', info_style),
+            Paragraph('SUBTOTAL<br/>TAXES<br/>TOTAL', bold_info_style)
+        ]]
+        
+        quote_details_table = Table(quote_details_data, colWidths=[3*inch, 2*inch])
+        quote_details_table.setStyle(TableStyle([
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('ALIGN', (0, 0), (0, 0), 'LEFT'),
+            ('ALIGN', (1, 0), (1, 0), 'RIGHT'),
+            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('LEFTPADDING', (0, 0), (-1, -1), 0),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+        ]))
+        elements.append(quote_details_table)
+        elements.append(Spacer(1, 30))
+        
+        # Additional notes
+        if quote['notes']:
+            elements.append(Paragraph('ADDITIONAL NOTES:', header_style))
+            elements.append(Paragraph(_br(quote['notes']), styles['Normal']))
+            elements.append(Spacer(1, 20))
+        
+        # Terms and Conditions
+        elements.append(Paragraph('TERMS AND CONDITIONS:', header_style))
+        terms_text = """
+        1. This quotation is valid for the period specified above and subject to acceptance within that timeframe.<br/>
+        2. All work will be performed in accordance with industry standards and applicable building codes.<br/>
+        3. Payment terms: 50% deposit required upon acceptance, balance due upon completion.<br/>
+        4. Any changes to the scope of work may result in additional charges.<br/>
+        5. Contractor is licensed and insured. Proof of insurance available upon request.<br/>
+        6. This quotation does not constitute a contract until formally accepted by both parties.
+        """
+        elements.append(Paragraph(terms_text, styles['Normal']))
+        elements.append(Spacer(1, 20))
+        
+        # Professional footer
+        elements.append(Spacer(1, 20))
+        footer_style = ParagraphStyle(
+            'Footer',
+            parent=styles['Normal'],
+            fontSize=10,
+            alignment=1,  # Center alignment
+            textColor=colors.HexColor('#666666')
+        )
+        footer_text = "Thank you for considering our professional services. We look forward to working with you."
+        elements.append(Paragraph(footer_text, footer_style))
+        
+        # Build PDF with page numbers and fail-safe canvas ops
+        def _add_page_number(canvas, doc):
+            canvas.saveState()
+            canvas.setFont('Helvetica', 9)
+            page_num_text = f"Page {canvas.getPageNumber()}"
+            canvas.drawRightString(LETTER[0] - 50, 30, page_num_text) if False else None
+            canvas.restoreState()
+        
+        doc.build(elements)
+        
+        # Get PDF data
+        buffer.seek(0)
+        pdf_data = buffer.getvalue()
+        buffer.close()
+        
+        # Return PDF as download
+        from flask import make_response
+        response = make_response(pdf_data)
+        response.headers['Content-Type'] = 'application/pdf'
+        response.headers['Content-Disposition'] = f'attachment; filename=quote_{quote["quote_number"]}.pdf'
+        return response
+        
+    except Exception as e:
+        # Log full traceback for debugging
+        try:
+            import traceback
+            traceback.print_exc()
+        except Exception:
+            pass
+        safe_close(cursor, conn)
+        return jsonify({'success': False, 'message': f'Failed to generate PDF: {str(e)}'}), 500
 
 # ============================================================================
 # ADMIN PORTAL ROUTES
@@ -4659,17 +5774,20 @@ def admin_create_admin():
 # def create_demo_users():
 #     """Adapted for Cognito - run manually or via script"""
 
-def get_db_connection():
-    return pymysql.connect(
-        host=os.getenv('DB_HOST'),
-        user=os.getenv('DB_USERNAME'),
-        password=os.getenv('DB_PASSWORD'),
-        db=os.getenv('DB_NAME'),
-        port=int(os.getenv('DB_PORT', 3306)),
-        cursorclass=pymysql.cursors.DictCursor
-    )
-
 if __name__ == '__main__':
+    # Startup health check: ensure MySQL is reachable before proceeding
+    try:
+        _hc_conn = get_db_connection()
+        _hc_cur = _hc_conn.cursor()
+        _hc_cur.execute('SELECT 1')
+        _ = _hc_cur.fetchone()
+        _hc_cur.close()
+        _hc_conn.close()
+        print('Database connectivity check passed')
+    except Exception as e:
+        print(f'Database connectivity check failed: {e}')
+        raise
+
     # Initialize database tables
     print("Initializing database...")
     init_database()

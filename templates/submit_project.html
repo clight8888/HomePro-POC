@@ -141,13 +141,18 @@
                         </div>
                     </div>
                     
-                    <div class="d-flex justify-content-between">
-                        <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">
+                    <div class="d-flex flex-column flex-md-row justify-content-between gap-2">
+                        <div class="d-flex justify-content-end gap-2 order-1 order-md-2">
+                            <button type="button" class="btn btn-outline-primary" onclick="skipToManualForm()">
+                                <i class="fas fa-edit me-2"></i>Skip to Manual Form
+                            </button>
+                            <button type="button" class="btn btn-primary" id="processAudioBtn" onclick="processAudio()" disabled>
+                                <i class="fas fa-magic me-2"></i>Process Audio
+                            </button>
+                        </div>
+                        <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary d-flex align-items-center justify-content-center order-2 order-md-1">
                             <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
                         </a>
-                        <button type="button" class="btn btn-primary" id="processAudioBtn" onclick="processAudio()" disabled>
-                            <i class="fas fa-magic me-2"></i>Process Audio
-                        </button>
                     </div>
                 </div>
             </div>
@@ -1435,6 +1440,37 @@ function checkForSavedProjectData() {
 // Navigation functions
 function goBackToUpload() {
     showStep('audioUploadStep');
+}
+
+// Skip to manual form without AI processing
+function skipToManualForm() {
+    // Create empty data object for manual entry
+    const emptyData = {
+        title: '',
+        project_type: 'General',
+        location: '',
+        description: '',
+        budget_min: '',
+        budget_max: '',
+        timeline: '',
+        transcribed_text: '',
+        confidence: '',
+        extraction_method: 'manual',
+        s3_key: '',
+        filename: ''
+    };
+    
+    // Show preview form with empty fields
+    showPreviewForm(emptyData);
+    
+    // Hide AI results section since we're doing manual entry
+    const aiResultsSection = document.getElementById('aiResults');
+    if (aiResultsSection) {
+        aiResultsSection.style.display = 'none';
+    }
+    
+    // Show a message to indicate manual entry mode
+    showToast('Manual form mode activated. Please fill in your project details.', 'info');
 }
 
 function submitAnother() {

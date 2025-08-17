@@ -1,0 +1,790 @@
+{% extends "base.html" %}
+
+{% block title %}Welcome to HomePro - Complete Your Profile{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+    .skill-selector {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 15px;
+        margin: 20px 0;
+    }
+    
+    .skill-card {
+        border: 2px solid #e9ecef;
+        border-radius: 12px;
+        padding: 20px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        background: white;
+    }
+    
+    .skill-card:hover {
+        border-color: #007bff;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,123,255,0.15);
+    }
+    
+    .skill-card.selected {
+        border-color: #007bff;
+        background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+        color: white;
+    }
+    
+    .skill-icon {
+        font-size: 2.5rem;
+        margin-bottom: 10px;
+        display: block;
+    }
+    
+    .progress-bar-container {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 30px;
+    }
+    
+    .step-indicator {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 20px;
+    }
+    
+    .step {
+        flex: 1;
+        text-align: center;
+        position: relative;
+    }
+    
+    .step::after {
+        content: '';
+        position: absolute;
+        top: 15px;
+        left: 50%;
+        width: 100%;
+        height: 2px;
+        background: #dee2e6;
+        z-index: 1;
+    }
+    
+    .step:last-child::after {
+        display: none;
+    }
+    
+    .step-circle {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        background: #dee2e6;
+        color: #6c757d;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 10px;
+        position: relative;
+        z-index: 2;
+        font-weight: bold;
+    }
+    
+    .step.active .step-circle {
+        background: #007bff;
+        color: white;
+    }
+    
+    .step.completed .step-circle {
+        background: #28a745;
+        color: white;
+    }
+    
+    .step.completed::after {
+        background: #28a745;
+    }
+    
+    #map {
+        height: 400px;
+        border-radius: 12px;
+        border: 2px solid #e9ecef;
+    }
+    
+    .portfolio-upload-zone {
+        border: 3px dashed #007bff;
+        border-radius: 12px;
+        padding: 40px;
+        text-align: center;
+        background: #f8f9ff;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .portfolio-upload-zone:hover {
+        background: #e6f3ff;
+        border-color: #0056b3;
+    }
+    
+    .portfolio-upload-zone.dragover {
+        background: #cce7ff;
+        border-color: #0056b3;
+    }
+    
+    .portfolio-preview {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 15px;
+        margin-top: 20px;
+    }
+    
+    .portfolio-item {
+        position: relative;
+        border-radius: 8px;
+        overflow: hidden;
+        aspect-ratio: 1;
+    }
+    
+    .portfolio-item img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    
+    .portfolio-item .remove-btn {
+        position: absolute;
+        top: 5px;
+        right: 5px;
+        background: rgba(220, 53, 69, 0.9);
+        color: white;
+        border: none;
+        border-radius: 50%;
+        width: 25px;
+        height: 25px;
+        font-size: 12px;
+        cursor: pointer;
+    }
+    
+    .category-tag {
+        position: absolute;
+        bottom: 5px;
+        left: 5px;
+        background: rgba(0, 123, 255, 0.9);
+        color: white;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 11px;
+    }
+    
+    .verification-status {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 15px;
+        border-radius: 8px;
+        margin: 10px 0;
+    }
+    
+    .verification-status.pending {
+        background: #fff3cd;
+        border: 1px solid #ffeaa7;
+    }
+    
+    .verification-status.verified {
+        background: #d1edff;
+        border: 1px solid #74c0fc;
+    }
+    
+    .verification-status.failed {
+        background: #f8d7da;
+        border: 1px solid #f5c6cb;
+    }
+    
+    .smart-suggestions {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 15px;
+        margin: 15px 0;
+    }
+    
+    .suggestion-chip {
+        display: inline-block;
+        background: #007bff;
+        color: white;
+        padding: 5px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        margin: 3px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    
+    .suggestion-chip:hover {
+        background: #0056b3;
+        transform: scale(1.05);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Progress Indicator -->
+    <div class="progress-bar-container">
+        <div class="step-indicator">
+            <div class="step active" id="step-1">
+                <div class="step-circle">1</div>
+                <div class="step-label">Skills & Expertise</div>
+            </div>
+            <div class="step" id="step-2">
+                <div class="step-circle">2</div>
+                <div class="step-label">Service Area</div>
+            </div>
+            <div class="step" id="step-3">
+                <div class="step-circle">3</div>
+                <div class="step-label">Portfolio</div>
+            </div>
+            <div class="step" id="step-4">
+                <div class="step-circle">4</div>
+                <div class="step-label">Verification</div>
+            </div>
+        </div>
+        <div class="progress">
+            <div class="progress-bar" role="progressbar" style="width: 25%" id="progress-bar"></div>
+        </div>
+    </div>
+
+    <!-- Step 1: Visual Skills Selector -->
+    <div class="step-content" id="step-1-content">
+        <div class="row justify-content-center">
+            <div class="col-lg-10">
+                <div class="card shadow-sm">
+                    <div class="card-body p-4">
+                        <h3 class="text-center mb-4">
+                            <i class="fas fa-tools text-primary me-2"></i>
+                            What's Your Expertise?
+                        </h3>
+                        <p class="text-center text-muted mb-4">Select all the services you provide. This helps us match you with the right projects.</p>
+                        
+                        <!-- Smart Suggestions -->
+                        <div class="smart-suggestions">
+                            <h6><i class="fas fa-lightbulb text-warning me-2"></i>Popular in Your Area:</h6>
+                            <div id="location-suggestions"></div>
+                        </div>
+                        
+                        <div class="skill-selector" id="skill-selector">
+                            <!-- Skills will be populated by JavaScript -->
+                        </div>
+                        
+                        <div class="text-center mt-4">
+                            <button class="btn btn-primary btn-lg px-5" onclick="nextStep(2)" id="skills-next-btn" disabled>
+                                Continue <i class="fas fa-arrow-right ms-2"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 2: Interactive Service Area Map -->
+    <div class="step-content d-none" id="step-2-content">
+        <div class="row justify-content-center">
+            <div class="col-lg-10">
+                <div class="card shadow-sm">
+                    <div class="card-body p-4">
+                        <h3 class="text-center mb-4">
+                            <i class="fas fa-map-marked-alt text-primary me-2"></i>
+                            Define Your Service Area
+                        </h3>
+                        <p class="text-center text-muted mb-4">Drag and drop to set your service radius. We'll show you projects in this area.</p>
+                        
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div id="map"></div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h6>Service Radius</h6>
+                                        <div class="mb-3">
+                                            <label for="radius-slider" class="form-label">Radius: <span id="radius-value">25</span> miles</label>
+                                            <input type="range" class="form-range" id="radius-slider" min="5" max="100" value="25">
+                                        </div>
+                                        
+                                        <h6>Quick Locations</h6>
+                                        <div class="d-grid gap-2">
+                                            <button class="btn btn-outline-primary btn-sm" onclick="addLocation('Downtown')">
+                                                <i class="fas fa-city me-2"></i>Downtown
+                                            </button>
+                                            <button class="btn btn-outline-primary btn-sm" onclick="addLocation('Suburbs')">
+                                                <i class="fas fa-home me-2"></i>Suburbs
+                                            </button>
+                                            <button class="btn btn-outline-primary btn-sm" onclick="addLocation('Rural')">
+                                                <i class="fas fa-tree me-2"></i>Rural Areas
+                                            </button>
+                                        </div>
+                                        
+                                        <div class="mt-3">
+                                            <small class="text-muted">
+                                                <i class="fas fa-info-circle me-1"></i>
+                                                Larger service areas = more project opportunities
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="text-center mt-4">
+                            <button class="btn btn-outline-secondary me-3" onclick="previousStep(1)">
+                                <i class="fas fa-arrow-left me-2"></i>Back
+                            </button>
+                            <button class="btn btn-primary btn-lg px-5" onclick="nextStep(3)">
+                                Continue <i class="fas fa-arrow-right ms-2"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 3: Portfolio Quick-Setup -->
+    <div class="step-content d-none" id="step-3-content">
+        <div class="row justify-content-center">
+            <div class="col-lg-10">
+                <div class="card shadow-sm">
+                    <div class="card-body p-4">
+                        <h3 class="text-center mb-4">
+                            <i class="fas fa-images text-primary me-2"></i>
+                            Showcase Your Work
+                        </h3>
+                        <p class="text-center text-muted mb-4">Upload photos of your best projects. Our AI will automatically categorize them.</p>
+                        
+                        <div class="portfolio-upload-zone" id="portfolio-upload-zone">
+                            <i class="fas fa-cloud-upload-alt fa-3x text-primary mb-3"></i>
+                            <h5>Drag & Drop Photos Here</h5>
+                            <p class="text-muted">or click to browse</p>
+                            <input type="file" id="portfolio-input" multiple accept="image/*" style="display: none;">
+                            <button class="btn btn-primary mt-2" onclick="document.getElementById('portfolio-input').click()">
+                                <i class="fas fa-plus me-2"></i>Add Photos
+                            </button>
+                        </div>
+                        
+                        <div class="portfolio-preview" id="portfolio-preview"></div>
+                        
+                        <div class="text-center mt-4">
+                            <button class="btn btn-outline-secondary me-3" onclick="previousStep(2)">
+                                <i class="fas fa-arrow-left me-2"></i>Back
+                            </button>
+                            <button class="btn btn-outline-primary me-3" onclick="nextStep(4)">
+                                Skip for Now
+                            </button>
+                            <button class="btn btn-primary btn-lg px-5" onclick="nextStep(4)" id="portfolio-next-btn">
+                                Continue <i class="fas fa-arrow-right ms-2"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 4: License & Insurance Verification -->
+    <div class="step-content d-none" id="step-4-content">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="card shadow-sm">
+                    <div class="card-body p-4">
+                        <h3 class="text-center mb-4">
+                            <i class="fas fa-shield-alt text-primary me-2"></i>
+                            Verify Your Credentials
+                        </h3>
+                        <p class="text-center text-muted mb-4">Add your licenses and insurance for instant verification and higher trust scores.</p>
+                        
+                        <!-- License Verification -->
+                        <div class="mb-4">
+                            <h5><i class="fas fa-certificate text-warning me-2"></i>Professional License</h5>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label for="license-number" class="form-label">License Number</label>
+                                    <input type="text" class="form-control" id="license-number" placeholder="Enter license number">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="license-state" class="form-label">Issuing State</label>
+                                    <select class="form-select" id="license-state">
+                                        <option value="">Select State</option>
+                                        <option value="CA">California</option>
+                                        <option value="TX">Texas</option>
+                                        <option value="FL">Florida</option>
+                                        <option value="NY">New York</option>
+                                        <!-- Add more states -->
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="verification-status pending" id="license-status" style="display: none;">
+                                <i class="fas fa-clock"></i>
+                                <span>Verifying license...</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Insurance Verification -->
+                        <div class="mb-4">
+                            <h5><i class="fas fa-umbrella text-info me-2"></i>Insurance Coverage</h5>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label for="insurance-provider" class="form-label">Insurance Provider</label>
+                                    <input type="text" class="form-control" id="insurance-provider" placeholder="e.g., State Farm, Allstate">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="policy-number" class="form-label">Policy Number</label>
+                                    <input type="text" class="form-control" id="policy-number" placeholder="Enter policy number">
+                                </div>
+                            </div>
+                            <div class="verification-status pending" id="insurance-status" style="display: none;">
+                                <i class="fas fa-clock"></i>
+                                <span>Verifying insurance...</span>
+                            </div>
+                        </div>
+                        
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>Why verify?</strong> Verified contractors get 3x more project invitations and higher trust scores.
+                        </div>
+                        
+                        <div class="text-center mt-4">
+                            <button class="btn btn-outline-secondary me-3" onclick="previousStep(3)">
+                                <i class="fas fa-arrow-left me-2"></i>Back
+                            </button>
+                            <button class="btn btn-outline-primary me-3" onclick="completeOnboarding(false)">
+                                Skip Verification
+                            </button>
+                            <button class="btn btn-success btn-lg px-5" onclick="completeOnboarding(true)">
+                                <i class="fas fa-check me-2"></i>Complete Setup
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// Enhanced Onboarding JavaScript
+let currentStep = 1;
+let selectedSkills = [];
+let serviceArea = { lat: 40.7128, lng: -74.0060, radius: 25 }; // Default to NYC
+let portfolioImages = [];
+let map, circle, marker;
+
+// Skills data with icons and categories
+const skillsData = [
+    { id: 'plumbing', name: 'Plumbing', icon: 'fas fa-wrench', category: 'Essential' },
+    { id: 'electrical', name: 'Electrical', icon: 'fas fa-bolt', category: 'Essential' },
+    { id: 'hvac', name: 'HVAC', icon: 'fas fa-fan', category: 'Essential' },
+    { id: 'carpentry', name: 'Carpentry', icon: 'fas fa-hammer', category: 'Construction' },
+    { id: 'painting', name: 'Painting', icon: 'fas fa-paint-roller', category: 'Finishing' },
+    { id: 'flooring', name: 'Flooring', icon: 'fas fa-th-large', category: 'Finishing' },
+    { id: 'roofing', name: 'Roofing', icon: 'fas fa-home', category: 'Exterior' },
+    { id: 'landscaping', name: 'Landscaping', icon: 'fas fa-seedling', category: 'Exterior' },
+    { id: 'kitchen', name: 'Kitchen Remodel', icon: 'fas fa-utensils', category: 'Specialty' },
+    { id: 'bathroom', name: 'Bathroom Remodel', icon: 'fas fa-bath', category: 'Specialty' },
+    { id: 'drywall', name: 'Drywall', icon: 'fas fa-square', category: 'Construction' },
+    { id: 'tile', name: 'Tile Work', icon: 'fas fa-th', category: 'Finishing' }
+];
+
+// Initialize the onboarding process
+document.addEventListener('DOMContentLoaded', function() {
+    initializeSkillSelector();
+    initializePortfolioUpload();
+    loadLocationSuggestions();
+});
+
+function initializeSkillSelector() {
+    const container = document.getElementById('skill-selector');
+    
+    skillsData.forEach(skill => {
+        const skillCard = document.createElement('div');
+        skillCard.className = 'skill-card';
+        skillCard.dataset.skillId = skill.id;
+        skillCard.innerHTML = `
+            <i class="${skill.icon} skill-icon"></i>
+            <h6>${skill.name}</h6>
+            <small class="text-muted">${skill.category}</small>
+        `;
+        
+        skillCard.addEventListener('click', function() {
+            toggleSkill(skill.id, skillCard);
+        });
+        
+        container.appendChild(skillCard);
+    });
+}
+
+function toggleSkill(skillId, element) {
+    if (selectedSkills.includes(skillId)) {
+        selectedSkills = selectedSkills.filter(id => id !== skillId);
+        element.classList.remove('selected');
+    } else {
+        selectedSkills.push(skillId);
+        element.classList.add('selected');
+    }
+    
+    // Enable/disable next button
+    document.getElementById('skills-next-btn').disabled = selectedSkills.length === 0;
+}
+
+function loadLocationSuggestions() {
+    // Simulate location-based suggestions
+    const suggestions = ['Kitchen Remodeling', 'Bathroom Renovation', 'Electrical Work', 'Plumbing Repair'];
+    const container = document.getElementById('location-suggestions');
+    
+    suggestions.forEach(suggestion => {
+        const chip = document.createElement('span');
+        chip.className = 'suggestion-chip';
+        chip.textContent = suggestion;
+        chip.onclick = () => selectSuggestion(suggestion);
+        container.appendChild(chip);
+    });
+}
+
+function selectSuggestion(suggestion) {
+    // Auto-select related skills based on suggestion
+    const skillMap = {
+        'Kitchen Remodeling': ['kitchen', 'plumbing', 'electrical', 'tile'],
+        'Bathroom Renovation': ['bathroom', 'plumbing', 'tile', 'electrical'],
+        'Electrical Work': ['electrical'],
+        'Plumbing Repair': ['plumbing']
+    };
+    
+    const relatedSkills = skillMap[suggestion] || [];
+    relatedSkills.forEach(skillId => {
+        if (!selectedSkills.includes(skillId)) {
+            const skillCard = document.querySelector(`[data-skill-id="${skillId}"]`);
+            if (skillCard) {
+                toggleSkill(skillId, skillCard);
+            }
+        }
+    });
+}
+
+function nextStep(step) {
+    // Hide current step
+    document.getElementById(`step-${currentStep}-content`).classList.add('d-none');
+    document.getElementById(`step-${currentStep}`).classList.remove('active');
+    document.getElementById(`step-${currentStep}`).classList.add('completed');
+    
+    // Show next step
+    currentStep = step;
+    document.getElementById(`step-${currentStep}-content`).classList.remove('d-none');
+    document.getElementById(`step-${currentStep}`).classList.add('active');
+    
+    // Update progress bar
+    const progress = (currentStep / 4) * 100;
+    document.getElementById('progress-bar').style.width = `${progress}%`;
+    
+    // Initialize step-specific functionality
+    if (step === 2) {
+        initializeMap();
+    }
+}
+
+function previousStep(step) {
+    // Hide current step
+    document.getElementById(`step-${currentStep}-content`).classList.add('d-none');
+    document.getElementById(`step-${currentStep}`).classList.remove('active');
+    
+    // Show previous step
+    currentStep = step;
+    document.getElementById(`step-${currentStep}-content`).classList.remove('d-none');
+    document.getElementById(`step-${currentStep}`).classList.add('active');
+    document.getElementById(`step-${currentStep}`).classList.remove('completed');
+    
+    // Update progress bar
+    const progress = (currentStep / 4) * 100;
+    document.getElementById('progress-bar').style.width = `${progress}%`;
+}
+
+function initializeMap() {
+    if (map) return; // Already initialized
+    
+    map = L.map('map').setView([serviceArea.lat, serviceArea.lng], 10);
+    
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+    
+    // Add draggable marker
+    marker = L.marker([serviceArea.lat, serviceArea.lng], { draggable: true }).addTo(map);
+    
+    // Add service radius circle
+    circle = L.circle([serviceArea.lat, serviceArea.lng], {
+        radius: serviceArea.radius * 1609.34, // Convert miles to meters
+        fillColor: '#007bff',
+        fillOpacity: 0.2,
+        color: '#007bff',
+        weight: 2
+    }).addTo(map);
+    
+    // Update service area when marker is dragged
+    marker.on('dragend', function(e) {
+        const position = e.target.getLatLng();
+        serviceArea.lat = position.lat;
+        serviceArea.lng = position.lng;
+        circle.setLatLng(position);
+    });
+    
+    // Update radius when slider changes
+    document.getElementById('radius-slider').addEventListener('input', function(e) {
+        serviceArea.radius = parseInt(e.target.value);
+        document.getElementById('radius-value').textContent = serviceArea.radius;
+        circle.setRadius(serviceArea.radius * 1609.34);
+    });
+}
+
+function addLocation(locationType) {
+    // Simulate adding specific location types to service area
+    alert(`Added ${locationType} areas to your service zone!`);
+}
+
+function initializePortfolioUpload() {
+    const uploadZone = document.getElementById('portfolio-upload-zone');
+    const fileInput = document.getElementById('portfolio-input');
+    
+    // Drag and drop functionality
+    uploadZone.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        uploadZone.classList.add('dragover');
+    });
+    
+    uploadZone.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        uploadZone.classList.remove('dragover');
+    });
+    
+    uploadZone.addEventListener('drop', function(e) {
+        e.preventDefault();
+        uploadZone.classList.remove('dragover');
+        const files = e.dataTransfer.files;
+        handleFiles(files);
+    });
+    
+    fileInput.addEventListener('change', function(e) {
+        handleFiles(e.target.files);
+    });
+}
+
+function handleFiles(files) {
+    Array.from(files).forEach(file => {
+        if (file.type.startsWith('image/')) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                addPortfolioImage(e.target.result, file.name);
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+}
+
+function addPortfolioImage(src, filename) {
+    const preview = document.getElementById('portfolio-preview');
+    const imageId = Date.now() + Math.random();
+    
+    // Simulate AI categorization
+    const categories = ['Kitchen', 'Bathroom', 'Electrical', 'Plumbing', 'General'];
+    const category = categories[Math.floor(Math.random() * categories.length)];
+    
+    const imageDiv = document.createElement('div');
+    imageDiv.className = 'portfolio-item';
+    imageDiv.innerHTML = `
+        <img src="${src}" alt="${filename}">
+        <button class="remove-btn" onclick="removePortfolioImage(this)">×</button>
+        <span class="category-tag">${category}</span>
+    `;
+    
+    preview.appendChild(imageDiv);
+    portfolioImages.push({ id: imageId, src, filename, category });
+}
+
+function removePortfolioImage(button) {
+    button.parentElement.remove();
+}
+
+function completeOnboarding(withVerification) {
+    // Collect all data
+    const onboardingData = {
+        skills: selectedSkills,
+        serviceArea: serviceArea,
+        portfolio: portfolioImages,
+        verification: withVerification ? {
+            license: document.getElementById('license-number').value,
+            licenseState: document.getElementById('license-state').value,
+            insurance: document.getElementById('insurance-provider').value,
+            policyNumber: document.getElementById('policy-number').value
+        } : null
+    };
+    
+    // Show loading state
+    const button = event.target;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Setting up your profile...';
+    button.disabled = true;
+    
+    // Simulate API call
+    setTimeout(() => {
+        // Redirect to dashboard with success message
+        window.location.href = '/contractor/dashboard?onboarding=complete';
+    }, 2000);
+}
+
+// Verification functions
+function verifyLicense() {
+    const licenseNumber = document.getElementById('license-number').value;
+    const state = document.getElementById('license-state').value;
+    
+    if (!licenseNumber || !state) return;
+    
+    const status = document.getElementById('license-status');
+    status.style.display = 'flex';
+    status.className = 'verification-status pending';
+    status.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>Verifying license...</span>';
+    
+    // Simulate verification
+    setTimeout(() => {
+        const isValid = Math.random() > 0.3; // 70% success rate
+        status.className = `verification-status ${isValid ? 'verified' : 'failed'}`;
+        status.innerHTML = isValid 
+            ? '<i class="fas fa-check-circle"></i><span>License verified successfully!</span>'
+            : '<i class="fas fa-exclamation-triangle"></i><span>Could not verify license. Please check details.</span>';
+    }, 2000);
+}
+
+function verifyInsurance() {
+    const provider = document.getElementById('insurance-provider').value;
+    const policyNumber = document.getElementById('policy-number').value;
+    
+    if (!provider || !policyNumber) return;
+    
+    const status = document.getElementById('insurance-status');
+    status.style.display = 'flex';
+    status.className = 'verification-status pending';
+    status.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>Verifying insurance...</span>';
+    
+    // Simulate verification
+    setTimeout(() => {
+        const isValid = Math.random() > 0.2; // 80% success rate
+        status.className = `verification-status ${isValid ? 'verified' : 'failed'}`;
+        status.innerHTML = isValid 
+            ? '<i class="fas fa-check-circle"></i><span>Insurance verified successfully!</span>'
+            : '<i class="fas fa-exclamation-triangle"></i><span>Could not verify insurance. Please check details.</span>';
+    }, 2000);
+}
+
+// Auto-verify when fields are filled
+document.getElementById('license-number').addEventListener('blur', verifyLicense);
+document.getElementById('license-state').addEventListener('change', verifyLicense);
+document.getElementById('insurance-provider').addEventListener('blur', verifyInsurance);
+document.getElementById('policy-number').addEventListener('blur', verifyInsurance);
+</script>
+{% endblock %}

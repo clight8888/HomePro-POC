@@ -1,0 +1,255 @@
+{% extends "base.html" %}
+
+{% block title %}Contact Us - HomePro{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex align-items-center mb-3">
+                <i class="fas fa-envelope text-primary me-3" style="font-size: 2rem;"></i>
+                <div>
+                    <h1 class="mb-0">Contact Us</h1>
+                    <p class="text-muted mb-0">Get in touch with our support team</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Contact Form -->
+        <div class="col-lg-8 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-paper-plane me-2"></i>Send us a Message</h5>
+                </div>
+                <div class="card-body">
+                    <form id="contactForm" method="POST">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="name" class="form-label">Full Name <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="name" name="name" required 
+                                       value="{% if user %}{{ user.first_name }} {{ user.last_name }}{% endif %}">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="email" class="form-label">Email Address <span class="text-danger">*</span></label>
+                                <input type="email" class="form-control" id="email" name="email" required
+                                       value="{% if user %}{{ user.email }}{% endif %}">
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="subject" class="form-label">Subject <span class="text-danger">*</span></label>
+                            <select class="form-select" id="subject" name="subject" required>
+                                <option value="">Select a topic...</option>
+                                <option value="general">General Inquiry</option>
+                                <option value="technical">Technical Support</option>
+                                <option value="billing">Billing Question</option>
+                                <option value="project">Project Issue</option>
+                                <option value="contractor">Contractor Support</option>
+                                <option value="feedback">Feedback & Suggestions</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+
+                        {% if user %}
+                        <div class="mb-3">
+                            <label for="user_type" class="form-label">Account Type</label>
+                            <input type="text" class="form-control" id="user_type" name="user_type" readonly
+                                   value="{{ user.role|title }}{% if user.is_admin %} (Admin){% endif %}">
+                        </div>
+                        {% endif %}
+
+                        <div class="mb-3">
+                            <label for="message" class="form-label">Message <span class="text-danger">*</span></label>
+                            <textarea class="form-control" id="message" name="message" rows="6" required
+                                      placeholder="Please describe your question or issue in detail..."></textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="privacy" name="privacy" required>
+                                <label class="form-check-label" for="privacy">
+                                    I agree to the <a href="#" class="text-primary">Privacy Policy</a> and understand that my information will be used to respond to my inquiry.
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <button type="reset" class="btn btn-outline-secondary me-md-2">
+                                <i class="fas fa-undo me-2"></i>Reset Form
+                            </button>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-paper-plane me-2"></i>Send Message
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Contact Information -->
+        <div class="col-lg-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Contact Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="contact-info-item mb-3">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-envelope text-primary me-3" style="font-size: 1.2rem;"></i>
+                            <div>
+                                <h6 class="mb-0">Email Support</h6>
+                                <a href="mailto:support@proprojects.pro" class="text-primary">support@proprojects.pro</a>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="contact-info-item mb-3">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-clock text-primary me-3" style="font-size: 1.2rem;"></i>
+                            <div>
+                                <h6 class="mb-0">Response Time</h6>
+                                <p class="text-muted mb-0">Within 24 hours</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="contact-info-item">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-business-time text-primary me-3" style="font-size: 1.2rem;"></i>
+                            <div>
+                                <h6 class="mb-0">Business Hours</h6>
+                                <p class="text-muted mb-0">Monday - Friday<br>9:00 AM - 6:00 PM EST</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+        </div>
+    </div>
+</div>
+
+<style>
+.contact-info-item {
+    padding: 1rem;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+}
+
+.contact-info-item h6 {
+    color: #1d4ed8;
+    font-weight: 600;
+}
+
+.list-group-item-action:hover {
+    background-color: #f1f5f9;
+    color: #1d4ed8;
+}
+
+.card {
+    border: none;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.card-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #e9ecef;
+    font-weight: 600;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: #1d4ed8;
+    box-shadow: 0 0 0 0.2rem rgba(29, 78, 216, 0.25);
+}
+
+.btn-primary {
+    background-color: #1d4ed8;
+    border-color: #1d4ed8;
+}
+
+.btn-primary:hover {
+    background-color: #1e40af;
+    border-color: #1e40af;
+}
+
+@media (max-width: 768px) {
+    .contact-info-item {
+        margin-bottom: 1rem;
+    }
+    
+    .d-grid.gap-2.d-md-flex {
+        gap: 0.5rem !important;
+    }
+}
+</style>
+
+<script>
+document.getElementById('contactForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const submitBtn = this.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    
+    // Show loading state
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Sending...';
+    submitBtn.disabled = true;
+    
+    fetch('{{ url_for("contact") }}', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Show success message
+            const alertDiv = document.createElement('div');
+            alertDiv.className = 'alert alert-success alert-dismissible fade show';
+            alertDiv.innerHTML = `
+                <i class="fas fa-check-circle me-2"></i>
+                ${data.message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            
+            // Insert alert at the top of the form
+            const cardBody = this.closest('.card-body');
+            cardBody.insertBefore(alertDiv, cardBody.firstChild);
+            
+            // Reset form
+            this.reset();
+            
+            // Scroll to top of form
+            cardBody.scrollIntoView({ behavior: 'smooth' });
+        } else {
+            throw new Error(data.message || 'Failed to send message');
+        }
+    })
+    .catch(error => {
+        // Show error message
+        const alertDiv = document.createElement('div');
+        alertDiv.className = 'alert alert-danger alert-dismissible fade show';
+        alertDiv.innerHTML = `
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            Error: ${error.message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        // Insert alert at the top of the form
+        const cardBody = this.closest('.card-body');
+        cardBody.insertBefore(alertDiv, cardBody.firstChild);
+        
+        // Scroll to top of form
+        cardBody.scrollIntoView({ behavior: 'smooth' });
+    })
+    .finally(() => {
+        // Restore button state
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+    });
+});
+</script>
+{% endblock %}

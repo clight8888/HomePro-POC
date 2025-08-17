@@ -57,20 +57,57 @@
                             </div>
                         </div>
                         
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="specialties" class="form-label">Specialties</label>
-                                    <input type="text" class="form-control" id="specialties" name="specialties" 
-                                           value="{{ contractor.specialties or '' }}"
-                                           placeholder="e.g., Plumbing, Electrical, HVAC">
+                        <!-- Project Categories & Expertise -->
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">Project Categories & Expertise</label>
+                            <p class="text-muted small mb-3">Select all categories you can work on. This helps match you with relevant projects.</p>
+                            <div class="row g-2" id="categoriesGrid">
+                                {% set categories = [
+                                    ('plumbing', 'Plumbing', 'fas fa-wrench'),
+                                    ('electrical', 'Electrical', 'fas fa-bolt'),
+                                    ('hvac', 'HVAC', 'fas fa-fan'),
+                                    ('kitchen', 'Kitchen Renovation', 'fas fa-utensils'),
+                                    ('bathroom', 'Bathroom Repair', 'fas fa-bath'),
+                                    ('roofing', 'Roofing', 'fas fa-home'),
+                                    ('flooring', 'Flooring', 'fas fa-th-large'),
+                                    ('painting', 'Painting', 'fas fa-paint-brush'),
+                                    ('landscaping', 'Landscaping', 'fas fa-leaf'),
+                                    ('carpentry', 'Carpentry', 'fas fa-hammer'),
+                                    ('general', 'General Repair', 'fas fa-tools')
+                                ] %}
+                                {% for category_id, category_name, icon_class in categories %}
+                                <div class="col-md-4 col-sm-6">
+                                    <div class="category-item" data-category="{{ category_id }}">
+                                        <input type="checkbox" class="category-checkbox" id="cat_{{ category_id }}" 
+                                               name="categories" value="{{ category_id }}"
+                                               {% if contractor.specialties and category_name.lower() in contractor.specialties.lower() %}checked{% endif %}>
+                                        <label for="cat_{{ category_id }}" class="category-label">
+                                            <i class="{{ icon_class }} category-icon"></i>
+                                            <span class="category-text">{{ category_name }}</span>
+                                        </label>
+                                    </div>
                                 </div>
+                                {% endfor %}
                             </div>
+                        </div>
+                        
+                        <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label for="years_experience" class="form-label">Years of Experience</label>
                                     <input type="number" class="form-control" id="years_experience" name="years_experience" 
                                            value="{{ contractor.years_experience or 0 }}" min="0" max="50">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="hourly_rate" class="form-label">Hourly Rate (Optional)</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">$</span>
+                                        <input type="number" class="form-control" id="hourly_rate" name="hourly_rate" 
+                                               value="{{ contractor.hourly_rate or '' }}" min="0" step="5" placeholder="75">
+                                        <span class="input-group-text">/hr</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -107,9 +144,45 @@
                     </form>
                 </div>
             </div>
-        </div>
+            
+         </div>
         
         <div class="col-lg-4">
+            <!-- Quote & Invoice Management -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-file-invoice-dollar me-2"></i>
+                        Quote & Invoice Management
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <a href="{{ url_for('contractor_quotes') }}" class="btn btn-outline-success w-100 d-flex flex-column align-items-center justify-content-center py-3">
+                                <i class="fas fa-file-alt fa-2x mb-2"></i>
+                                <strong>Manage Quotes</strong>
+                                <small class="text-muted">Create and send project quotes</small>
+                            </a>
+                        </div>
+                        <div class="col-12">
+                            <a href="{{ url_for('contractor_invoices') }}" class="btn btn-outline-info w-100 d-flex flex-column align-items-center justify-content-center py-3">
+                                <i class="fas fa-receipt fa-2x mb-2"></i>
+                                <strong>Manage Invoices</strong>
+                                <small class="text-muted">Generate and track invoices</small>
+                            </a>
+                        </div>
+                    </div>
+                    <div class="row g-3 mt-2">
+                        <div class="col-12">
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <strong>Quick Actions:</strong> Generate professional quotes and invoices for your projects with just a few clicks.
+                            </div>
+                        </div>
+                    </div>
+                 </div>
+             </div>
             <div class="card">
                 <div class="card-header">
                     <h5 class="mb-0">
@@ -179,11 +252,121 @@
     </div>
 </div>
 
+<style>
+.category-item {
+    position: relative;
+    margin-bottom: 10px;
+}
+
+.category-checkbox {
+    display: none;
+}
+
+.category-label {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 15px 10px;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: white;
+    text-decoration: none;
+    color: #6c757d;
+    min-height: 80px;
+    justify-content: center;
+}
+
+.category-label:hover {
+    border-color: #007bff;
+    background-color: #f8f9fa;
+    color: #007bff;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,123,255,0.15);
+}
+
+.category-checkbox:checked + .category-label {
+    border-color: #28a745;
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.category-checkbox:checked + .category-label .category-icon {
+    color: #28a745;
+}
+
+.category-icon {
+    font-size: 1.5rem;
+    margin-bottom: 8px;
+    transition: color 0.3s ease;
+}
+
+.category-text {
+    font-size: 0.85rem;
+    font-weight: 500;
+    text-align: center;
+    line-height: 1.2;
+}
+
+@media (max-width: 768px) {
+    .category-label {
+        padding: 12px 8px;
+        min-height: 70px;
+    }
+    
+    .category-icon {
+        font-size: 1.2rem;
+        margin-bottom: 6px;
+    }
+    
+    .category-text {
+        font-size: 0.8rem;
+    }
+}
+</style>
+
 <script>
+// Handle category selection
+const categoryCheckboxes = document.querySelectorAll('.category-checkbox');
+categoryCheckboxes.forEach(checkbox => {
+    checkbox.addEventListener('change', function() {
+        updateSelectedCategories();
+    });
+});
+
+function updateSelectedCategories() {
+    const selectedCategories = [];
+    categoryCheckboxes.forEach(checkbox => {
+        if (checkbox.checked) {
+            const categoryName = checkbox.nextElementSibling.querySelector('.category-text').textContent;
+            selectedCategories.push(categoryName);
+        }
+    });
+    
+    // Update a hidden field or display selected count
+    const selectedCount = selectedCategories.length;
+    console.log(`Selected ${selectedCount} categories:`, selectedCategories);
+}
+
+// Initialize category selection on page load
+updateSelectedCategories();
+
 document.getElementById('profileForm').addEventListener('submit', function(e) {
     e.preventDefault();
     
     const formData = new FormData(this);
+    
+    // Add selected categories to form data
+    const selectedCategories = [];
+    categoryCheckboxes.forEach(checkbox => {
+        if (checkbox.checked) {
+            const categoryName = checkbox.nextElementSibling.querySelector('.category-text').textContent;
+            selectedCategories.push(categoryName);
+        }
+    });
+    formData.set('specialties', selectedCategories.join(', '));
+    
     const submitBtn = this.querySelector('button[type="submit"]');
     const originalText = submitBtn.innerHTML;
     

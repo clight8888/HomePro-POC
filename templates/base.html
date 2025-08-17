@@ -176,8 +176,15 @@
                 </ul>
                 <ul class="navbar-nav ms-auto">
                     {% if user %}
+                        {% if user.role == 'contractor' %}
                         <li class="nav-item">
-                            <a class="nav-link position-relative me-2" href="#" onclick="showNotifications(); return false;" title="Notifications">
+                            <a class="nav-link position-relative" href="{{ url_for('contractor_messages') }}" title="Messages">
+                                <i class="fas fa-comments"></i>
+                            </a>
+                        </li>
+                        {% endif %}
+                        <li class="nav-item">
+                            <a class="nav-link position-relative me-1" href="#" onclick="showNotifications(); return false;" title="Notifications">
                                 <i class="fas fa-bell"></i>
                                 <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="notificationBadge" style="display: none;">
                                     0
@@ -200,6 +207,14 @@
                                 <li><a class="dropdown-item" href="{% if user.role == 'contractor' %}{{ url_for('contractor_profile') }}{% else %}#{% endif %}">
                                     <i class="fas fa-user me-2"></i>Profile
                                 </a></li>
+                                {% if user.role == 'contractor' %}
+                                <li><a class="dropdown-item" href="{{ url_for('contractor_availability') }}">
+                                    <i class="fas fa-calendar-alt me-2"></i>Calendar
+                                </a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('contractor_reviews', contractor_id=contractor_id) }}">
+                                    <i class="fas fa-star me-2"></i>My Reviews
+                                </a></li>
+                                {% endif %}
                                 <li><hr class="dropdown-divider"></li>
                                 <li><a class="dropdown-item" href="{{ url_for('logout') }}">
                                     <i class="fas fa-sign-out-alt me-2"></i>Logout
@@ -271,8 +286,7 @@
                         <div class="col-4">
                             <h6 class="footer-heading">Support</h6>
                             <ul class="footer-links">
-                                <li><a href="#">Help Center</a></li>
-                                <li><a href="#">Contact Us</a></li>
+                                <li><a href="{{ url_for('contact') }}">Contact Us</a></li>
                             </ul>
                         </div>
                     </div>

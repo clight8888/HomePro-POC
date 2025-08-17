@@ -1,0 +1,333 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Invoices - HomePro{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="mb-1"><i class="fas fa-file-invoice text-primary me-2"></i>Manage Invoices</h2>
+                    <p class="text-muted mb-0">Create and track invoices for completed work</p>
+                </div>
+                <div>
+                    <a href="{{ url_for('contractor_profile') }}" class="btn btn-outline-secondary me-2">
+                        <i class="fas fa-arrow-left me-1"></i>Back to Profile
+                    </a>
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createInvoiceModal">
+                        <i class="fas fa-plus me-1"></i>Create New Invoice
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Invoice Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="card-title mb-0">Total Outstanding</h6>
+                            <h4 class="mb-0">${{ "%.2f"|format(summary.total_outstanding or 0) }}</h4>
+                        </div>
+                        <i class="fas fa-clock fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="card-title mb-0">Total Paid</h6>
+                            <h4 class="mb-0">${{ "%.2f"|format(summary.total_paid or 0) }}</h4>
+                        </div>
+                        <i class="fas fa-check-circle fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="card-title mb-0">Overdue</h6>
+                            <h4 class="mb-0">${{ "%.2f"|format(summary.total_overdue or 0) }}</h4>
+                        </div>
+                        <i class="fas fa-exclamation-triangle fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="card-title mb-0">This Month</h6>
+                            <h4 class="mb-0">${{ "%.2f"|format(summary.this_month or 0) }}</h4>
+                        </div>
+                        <i class="fas fa-calendar fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Invoices List -->
+    <div class="row">
+        <div class="col-12">
+            {% if invoices %}
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Your Invoices</h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Invoice #</th>
+                                        <th>Project</th>
+                                        <th>Client</th>
+                                        <th>Amount</th>
+                                        <th>Status</th>
+                                        <th>Due Date</th>
+                                        <th>Created</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for invoice in invoices %}
+                                    <tr>
+                                        <td>
+                                            <strong class="text-primary">{{ invoice.invoice_number }}</strong>
+                                        </td>
+                                        <td>
+                                            <div>
+                                                <strong>{{ invoice.project_title }}</strong>
+                                                <br>
+                                                <small class="text-muted">{{ invoice.title }}</small>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div>
+                                                <strong>{{ invoice.client_name }}</strong>
+                                                <br>
+                                                <small class="text-muted">{{ invoice.client_location }}</small>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <strong>${{ "%.2f"|format(invoice.final_amount) }}</strong>
+                                            {% if invoice.tax_amount > 0 %}
+                                                <br><small class="text-muted">(+${{ "%.2f"|format(invoice.tax_amount) }} tax)</small>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if invoice.status == 'draft' %}
+                                                <span class="badge bg-secondary">Draft</span>
+                                            {% elif invoice.status == 'sent' %}
+                                                <span class="badge bg-primary">Sent</span>
+                                            {% elif invoice.status == 'paid' %}
+                                                <span class="badge bg-success">Paid</span>
+                                            {% elif invoice.status == 'overdue' %}
+                                                <span class="badge bg-danger">Overdue</span>
+                                            {% elif invoice.status == 'cancelled' %}
+                                                <span class="badge bg-warning">Cancelled</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if invoice.due_date %}
+                                                {% set is_overdue = invoice.due_date < current_date and invoice.status not in ['paid', 'cancelled'] %}
+                                                <span class="{% if is_overdue %}text-danger fw-bold{% endif %}">
+                                                    {{ invoice.due_date.strftime('%m/%d/%Y') }}
+                                                </span>
+                                                {% if is_overdue %}
+                                                    <br><small class="text-danger">Overdue</small>
+                                                {% endif %}
+                                            {% else %}
+                                                <span class="text-muted">No due date</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <small class="text-muted">{{ invoice.created_at.strftime('%m/%d/%Y') }}</small>
+                                        </td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm">
+                                                <button class="btn btn-outline-primary" title="View/Edit">
+                                                    <i class="fas fa-eye"></i>
+                                                </button>
+                                                {% if invoice.status == 'draft' %}
+                                                    <button class="btn btn-outline-success" title="Send Invoice">
+                                                        <i class="fas fa-paper-plane"></i>
+                                                    </button>
+                                                {% endif %}
+                                                {% if invoice.status in ['sent', 'overdue'] %}
+                                                    <button class="btn btn-outline-info" title="Mark as Paid">
+                                                        <i class="fas fa-check"></i>
+                                                    </button>
+                                                {% endif %}
+                                                <button class="btn btn-outline-secondary" title="Download PDF">
+                                                    <i class="fas fa-download"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            {% else %}
+                <div class="card">
+                    <div class="card-body text-center py-5">
+                        <i class="fas fa-file-invoice fa-3x text-muted mb-3"></i>
+                        <h4 class="text-muted">No Invoices Yet</h4>
+                        <p class="text-muted mb-4">You haven't created any invoices yet. Start by creating your first invoice for completed work.</p>
+                        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createInvoiceModal">
+                            <i class="fas fa-plus me-1"></i>Create Your First Invoice
+                        </button>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Create Invoice Modal -->
+<div class="modal fade" id="createInvoiceModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Create New Invoice</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="createInvoiceForm">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="invoice_project_id" class="form-label">Project *</label>
+                                <select class="form-select" id="invoice_project_id" name="project_id" required>
+                                    <option value="">Select a project...</option>
+                                    <!-- Projects will be loaded dynamically -->
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="invoice_title" class="form-label">Invoice Title *</label>
+                                <input type="text" class="form-control" id="invoice_title" name="title" required placeholder="e.g., Kitchen Renovation - Final Invoice">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="invoice_description" class="form-label">Description</label>
+                        <textarea class="form-control" id="invoice_description" name="description" rows="3" placeholder="Detailed description of completed work..."></textarea>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="invoice_labor_cost" class="form-label">Labor Cost</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" class="form-control" id="invoice_labor_cost" name="labor_cost" min="0" step="0.01" value="0">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="invoice_materials_cost" class="form-label">Materials Cost</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" class="form-control" id="invoice_materials_cost" name="materials_cost" min="0" step="0.01" value="0">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="invoice_other_costs" class="form-label">Other Costs</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" class="form-control" id="invoice_other_costs" name="other_costs" min="0" step="0.01" value="0">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="invoice_tax_rate" class="form-label">Tax Rate (%)</label>
+                                <input type="number" class="form-control" id="invoice_tax_rate" name="tax_rate" min="0" max="100" step="0.01" value="0">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="invoice_due_date" class="form-label">Due Date</label>
+                                <input type="date" class="form-control" id="invoice_due_date" name="due_date">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="invoice_notes" class="form-label">Payment Terms & Notes</label>
+                        <textarea class="form-control" id="invoice_notes" name="notes" rows="2" placeholder="Payment terms, additional notes..."></textarea>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <strong>Total Amount:</strong> $<span id="invoiceTotalAmount">0.00</span>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-outline-primary" id="saveInvoiceDraftBtn">Save as Draft</button>
+                <button type="button" class="btn btn-primary" id="createInvoiceBtn">Create & Send Invoice</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Calculate total amount for invoice
+function calculateInvoiceTotal() {
+    const labor = parseFloat(document.getElementById('invoice_labor_cost').value) || 0;
+    const materials = parseFloat(document.getElementById('invoice_materials_cost').value) || 0;
+    const other = parseFloat(document.getElementById('invoice_other_costs').value) || 0;
+    const taxRate = parseFloat(document.getElementById('invoice_tax_rate').value) || 0;
+    
+    const subtotal = labor + materials + other;
+    const taxAmount = subtotal * (taxRate / 100);
+    const total = subtotal + taxAmount;
+    
+    document.getElementById('invoiceTotalAmount').textContent = total.toFixed(2);
+}
+
+// Add event listeners for cost inputs
+document.addEventListener('DOMContentLoaded', function() {
+    const costInputs = ['invoice_labor_cost', 'invoice_materials_cost', 'invoice_other_costs', 'invoice_tax_rate'];
+    costInputs.forEach(id => {
+        document.getElementById(id).addEventListener('input', calculateInvoiceTotal);
+    });
+    
+    // Set default due date (30 days from now)
+    const dueDateInput = document.getElementById('invoice_due_date');
+    const thirtyDaysFromNow = new Date();
+    thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
+    dueDateInput.value = thirtyDaysFromNow.toISOString().split('T')[0];
+    
+    // Initial calculation
+    calculateInvoiceTotal();
+});
+</script>
+{% endblock %}

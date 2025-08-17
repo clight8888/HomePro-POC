@@ -108,6 +108,27 @@
                     <div class="text-center mt-4">
                         <p class="mb-0">Already have an account? <a href="{{ url_for('login') }}" class="text-decoration-none">Sign in here</a></p>
                     </div>
+                    
+                    <!-- Enhanced Onboarding Notice for Contractors -->
+                    <div id="contractor-notice" class="mt-4 p-4 bg-light border border-primary rounded d-none">
+                        <div class="d-flex align-items-start">
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-info-circle text-primary"></i>
+                            </div>
+                            <div class="ms-3">
+                                <h5 class="text-primary mb-2">Enhanced Setup Experience</h5>
+                                <div class="text-muted">
+                                    <p>After registration, you'll be guided through our new "Effortless Efficiency" onboarding process featuring:</p>
+                                    <ul class="mt-2">
+                                        <li>Visual skill selector with smart recommendations</li>
+                                        <li>Interactive service area mapping</li>
+                                        <li>AI-powered portfolio quick-setup</li>
+                                        <li>Real-time license and insurance verification</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -122,12 +143,15 @@
         const homeownerRadio = document.getElementById('homeowner');
         const contractorRadio = document.getElementById('contractor');
         const contractorFields = document.getElementById('contractor-fields');
+        const contractorNotice = document.getElementById('contractor-notice');
         
         function toggleContractorFields() {
             if (contractorRadio.checked) {
                 contractorFields.style.display = 'block';
+                contractorNotice.classList.remove('d-none');
             } else {
                 contractorFields.style.display = 'none';
+                contractorNotice.classList.add('d-none');
             }
         }
         
@@ -139,6 +163,9 @@
         const userType = urlParams.get('type');
         if (userType === 'contractor') {
             contractorRadio.checked = true;
+            toggleContractorFields();
+        } else if (userType === 'homeowner') {
+            homeownerRadio.checked = true;
             toggleContractorFields();
         }
     });
