@@ -259,7 +259,7 @@ def add_bid_history(bid_id, action, old_status=None, new_status=None, old_amount
         
         cursor.execute('''
             INSERT INTO bid_history (bid_id, action, old_status, new_status, old_amount, new_amount, notes, created_by)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         ''', (bid_id, action, old_status, new_status, old_amount, new_amount, notes, created_by))
         
         conn.commit()
@@ -356,7 +356,7 @@ def expire_old_bids():
         # Update expired bids
         for bid in expired_bids:
             cursor.execute('''
-                UPDATE bids SET status = 'Expired' WHERE id = %s
+                UPDATE bids SET status = 'Expired' WHERE id = ?
             ''', (bid['id'],))
             
             # Add history entry
@@ -472,7 +472,7 @@ def contact():
             cursor.execute('''
                 INSERT INTO contact_submissions 
                 (user_id, name, email, subject, message, user_type, ip_address, user_agent, created_at)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, NOW())
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())
             ''', (
                 user_id,
                 name,
@@ -534,7 +534,7 @@ def register():
             # Check if user already exists
             conn = get_db_connection()
             cursor = conn.cursor()
-            cursor.execute('SELECT id FROM users WHERE email = %s', (email,))
+            cursor.execute('SELECT id FROM users WHERE email = ?', (email,))
             existing_user = cursor.fetchone()
             
             if existing_user:
@@ -549,7 +549,7 @@ def register():
             # Insert into users table
             cursor.execute('''
                 INSERT INTO users (email, password_hash, first_name, last_name, role)
-                VALUES (%s, %s, %s, %s, %s)
+                VALUES (?, ?, ?, ?, ?)
             ''', (email, password_hash, first_name, last_name, user_type))
             
             user_id = cursor.lastrowid
@@ -558,7 +558,7 @@ def register():
             if user_type == 'homeowner':
                 cursor.execute('''
                     INSERT INTO homeowners (user_id, location)
-                    VALUES (%s, %s)
+                    VALUES (?, ?)
                 ''', (user_id, location))
             else:  # contractor
                 # Get contractor-specific fields
@@ -568,13 +568,13 @@ def register():
                 
                 cursor.execute('''
                     INSERT INTO contractors (user_id, location, company, specialties, business_info, onboarding_completed)
-                    VALUES (%s, %s, %s, %s, %s, %s)
+                    VALUES (?, ?, ?, ?, ?, ?)
                 ''', (user_id, location, company, specialties, business_info, False))
             
             # Check onboarding status for contractors before committing
             onboarding_completed = False
             if user_type == 'contractor':
-                cursor.execute('SELECT onboarding_completed FROM contractors WHERE user_id = %s', (user_id,))
+                cursor.execute('SELECT onboarding_completed FROM contractors WHERE user_id = ?', (user_id,))
                 contractor = cursor.fetchone()
                 onboarding_completed = contractor.get('onboarding_completed', False) if contractor else False
             
@@ -655,7 +655,7 @@ def is_admin_user(user_id):
         cursor = conn.cursor()
         cursor.execute('''
             SELECT admin_level, is_active FROM admin_users 
-            WHERE user_id = %s AND is_active = TRUE
+            WHERE user_id = ? AND is_active = TRUE
         ''', (user_id,))
         admin = cursor.fetchone()
         cursor.close()
@@ -672,7 +672,7 @@ def get_admin_level(user_id):
         cursor = conn.cursor()
         cursor.execute('''
             SELECT admin_level FROM admin_users 
-            WHERE user_id = %s AND is_active = TRUE
+            WHERE user_id = ? AND is_active = TRUE
         ''', (user_id,))
         admin = cursor.fetchone()
         cursor.close()
@@ -694,7 +694,7 @@ def log_admin_activity(admin_user_id, action, target_type, target_id=None, detai
         cursor.execute('''
             INSERT INTO admin_activity_logs 
             (admin_user_id, action, target_type, target_id, details, ip_address, user_agent)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
         ''', (admin_user_id, action, target_type, target_id, json.dumps(details) if details else None, ip_address, user_agent))
         
         conn.commit()
@@ -742,7 +742,7 @@ def guest_register():
     if guest_project_id:
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute('SELECT * FROM guest_projects WHERE id = %s AND status = "Pending"', (guest_project_id,))
+        cursor.execute('SELECT * FROM guest_projects WHERE id = ? AND status = "Pending"', (guest_project_id,))
         guest_project = cursor.fetchone()
         cursor.close()
         conn.close()
@@ -775,7 +775,7 @@ def guest_register():
             cursor = conn.cursor()
             
             # Check if email already exists
-            cursor.execute('SELECT id FROM users WHERE email = %s', (email,))
+            cursor.execute('SELECT id FROM users WHERE email = ?', (email,))
             existing_user = cursor.fetchone()
             if existing_user:
                 flash('An account with this email already exists. Please sign in instead.')
@@ -787,7 +787,7 @@ def guest_register():
             password_hash = generate_password_hash(password)
             cursor.execute('''
                 INSERT INTO users (email, password_hash, first_name, last_name, role)
-                VALUES (%s, %s, %s, %s, %s)
+                VALUES (?, ?, ?, ?, ?)
             ''', (email, password_hash, first_name, last_name, 'homeowner'))
             
             user_id = cursor.lastrowid
@@ -795,7 +795,7 @@ def guest_register():
             # Create homeowner record
             cursor.execute('''
                 INSERT INTO homeowners (user_id, location)
-                VALUES (%s, %s)
+                VALUES (?, ?)
             ''', (user_id, location))
             
             homeowner_id = cursor.lastrowid
@@ -806,7 +806,7 @@ def guest_register():
                 cursor.execute('''
                     INSERT INTO projects (title, description, project_type, location, budget_min, budget_max, 
                                         timeline, original_file_path, ai_processed_text, homeowner_id, created_at)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ''', (guest_project['title'], guest_project['description'], guest_project['project_type'],
                       guest_project['location'] or location, guest_project['budget_min'], guest_project['budget_max'],
                       guest_project['timeline'], guest_project['original_file_path'], guest_project['ai_processed_text'],
@@ -816,7 +816,7 @@ def guest_register():
                 
                 # Mark guest project as claimed
                 cursor.execute('''
-                    UPDATE guest_projects SET status = 'Claimed' WHERE id = %s
+                    UPDATE guest_projects SET status = 'Claimed' WHERE id = ?
                 ''', (guest_project_id,))
                 
                 # Clear guest project from session
@@ -908,7 +908,7 @@ def save_bid_comparison():
     cursor = conn.cursor()
     
     # Get homeowner ID
-    cursor.execute('SELECT id FROM homeowners WHERE user_id = %s', (user['id'],))
+    cursor.execute('SELECT id FROM homeowners WHERE user_id = ?', (user['id'],))
     homeowner_result = cursor.fetchone()
     if not homeowner_result:
         cursor.close()
@@ -918,7 +918,7 @@ def save_bid_comparison():
     homeowner_id = homeowner_result['id']
     
     # Verify project ownership
-    cursor.execute('SELECT * FROM projects WHERE id = %s AND homeowner_id = %s', (project_id, homeowner_id))
+    cursor.execute('SELECT * FROM projects WHERE id = ? AND homeowner_id = ?', (project_id, homeowner_id))
     if not cursor.fetchone():
         cursor.close()
         conn.close()
@@ -928,7 +928,7 @@ def save_bid_comparison():
     import json
     cursor.execute('''
         INSERT INTO bid_comparisons (project_id, homeowner_id, bid_ids, comparison_notes)
-        VALUES (%s, %s, %s, %s)
+        VALUES (?, ?, ?, ?)
     ''', (project_id, homeowner_id, json.dumps(bid_ids), notes))
     
     conn.commit()
@@ -949,7 +949,7 @@ def get_bid_comparisons(project_id):
     cursor = conn.cursor()
     
     # Get homeowner ID
-    cursor.execute('SELECT id FROM homeowners WHERE user_id = %s', (user['id'],))
+    cursor.execute('SELECT id FROM homeowners WHERE user_id = ?', (user['id'],))
     homeowner_result = cursor.fetchone()
     if not homeowner_result:
         cursor.close()
@@ -998,7 +998,7 @@ def send_bid_message(bid_id):
         FROM bids b
         JOIN projects p ON b.project_id = p.id
         JOIN contractors c ON b.contractor_id = c.id
-        WHERE b.id = %s
+        WHERE b.id = ?
     ''', (bid_id,))
     
     bid = cursor.fetchone()
@@ -1021,20 +1021,20 @@ def send_bid_message(bid_id):
             cursor.close()
             conn.close()
             return jsonify({'success': False, 'message': 'Access denied'}), 403
-        cursor.execute('SELECT user_id FROM homeowners WHERE id = %s', (bid['homeowner_id'],))
+        cursor.execute('SELECT user_id FROM homeowners WHERE id = ?', (bid['homeowner_id'],))
         homeowner_user = cursor.fetchone()
         receiver_id = homeowner_user['user_id']
     
     # Insert message
     cursor.execute('''
         INSERT INTO bid_messages (bid_id, sender_id, receiver_id, message_type, message_text, proposed_amount, proposed_timeline)
-        VALUES (%s, %s, %s, %s, %s, %s, %s)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
     ''', (bid_id, user['id'], receiver_id, message_type, message_text, proposed_amount, proposed_timeline))
     
     message_id = cursor.lastrowid
     
     # Update bid activity timestamp
-    cursor.execute('UPDATE bids SET last_activity_at = NOW() WHERE id = %s', (bid_id,))
+    cursor.execute('UPDATE bids SET last_activity_at = NOW() WHERE id = ?', (bid_id,))
     
     # Create notification
     notification_type = 'new_message' if message_type in ['question', 'clarification'] else 'counter_offer'
@@ -1043,7 +1043,7 @@ def send_bid_message(bid_id):
     
     cursor.execute('''
         INSERT INTO bid_notifications (bid_id, user_id, notification_type, title, message)
-        VALUES (%s, %s, %s, %s, %s)
+        VALUES (?, ?, ?, ?, ?)
     ''', (bid_id, receiver_id, notification_type, title, notification_message))
     
     conn.commit()
@@ -1072,7 +1072,7 @@ def get_bid_details(bid_id):
         JOIN homeowners h ON p.homeowner_id = h.id
         JOIN users u ON h.user_id = u.id
         JOIN contractors c ON b.contractor_id = c.id
-        WHERE b.id = %s
+        WHERE b.id = ?
     ''', (bid_id,))
     
     bid = cursor.fetchone()
@@ -1130,7 +1130,7 @@ def get_bid_messages(bid_id):
         FROM bids b
         JOIN projects p ON b.project_id = p.id
         JOIN contractors c ON b.contractor_id = c.id
-        WHERE b.id = %s
+        WHERE b.id = ?
     ''', (bid_id,))
     
     bid = cursor.fetchone()
@@ -1161,7 +1161,7 @@ def get_bid_messages(bid_id):
                u.first_name, u.last_name, u.role
         FROM bid_messages bm
         JOIN users u ON bm.sender_id = u.id
-        WHERE bm.bid_id = %s
+        WHERE bm.bid_id = ?
         ORDER BY bm.created_at ASC
     ''', (bid_id,))
     
@@ -1171,7 +1171,7 @@ def get_bid_messages(bid_id):
     cursor.execute('''
         UPDATE bid_messages 
         SET is_read = TRUE 
-        WHERE bid_id = %s AND receiver_id = %s AND is_read = FALSE
+        WHERE bid_id = ? AND receiver_id = ? AND is_read = FALSE
     ''', (bid_id, user['id']))
     
     conn.commit()
@@ -1217,7 +1217,7 @@ def mark_notification_read(notification_id):
     cursor.execute('''
         UPDATE bid_notifications 
         SET is_read = TRUE 
-        WHERE id = %s AND user_id = %s
+        WHERE id = ? AND user_id = ?
     ''', (notification_id, user['id']))
     
     conn.commit()
@@ -1239,7 +1239,7 @@ def get_contractor_message_stats():
     cursor = conn.cursor()
     
     # Get contractor ID
-    cursor.execute('SELECT id FROM contractors WHERE user_id = %s', (user['id'],))
+    cursor.execute('SELECT id FROM contractors WHERE user_id = ?', (user['id'],))
     contractor_result = cursor.fetchone()
     if not contractor_result:
         return jsonify({'success': False, 'message': 'Contractor not found'}), 404
@@ -1249,7 +1249,7 @@ def get_contractor_message_stats():
     cursor.execute('''
         SELECT COUNT(DISTINCT b.id) as total
         FROM bids b
-        WHERE b.contractor_id = %s
+        WHERE b.contractor_id = ?
         AND EXISTS (SELECT 1 FROM bid_messages bm WHERE bm.bid_id = b.id)
     ''', (contractor_id,))
     total_conversations = cursor.fetchone()['total']
@@ -1259,8 +1259,8 @@ def get_contractor_message_stats():
         SELECT COUNT(*) as unread
         FROM bid_messages bm
         JOIN bids b ON bm.bid_id = b.id
-        WHERE b.contractor_id = %s
-        AND bm.receiver_id = %s
+        WHERE b.contractor_id = ?
+        AND bm.receiver_id = ?
         AND bm.is_read = FALSE
     ''', (contractor_id, user['id']))
     unread_messages = cursor.fetchone()['unread']
@@ -1269,7 +1269,7 @@ def get_contractor_message_stats():
     cursor.execute('''
         SELECT COUNT(DISTINCT b.id) as active
         FROM bids b
-        WHERE b.contractor_id = %s
+        WHERE b.contractor_id = ?
         AND b.status IN ('Submitted', 'Under Review')
         AND b.negotiation_allowed = TRUE
         AND b.last_activity_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
@@ -1299,7 +1299,7 @@ def get_contractor_messages():
     cursor = conn.cursor()
     
     # Get contractor ID
-    cursor.execute('SELECT id FROM contractors WHERE user_id = %s', (user['id'],))
+    cursor.execute('SELECT id FROM contractors WHERE user_id = ?', (user['id'],))
     contractor_result = cursor.fetchone()
     if not contractor_result:
         return jsonify({'success': False, 'message': 'Contractor not found'}), 404
@@ -1317,14 +1317,14 @@ def get_contractor_messages():
                p.title as project_title,
                CONCAT(u.first_name, ' ', u.last_name) as homeowner_name,
                (SELECT COUNT(*) FROM bid_messages bm 
-                WHERE bm.bid_id = b.id AND bm.receiver_id = %s AND bm.is_read = FALSE) as unread_count,
+                WHERE bm.bid_id = b.id AND bm.receiver_id = ? AND bm.is_read = FALSE) as unread_count,
                (SELECT bm2.message_text FROM bid_messages bm2 
                 WHERE bm2.bid_id = b.id ORDER BY bm2.created_at DESC LIMIT 1) as last_message
         FROM bids b
         JOIN projects p ON b.project_id = p.id
         JOIN homeowners h ON p.homeowner_id = h.id
         JOIN users u ON h.user_id = u.id
-        WHERE b.contractor_id = %s
+        WHERE b.contractor_id = ?
         AND EXISTS (SELECT 1 FROM bid_messages bm WHERE bm.bid_id = b.id)
     '''
     
@@ -1345,7 +1345,7 @@ def get_contractor_messages():
     
     # Add search filter
     if search_term:
-        query += " AND (p.title LIKE %s OR CONCAT(u.first_name, ' ', u.last_name) LIKE %s)"
+        query += " AND (p.title LIKE ? OR CONCAT(u.first_name, ' ', u.last_name) LIKE ?)"
         search_pattern = f'%{search_term}%'
         params.extend([search_pattern, search_pattern])
     
@@ -1384,7 +1384,7 @@ def mark_bid_messages_read(bid_id):
         FROM bids b
         JOIN projects p ON b.project_id = p.id
         JOIN contractors c ON b.contractor_id = c.id
-        WHERE b.id = %s
+        WHERE b.id = ?
     ''', (bid_id,))
     
     bid = cursor.fetchone()
@@ -1413,7 +1413,7 @@ def mark_bid_messages_read(bid_id):
     cursor.execute('''
         UPDATE bid_messages 
         SET is_read = TRUE 
-        WHERE bid_id = %s AND receiver_id = %s AND is_read = FALSE
+        WHERE bid_id = ? AND receiver_id = ? AND is_read = FALSE
     ''', (bid_id, user['id']))
     
     conn.commit()
@@ -1450,7 +1450,7 @@ def send_bid_message_api():
             JOIN projects p ON b.project_id = p.id
             JOIN contractors c ON b.contractor_id = c.id
             JOIN homeowners h ON p.homeowner_id = h.id
-            WHERE b.id = %s
+            WHERE b.id = ?
         ''', (bid_id,))
         
         bid = cursor.fetchone()
@@ -1470,7 +1470,7 @@ def send_bid_message_api():
         cursor.execute('''
             INSERT INTO bid_messages (bid_id, sender_id, receiver_id, message_text, message_type, 
                                     proposed_amount, proposed_timeline)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
         ''', (bid_id, user['id'], receiver_id, message, message_type, 
               price_adjustment, timeline_adjustment))
         
@@ -1478,7 +1478,7 @@ def send_bid_message_api():
         
         # Update bid activity
         cursor.execute('''
-            UPDATE bids SET last_activity_at = NOW() WHERE id = %s
+            UPDATE bids SET last_activity_at = NOW() WHERE id = ?
         ''', (bid_id,))
         
         # Create notification for receiver
@@ -1492,7 +1492,7 @@ def send_bid_message_api():
         
         cursor.execute('''
             INSERT INTO bid_notifications (bid_id, user_id, notification_type, title, message)
-            VALUES (%s, %s, %s, %s, %s)
+            VALUES (?, ?, ?, ?, ?)
         ''', (bid_id, receiver_id, 'new_message', notification_title, 
               f'New message: {message[:100]}...'))
         
@@ -1542,7 +1542,7 @@ def get_project_messages(project_id):
         # Verify user is actually a contractor
         cursor.execute('''
             SELECT c.id FROM contractors c
-            WHERE c.user_id = %s
+            WHERE c.user_id = ?
         ''', (user['id'],))
         if cursor.fetchone():
             has_access = True
@@ -1558,7 +1558,7 @@ def get_project_messages(project_id):
                u.first_name, u.last_name, u.role
         FROM project_messages pm
         JOIN users u ON pm.sender_id = u.id
-        WHERE pm.project_id = %s
+        WHERE pm.project_id = ?
         ORDER BY pm.created_at ASC
     ''', (project_id,))
     
@@ -1616,7 +1616,7 @@ def send_project_message():
             # Verify user is actually a contractor
             cursor.execute('''
                 SELECT c.id FROM contractors c
-                WHERE c.user_id = %s
+                WHERE c.user_id = ?
             ''', (user['id'],))
             if cursor.fetchone():
                 has_access = True
@@ -1627,7 +1627,7 @@ def send_project_message():
         # Insert message
         cursor.execute('''
             INSERT INTO project_messages (project_id, sender_id, receiver_id, message_text, message_type)
-            VALUES (%s, %s, %s, %s, %s)
+            VALUES (?, ?, ?, ?, ?)
         ''', (project_id, user['id'], receiver_id, message, message_type))
         
         message_id = cursor.lastrowid
@@ -1635,7 +1635,7 @@ def send_project_message():
         # Create notification for receiver
         cursor.execute('''
             INSERT INTO notifications (user_id, title, message, type, related_id)
-            VALUES (%s, %s, %s, %s, %s)
+            VALUES (?, ?, ?, ?, ?)
         ''', (receiver_id, 'New Project Message', 
               f'New message about project: {project["title"]}', 'project_message', project_id))
         
@@ -1663,7 +1663,7 @@ def manual_expire_bids():
     # Check if user is admin (simplified check)
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute('SELECT * FROM admin_users WHERE user_id = %s AND is_active = TRUE', (user['id'],))
+    cursor.execute('SELECT * FROM admin_users WHERE user_id = ? AND is_active = TRUE', (user['id'],))
     if not cursor.fetchone():
         cursor.close()
         conn.close()
@@ -1715,14 +1715,14 @@ def expire_old_bids():
             for bid in expired_bids:
                 # Notify contractor
                 cursor.execute('''
-                    SELECT user_id FROM contractors WHERE id = %s
+                    SELECT user_id FROM contractors WHERE id = ?
                 ''', (bid['contractor_id'],))
                 contractor_user = cursor.fetchone()
                 
                 if contractor_user:
                     cursor.execute('''
                         INSERT INTO bid_notifications (bid_id, user_id, notification_type, title, message)
-                        VALUES (%s, %s, %s, %s, %s)
+                        VALUES (?, ?, ?, ?, ?)
                     ''', (bid['id'], contractor_user['user_id'], 'bid_expired', 
                           'Bid Expired', f'Your bid of ${bid["amount"]:,.2f} has expired'))
                 
@@ -1730,14 +1730,14 @@ def expire_old_bids():
                 cursor.execute('''
                     SELECT h.user_id FROM homeowners h
                     JOIN projects p ON h.id = p.homeowner_id
-                    WHERE p.id = %s
+                    WHERE p.id = ?
                 ''', (bid['project_id'],))
                 homeowner_user = cursor.fetchone()
                 
                 if homeowner_user:
                     cursor.execute('''
                         INSERT INTO bid_notifications (bid_id, user_id, notification_type, title, message)
-                        VALUES (%s, %s, %s, %s, %s)
+                        VALUES (?, ?, ?, ?, ?)
                     ''', (bid['id'], homeowner_user['user_id'], 'bid_expired', 
                           'Bid Expired', f'A bid of ${bid["amount"]:,.2f} on your project has expired'))
         
@@ -1756,19 +1756,27 @@ def expire_old_bids():
 #     """Adapted for Cognito - run manually or via script"""
 
 def get_db_connection():
-    # MySQL only. Fail fast if misconfigured or unreachable.
-    required = ['DB_HOST', 'DB_USERNAME', 'DB_PASSWORD', 'DB_NAME']
-    missing = [k for k in required if not os.getenv(k)]
-    if missing:
-        raise RuntimeError(f"Missing required DB env vars: {', '.join(missing)}")
-    return pymysql.connect(
-        host=os.getenv('DB_HOST'),
-        user=os.getenv('DB_USERNAME'),
-        password=os.getenv('DB_PASSWORD'),
-        db=os.getenv('DB_NAME'),
-        port=int(os.getenv('DB_PORT', 3306)),
-        cursorclass=pymysql.cursors.DictCursor
-    )
+    # Check if we're in local development (SQLite) or production (MySQL)
+    if os.path.exists('homepro.db') or os.getenv('FLASK_ENV') == 'development':
+        # Use SQLite for local development
+        import sqlite3
+        conn = sqlite3.connect('homepro.db')
+        conn.row_factory = sqlite3.Row
+        return conn
+    else:
+        # MySQL for production. Fail fast if misconfigured or unreachable.
+        required = ['DB_HOST', 'DB_USERNAME', 'DB_PASSWORD', 'DB_NAME']
+        missing = [k for k in required if not os.getenv(k)]
+        if missing:
+            raise RuntimeError(f"Missing required DB env vars: {', '.join(missing)}")
+        return pymysql.connect(
+            host=os.getenv('DB_HOST'),
+            user=os.getenv('DB_USERNAME'),
+            password=os.getenv('DB_PASSWORD'),
+            db=os.getenv('DB_NAME'),
+            port=int(os.getenv('DB_PORT', 3306)),
+            cursorclass=pymysql.cursors.DictCursor
+        )
 
 def safe_close(cursor=None, conn=None):
     """Close DB cursor/connection safely without raising if already closed."""
@@ -2976,7 +2984,7 @@ def submit_preview():
         cursor = conn.cursor()
         
         # Get homeowner ID from homeowners table
-        cursor.execute('SELECT id FROM homeowners WHERE user_id = %s', (user['id'],))
+        cursor.execute('SELECT id FROM homeowners WHERE user_id = ?', (user['id'],))
         homeowner_result = cursor.fetchone()
         if not homeowner_result:
             return jsonify({
@@ -2991,7 +2999,7 @@ def submit_preview():
             homeowner_id, title, description, project_type, location, 
             budget_min, budget_max, timeline, status,
             original_file_path, ai_processed_text, created_at
-        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW())
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
         """
         
         # Construct file path if we have filename
@@ -3040,7 +3048,7 @@ def submit_preview():
                         # Insert into project_images table
                         cursor.execute("""
                             INSERT INTO project_images (project_id, image_path, image_order, created_at)
-                            VALUES (%s, %s, %s, NOW())
+                            VALUES (?, ?, ?, NOW())
                         """, (project_id, relative_path, i))
         
         conn.commit()
@@ -3226,7 +3234,7 @@ def confirm_project():
     cursor = conn.cursor()
     
     # Get homeowner ID from homeowners table
-    cursor.execute('SELECT id FROM homeowners WHERE user_id = %s', (user['id'],))
+    cursor.execute('SELECT id FROM homeowners WHERE user_id = ?', (user['id'],))
     homeowner_result = cursor.fetchone()
     if not homeowner_result:
         flash('Homeowner profile not found. Please contact support.')
@@ -3235,7 +3243,7 @@ def confirm_project():
     
     cursor.execute('''
         INSERT INTO projects (title, description, project_type, location, budget_min, budget_max, timeline, status, original_file_path, ai_processed_text, created_at, homeowner_id)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, 'Active', %s, %s, NOW(), %s)
+        VALUES (?, ?, ?, ?, ?, ?, ?, 'Active', ?, ?, NOW(), ?)
     ''', (title, description, project_type, location, budget_min, budget_max, timeline, original_file_path, ai_results.get('transcribed_text'), homeowner_id))
     conn.commit()
     cursor.close()
@@ -3255,6 +3263,7 @@ def simple_audio_test():
 @app.route('/project/<int:project_id>')
 @login_required
 def view_project(project_id):
+    print(f"************ project_id: {project_id}, type: {type(project_id)} ************")
     conn = get_db_connection()
     cursor = conn.cursor()
     
@@ -3459,19 +3468,19 @@ def submit_bid(project_id):
     cursor = conn.cursor()
     
     # Get contractor ID from contractors table
-    cursor.execute('SELECT id FROM contractors WHERE user_id = %s', (user['id'],))
+    cursor.execute('SELECT id FROM contractors WHERE user_id = ?', (user['id'],))
     contractor_result = cursor.fetchone()
     if not contractor_result:
         flash('Contractor profile not found. Please contact support.')
         return redirect(url_for('dashboard'))
     contractor_id = contractor_result['id']
     
-    cursor.execute('SELECT * FROM projects WHERE id = %s', (project_id,))
+    cursor.execute('SELECT * FROM projects WHERE id = ?', (project_id,))
     project = cursor.fetchone()
     if not project:
         abort(404)
     
-    cursor.execute('SELECT * FROM bids WHERE project_id = %s AND contractor_id = %s', (project_id, contractor_id))
+    cursor.execute('SELECT * FROM bids WHERE project_id = ? AND contractor_id = ?', (project_id, contractor_id))
     existing_bid = cursor.fetchone()
     if existing_bid:
         flash('You have already submitted a bid for this project')
@@ -3486,7 +3495,7 @@ def submit_bid(project_id):
     
     cursor.execute('''
         INSERT INTO bids (amount, timeline, description, status, created_at, expires_at, project_id, contractor_id)
-        VALUES (%s, %s, %s, 'Submitted', NOW(), %s, %s, %s)
+        VALUES (?, ?, ?, 'Submitted', NOW(), ?, ?, ?)
     ''', (amount, timeline, description, expires_at, project_id, contractor_id))
     
     bid_id = cursor.lastrowid
@@ -3516,7 +3525,7 @@ def edit_bid(bid_id):
     cursor = conn.cursor()
     
     # Get contractor ID from contractors table
-    cursor.execute('SELECT id FROM contractors WHERE user_id = %s', (user['id'],))
+    cursor.execute('SELECT id FROM contractors WHERE user_id = ?', (user['id'],))
     contractor_result = cursor.fetchone()
     if not contractor_result:
         cursor.close()
@@ -3525,7 +3534,7 @@ def edit_bid(bid_id):
     contractor_id = contractor_result['id']
     
     # Check if the bid exists and belongs to the current contractor
-    cursor.execute('SELECT * FROM bids WHERE id = %s AND contractor_id = %s', (bid_id, contractor_id))
+    cursor.execute('SELECT * FROM bids WHERE id = ? AND contractor_id = ?', (bid_id, contractor_id))
     bid = cursor.fetchone()
     if not bid:
         cursor.close()
@@ -3551,8 +3560,8 @@ def edit_bid(bid_id):
         # Update the bid
         cursor.execute('''
             UPDATE bids 
-            SET amount = %s, timeline = %s, description = %s
-            WHERE id = %s
+            SET amount = ?, timeline = ?, description = ?
+            WHERE id = ?
         ''', (amount, timeline, description, bid_id))
         conn.commit()
         
@@ -3584,7 +3593,7 @@ def accept_bid(bid_id):
     cursor = conn.cursor()
     
     # Get homeowner ID from homeowners table
-    cursor.execute('SELECT id FROM homeowners WHERE user_id = %s', (user['id'],))
+    cursor.execute('SELECT id FROM homeowners WHERE user_id = ?', (user['id'],))
     homeowner_result = cursor.fetchone()
     if not homeowner_result:
         cursor.close()
@@ -3592,14 +3601,14 @@ def accept_bid(bid_id):
         return jsonify({'success': False, 'message': 'Homeowner profile not found'}), 404
     homeowner_id = homeowner_result['id']
     
-    cursor.execute('SELECT * FROM bids WHERE id = %s', (bid_id,))
+    cursor.execute('SELECT * FROM bids WHERE id = ?', (bid_id,))
     bid = cursor.fetchone()
     if not bid:
         cursor.close()
         conn.close()
         abort(404)
     
-    cursor.execute('SELECT * FROM projects WHERE id = %s', (bid['project_id'],))
+    cursor.execute('SELECT * FROM projects WHERE id = ?', (bid['project_id'],))
     project = cursor.fetchone()
     
     if project['homeowner_id'] != homeowner_id:
@@ -3615,8 +3624,8 @@ def accept_bid(bid_id):
     # Store old status for history
     old_status = bid['status']
     
-    cursor.execute("UPDATE bids SET status = 'Accepted' WHERE id = %s", (bid_id,))
-    cursor.execute("UPDATE bids SET status = 'Rejected' WHERE project_id = %s AND id != %s AND status = 'Submitted'", (project['id'], bid_id))
+    cursor.execute("UPDATE bids SET status = 'Accepted' WHERE id = ?", (bid_id,))
+    cursor.execute("UPDATE bids SET status = 'Rejected' WHERE project_id = ? AND id != ? AND status = 'Submitted'", (project['id'], bid_id))
     conn.commit()
     
     # Add history entry for accepted bid
@@ -3624,7 +3633,7 @@ def accept_bid(bid_id):
                    notes=f'Bid accepted by homeowner', created_by=user['id'])
     
     # Add history entries for rejected bids
-    cursor.execute("SELECT id FROM bids WHERE project_id = %s AND id != %s AND status = 'Rejected'", (project['id'], bid_id))
+    cursor.execute("SELECT id FROM bids WHERE project_id = ? AND id != ? AND status = 'Rejected'", (project['id'], bid_id))
     rejected_bids = cursor.fetchall()
     for rejected_bid in rejected_bids:
         add_bid_history(rejected_bid['id'], 'Auto-Rejected', 'Submitted', 'Rejected', 
@@ -3638,8 +3647,12 @@ def accept_bid(bid_id):
     cursor.close()
     conn.close()
     
-    # Note: To get contractor name, would need to join users table, but simplifying by not including name in message
-    return jsonify({'success': True, 'message': 'Bid accepted successfully!'})
+    # Return success with redirect to agreement creation
+    return jsonify({
+        'success': True, 
+        'message': 'Bid accepted successfully! Please create a project agreement.',
+        'redirect': url_for('create_agreement', project_id=project['id'], bid_id=bid_id)
+    })
 
 @app.route('/reject_bid/<int:bid_id>', methods=['POST'])
 @login_required
@@ -3649,7 +3662,7 @@ def reject_bid(bid_id):
     cursor = conn.cursor()
     
     # Get homeowner ID from homeowners table
-    cursor.execute('SELECT id FROM homeowners WHERE user_id = %s', (user['id'],))
+    cursor.execute('SELECT id FROM homeowners WHERE user_id = ?', (user['id'],))
     homeowner_result = cursor.fetchone()
     if not homeowner_result:
         cursor.close()
@@ -3657,14 +3670,14 @@ def reject_bid(bid_id):
         return jsonify({'success': False, 'message': 'Homeowner profile not found'}), 404
     homeowner_id = homeowner_result['id']
     
-    cursor.execute('SELECT * FROM bids WHERE id = %s', (bid_id,))
+    cursor.execute('SELECT * FROM bids WHERE id = ?', (bid_id,))
     bid = cursor.fetchone()
     if not bid:
         cursor.close()
         conn.close()
         abort(404)
     
-    cursor.execute('SELECT * FROM projects WHERE id = %s', (bid['project_id'],))
+    cursor.execute('SELECT * FROM projects WHERE id = ?', (bid['project_id'],))
     project = cursor.fetchone()
     
     if project['homeowner_id'] != homeowner_id:
@@ -3675,7 +3688,7 @@ def reject_bid(bid_id):
     # Store old status for history
     old_status = bid['status']
     
-    cursor.execute("UPDATE bids SET status = 'Rejected' WHERE id = %s", (bid_id,))
+    cursor.execute("UPDATE bids SET status = 'Rejected' WHERE id = ?", (bid_id,))
     conn.commit()
     
     # Add history entry
@@ -3698,7 +3711,7 @@ def withdraw_bid(bid_id):
     cursor = conn.cursor()
     
     # Get contractor ID from contractors table
-    cursor.execute('SELECT id FROM contractors WHERE user_id = %s', (user['id'],))
+    cursor.execute('SELECT id FROM contractors WHERE user_id = ?', (user['id'],))
     contractor_result = cursor.fetchone()
     if not contractor_result:
         cursor.close()
@@ -3707,7 +3720,7 @@ def withdraw_bid(bid_id):
     contractor_id = contractor_result['id']
     
     # Check if the bid exists and belongs to the current contractor
-    cursor.execute('SELECT * FROM bids WHERE id = %s AND contractor_id = %s', (bid_id, contractor_id))
+    cursor.execute('SELECT * FROM bids WHERE id = ? AND contractor_id = ?', (bid_id, contractor_id))
     bid = cursor.fetchone()
     if not bid:
         cursor.close()
@@ -3729,8 +3742,8 @@ def withdraw_bid(bid_id):
     # Update bid status and add withdrawal information
     cursor.execute('''
         UPDATE bids 
-        SET status = 'Withdrawn', withdrawn_at = NOW(), withdrawal_reason = %s
-        WHERE id = %s
+        SET status = 'Withdrawn', withdrawn_at = NOW(), withdrawal_reason = ?
+        WHERE id = ?
     ''', (withdrawal_reason, bid_id))
     conn.commit()
     
@@ -3756,23 +3769,23 @@ def bid_history(bid_id):
     
     # Check if user has permission to view this bid's history
     if user['role'] == 'contractor':
-        cursor.execute('SELECT id FROM contractors WHERE user_id = %s', (user['id'],))
+        cursor.execute('SELECT id FROM contractors WHERE user_id = ?', (user['id'],))
         contractor_result = cursor.fetchone()
         if contractor_result:
-            cursor.execute('SELECT * FROM bids WHERE id = %s AND contractor_id = %s', (bid_id, contractor_result['id']))
+            cursor.execute('SELECT * FROM bids WHERE id = ? AND contractor_id = ?', (bid_id, contractor_result['id']))
             bid = cursor.fetchone()
             if not bid:
                 cursor.close()
                 conn.close()
                 abort(403)
     elif user['role'] == 'homeowner':
-        cursor.execute('SELECT id FROM homeowners WHERE user_id = %s', (user['id'],))
+        cursor.execute('SELECT id FROM homeowners WHERE user_id = ?', (user['id'],))
         homeowner_result = cursor.fetchone()
         if homeowner_result:
             cursor.execute('''
                 SELECT b.* FROM bids b 
                 JOIN projects p ON b.project_id = p.id 
-                WHERE b.id = %s AND p.homeowner_id = %s
+                WHERE b.id = ? AND p.homeowner_id = ?
             ''', (bid_id, homeowner_result['id']))
             bid = cursor.fetchone()
             if not bid:
@@ -3789,7 +3802,7 @@ def bid_history(bid_id):
         SELECT bh.*, u.first_name, u.last_name 
         FROM bid_history bh
         LEFT JOIN users u ON bh.created_by = u.id
-        WHERE bh.bid_id = %s
+        WHERE bh.bid_id = ?
         ORDER BY bh.created_at DESC
     ''', (bid_id,))
     history = cursor.fetchall()
@@ -3809,13 +3822,13 @@ def update_project_progress(project_id):
     
     try:
         # Get project details
-        cursor.execute('SELECT * FROM projects WHERE id = %s', (project_id,))
+        cursor.execute('SELECT * FROM projects WHERE id = ?', (project_id,))
         project = cursor.fetchone()
         if not project:
             return jsonify({'success': False, 'message': 'Project not found'}), 404
         
         # Check if project has an accepted bid
-        cursor.execute("SELECT * FROM bids WHERE project_id = %s AND status = 'Accepted'", (project_id,))
+        cursor.execute("SELECT * FROM bids WHERE project_id = ? AND status = 'Accepted'", (project_id,))
         accepted_bid = cursor.fetchone()
         if not accepted_bid:
             return jsonify({'success': False, 'message': 'Project must have an accepted bid before progress can be updated'}), 400
@@ -3824,13 +3837,13 @@ def update_project_progress(project_id):
         can_update = False
         if user['role'] == 'homeowner':
             # Get homeowner ID and check if they own the project
-            cursor.execute('SELECT id FROM homeowners WHERE user_id = %s', (user['id'],))
+            cursor.execute('SELECT id FROM homeowners WHERE user_id = ?', (user['id'],))
             homeowner_result = cursor.fetchone()
             if homeowner_result and homeowner_result['id'] == project['homeowner_id']:
                 can_update = True
         elif user['role'] == 'contractor':
             # Get contractor ID and check if they have the accepted bid
-            cursor.execute('SELECT id FROM contractors WHERE user_id = %s', (user['id'],))
+            cursor.execute('SELECT id FROM contractors WHERE user_id = ?', (user['id'],))
             contractor_result = cursor.fetchone()
             if contractor_result and contractor_result['id'] == accepted_bid['contractor_id']:
                 can_update = True
@@ -3850,7 +3863,7 @@ def update_project_progress(project_id):
             return jsonify({'success': False, 'message': 'Progress must be in 10% increments (0, 10, 20, ..., 100)'}), 400
         
         # Get current progress
-        cursor.execute('SELECT progress_percentage FROM project_status WHERE project_id = %s ORDER BY updated_at DESC LIMIT 1', (project_id,))
+        cursor.execute('SELECT progress_percentage FROM project_status WHERE project_id = ? ORDER BY updated_at DESC LIMIT 1', (project_id,))
         current_progress = cursor.fetchone()
         current_percentage = current_progress['progress_percentage'] if current_progress else 0
         
@@ -3861,14 +3874,14 @@ def update_project_progress(project_id):
         # Insert new progress update
         cursor.execute('''
             INSERT INTO project_status (project_id, progress_percentage, update_notes, updated_by, updated_at)
-            VALUES (%s, %s, %s, %s, NOW())
+            VALUES (?, ?, ?, ?, NOW())
         ''', (project_id, progress_percentage, update_notes, user['id']))
         
         # Update project status based on progress
         if progress_percentage == 100:
-            cursor.execute("UPDATE projects SET status = 'Completed' WHERE id = %s", (project_id,))
+            cursor.execute("UPDATE projects SET status = 'Completed' WHERE id = ?", (project_id,))
         elif progress_percentage > 0:
-            cursor.execute("UPDATE projects SET status = 'In Progress' WHERE id = %s", (project_id,))
+            cursor.execute("UPDATE projects SET status = 'In Progress' WHERE id = ?", (project_id,))
         
         conn.commit()
         
@@ -3893,27 +3906,27 @@ def complete_project(project_id):
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    cursor.execute('SELECT * FROM projects WHERE id = %s', (project_id,))
+    cursor.execute('SELECT * FROM projects WHERE id = ?', (project_id,))
     project = cursor.fetchone()
     if not project:
         cursor.close()
         conn.close()
         abort(404)
     
-    cursor.execute("SELECT * FROM bids WHERE project_id = %s AND status = 'Accepted'", (project_id,))
+    cursor.execute("SELECT * FROM bids WHERE project_id = ? AND status = 'Accepted'", (project_id,))
     accepted_bid = cursor.fetchone()
     
     # Check permissions based on user role
     can_complete = False
     if user['role'] == 'homeowner':
         # Get homeowner ID and check if they own the project
-        cursor.execute('SELECT id FROM homeowners WHERE user_id = %s', (user['id'],))
+        cursor.execute('SELECT id FROM homeowners WHERE user_id = ?', (user['id'],))
         homeowner_result = cursor.fetchone()
         if homeowner_result and homeowner_result['id'] == project['homeowner_id']:
             can_complete = True
     elif user['role'] == 'contractor' and accepted_bid:
         # Get contractor ID and check if they have the accepted bid
-        cursor.execute('SELECT id FROM contractors WHERE user_id = %s', (user['id'],))
+        cursor.execute('SELECT id FROM contractors WHERE user_id = ?', (user['id'],))
         contractor_result = cursor.fetchone()
         if contractor_result and contractor_result['id'] == accepted_bid['contractor_id']:
             can_complete = True
@@ -3928,7 +3941,7 @@ def complete_project(project_id):
         conn.close()
         return jsonify({'success': False, 'message': 'Project must have an accepted bid before it can be completed'}), 400
     
-    cursor.execute("UPDATE projects SET status = 'Completed' WHERE id = %s", (project_id,))
+    cursor.execute("UPDATE projects SET status = 'Completed' WHERE id = ?", (project_id,))
     conn.commit()
     cursor.close()
     conn.close()
@@ -3949,14 +3962,14 @@ def submit_review(project_id):
     
     try:
         # Get homeowner ID
-        cursor.execute('SELECT id FROM homeowners WHERE user_id = %s', (user['id'],))
+        cursor.execute('SELECT id FROM homeowners WHERE user_id = ?', (user['id'],))
         homeowner_result = cursor.fetchone()
         if not homeowner_result:
             return jsonify({'success': False, 'message': 'Homeowner profile not found'}), 404
         homeowner_id = homeowner_result['id']
         
         # Verify project exists and belongs to homeowner
-        cursor.execute('SELECT * FROM projects WHERE id = %s AND homeowner_id = %s', (project_id, homeowner_id))
+        cursor.execute('SELECT * FROM projects WHERE id = ? AND homeowner_id = ?', (project_id, homeowner_id))
         project = cursor.fetchone()
         if not project:
             return jsonify({'success': False, 'message': 'Project not found'}), 404
@@ -3966,14 +3979,14 @@ def submit_review(project_id):
             return jsonify({'success': False, 'message': 'You can only review completed projects'}), 400
         
         # Get the accepted bid to find the contractor
-        cursor.execute('SELECT contractor_id FROM bids WHERE project_id = %s AND status = "Accepted"', (project_id,))
+        cursor.execute('SELECT contractor_id FROM bids WHERE project_id = ? AND status = "Accepted"', (project_id,))
         bid_result = cursor.fetchone()
         if not bid_result:
             return jsonify({'success': False, 'message': 'No accepted contractor found for this project'}), 400
         contractor_id = bid_result['contractor_id']
         
         # Check if review already exists
-        cursor.execute('SELECT id FROM reviews WHERE project_id = %s AND contractor_id = %s', (project_id, contractor_id))
+        cursor.execute('SELECT id FROM reviews WHERE project_id = ? AND contractor_id = ?', (project_id, contractor_id))
         existing_review = cursor.fetchone()
         if existing_review:
             return jsonify({'success': False, 'message': 'You have already reviewed this project'}), 400
@@ -3989,20 +4002,20 @@ def submit_review(project_id):
         # Insert review
         cursor.execute('''
             INSERT INTO reviews (project_id, contractor_id, homeowner_id, rating, review_text)
-            VALUES (%s, %s, %s, %s, %s)
+            VALUES (?, ?, ?, ?, ?)
         ''', (project_id, contractor_id, homeowner_id, rating, review_text))
         
         # Update contractor's average rating and rating count
         cursor.execute('''
             SELECT AVG(rating) as avg_rating, COUNT(*) as review_count
-            FROM reviews WHERE contractor_id = %s
+            FROM reviews WHERE contractor_id = ?
         ''', (contractor_id,))
         rating_stats = cursor.fetchone()
         
         cursor.execute('''
             UPDATE contractors 
-            SET average_rating = %s, rating_count = %s
-            WHERE id = %s
+            SET average_rating = ?, rating_count = ?
+            WHERE id = ?
         ''', (round(rating_stats['avg_rating'], 1), rating_stats['review_count'], contractor_id))
         
         conn.commit()
@@ -4029,7 +4042,7 @@ def close_project(project_id):
     cursor = conn.cursor()
     
     # Get homeowner ID from homeowners table
-    cursor.execute('SELECT id FROM homeowners WHERE user_id = %s', (user['id'],))
+    cursor.execute('SELECT id FROM homeowners WHERE user_id = ?', (user['id'],))
     homeowner_result = cursor.fetchone()
     if not homeowner_result:
         cursor.close()
@@ -4038,7 +4051,7 @@ def close_project(project_id):
         return redirect(url_for('dashboard'))
     homeowner_id = homeowner_result['id']
     
-    cursor.execute('SELECT * FROM projects WHERE id = %s', (project_id,))
+    cursor.execute('SELECT * FROM projects WHERE id = ?', (project_id,))
     project = cursor.fetchone()
     if not project:
         cursor.close()
@@ -4051,7 +4064,7 @@ def close_project(project_id):
         flash('You can only close your own projects')
         return redirect(url_for('dashboard'))
     
-    cursor.execute("UPDATE projects SET status = 'Closed' WHERE id = %s", (project_id,))
+    cursor.execute("UPDATE projects SET status = 'Closed' WHERE id = ?", (project_id,))
     conn.commit()
     cursor.close()
     conn.close()
@@ -4173,14 +4186,14 @@ def complete_simple_onboarding():
         # Update contractor profile with onboarding data
         cursor.execute('''
             UPDATE contractors SET 
-                company = %s,
-                location = %s,
-                specialties = %s,
-                bio = %s,
-                years_experience = %s,
+                company = ?,
+                location = ?,
+                specialties = ?,
+                bio = ?,
+                years_experience = ?,
                 onboarding_completed = TRUE,
-                profile_completion_score = %s
-            WHERE user_id = %s
+                profile_completion_score = ?
+            WHERE user_id = ?
         ''', (
             company if company else None,
             location,
@@ -4289,7 +4302,7 @@ def update_contractor_profile():
     
     try:
         # Get contractor ID
-        cursor.execute('SELECT id FROM contractors WHERE user_id = %s', (user['id'],))
+        cursor.execute('SELECT id FROM contractors WHERE user_id = ?', (user['id'],))
         contractor_result = cursor.fetchone()
         if not contractor_result:
             return jsonify({'success': False, 'message': 'Contractor profile not found'}), 404
@@ -4308,9 +4321,9 @@ def update_contractor_profile():
         # Update contractor profile
         cursor.execute('''
             UPDATE contractors 
-            SET company = %s, location = %s, specialties = %s, bio = %s,
-                years_experience = %s, business_info = %s, portfolio = %s, hourly_rate = %s
-            WHERE id = %s
+            SET company = ?, location = ?, specialties = ?, bio = ?,
+                years_experience = ?, business_info = ?, portfolio = ?, hourly_rate = ?
+            WHERE id = ?
         ''', (company, location, specialties, bio, years_experience, business_info, portfolio, hourly_rate, contractor_id))
         
         conn.commit()
@@ -4338,7 +4351,7 @@ def contractor_availability():
     cursor = conn.cursor()
     
     # Get contractor ID
-    cursor.execute('SELECT id FROM contractors WHERE user_id = %s', (user['id'],))
+    cursor.execute('SELECT id FROM contractors WHERE user_id = ?', (user['id'],))
     contractor_result = cursor.fetchone()
     if not contractor_result:
         flash('Contractor profile not found.')
@@ -4352,7 +4365,7 @@ def contractor_availability():
     
     cursor.execute('''
         SELECT * FROM contractor_availability
-        WHERE contractor_id = %s AND available_date BETWEEN %s AND %s
+        WHERE contractor_id = ? AND available_date BETWEEN ? AND ?
         ORDER BY available_date
     ''', (contractor_id, start_date, end_date))
     availability = cursor.fetchall()
@@ -4376,7 +4389,7 @@ def update_contractor_availability():
     
     try:
         # Get contractor ID
-        cursor.execute('SELECT id FROM contractors WHERE user_id = %s', (user['id'],))
+        cursor.execute('SELECT id FROM contractors WHERE user_id = ?', (user['id'],))
         contractor_result = cursor.fetchone()
         if not contractor_result:
             return jsonify({'success': False, 'message': 'Contractor profile not found'}), 404
@@ -4401,8 +4414,8 @@ def update_contractor_availability():
         # Update or insert availability
         cursor.execute('''
             INSERT INTO contractor_availability (contractor_id, available_date, status, notes)
-            VALUES (%s, %s, %s, %s)
-            ON DUPLICATE KEY UPDATE status = %s, notes = %s, updated_at = CURRENT_TIMESTAMP
+            VALUES (?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE status = ?, notes = ?, updated_at = CURRENT_TIMESTAMP
         ''', (contractor_id, date_obj, status, notes, status, notes))
         
         conn.commit()
@@ -4430,7 +4443,7 @@ def contractor_messages():
     cursor = conn.cursor()
     
     # Get contractor ID
-    cursor.execute('SELECT id FROM contractors WHERE user_id = %s', (user['id'],))
+    cursor.execute('SELECT id FROM contractors WHERE user_id = ?', (user['id'],))
     contractor_result = cursor.fetchone()
     if not contractor_result:
         flash('Contractor profile not found.')
@@ -4456,7 +4469,7 @@ def contractor_quotes():
     cursor = conn.cursor()
     
     # Get contractor ID
-    cursor.execute('SELECT id FROM contractors WHERE user_id = %s', (user['id'],))
+    cursor.execute('SELECT id FROM contractors WHERE user_id = ?', (user['id'],))
     contractor_result = cursor.fetchone()
     if not contractor_result:
         flash('Contractor profile not found.')
@@ -4472,7 +4485,7 @@ def contractor_quotes():
         JOIN projects p ON q.project_id = p.id
         JOIN homeowners h ON p.homeowner_id = h.id
         JOIN users u ON h.user_id = u.id
-        WHERE q.contractor_id = %s
+        WHERE q.contractor_id = ?
         ORDER BY q.created_at DESC
     ''', (contractor_id,))
     quotes = cursor.fetchall()
@@ -4496,7 +4509,7 @@ def contractor_invoices():
     cursor = conn.cursor()
     
     # Get contractor ID
-    cursor.execute('SELECT id FROM contractors WHERE user_id = %s', (user['id'],))
+    cursor.execute('SELECT id FROM contractors WHERE user_id = ?', (user['id'],))
     contractor_result = cursor.fetchone()
     if not contractor_result:
         flash('Contractor profile not found.')
@@ -4512,7 +4525,7 @@ def contractor_invoices():
         JOIN projects p ON i.project_id = p.id
         JOIN homeowners h ON p.homeowner_id = h.id
         JOIN users u ON h.user_id = u.id
-        WHERE i.contractor_id = %s
+        WHERE i.contractor_id = ?
         ORDER BY i.created_at DESC
     ''', (contractor_id,))
     invoices = cursor.fetchall()
@@ -4526,7 +4539,7 @@ def contractor_invoices():
             SUM(CASE WHEN status IN ('sent', 'paid') AND MONTH(created_at) = MONTH(CURRENT_DATE()) 
                      AND YEAR(created_at) = YEAR(CURRENT_DATE()) THEN final_amount ELSE 0 END) as this_month
         FROM invoices
-        WHERE contractor_id = %s
+        WHERE contractor_id = ?
     ''', (contractor_id,))
     summary_result = cursor.fetchone()
     
@@ -4557,7 +4570,7 @@ def contractor_reviews(contractor_id):
         SELECT c.*, u.first_name, u.last_name
         FROM contractors c
         JOIN users u ON c.user_id = u.id
-        WHERE c.id = %s
+        WHERE c.id = ?
     ''', (contractor_id,))
     contractor = cursor.fetchone()
     
@@ -4578,21 +4591,21 @@ def contractor_reviews(contractor_id):
         JOIN homeowners h ON r.homeowner_id = h.id
         JOIN users u ON h.user_id = u.id
         LEFT JOIN review_replies rr ON r.id = rr.review_id
-        WHERE r.contractor_id = %s
+        WHERE r.contractor_id = ?
         ORDER BY r.created_at DESC
-        LIMIT %s OFFSET %s
+        LIMIT ? OFFSET ?
     ''', (contractor_id, per_page, offset))
     reviews = cursor.fetchall()
     
     # Get total review count
-    cursor.execute('SELECT COUNT(*) as total FROM reviews WHERE contractor_id = %s', (contractor_id,))
+    cursor.execute('SELECT COUNT(*) as total FROM reviews WHERE contractor_id = ?', (contractor_id,))
     total_reviews = cursor.fetchone()['total']
     
     # Get rating distribution
     cursor.execute('''
         SELECT rating, COUNT(*) as count
         FROM reviews
-        WHERE contractor_id = %s
+        WHERE contractor_id = ?
         GROUP BY rating
         ORDER BY rating DESC
     ''', (contractor_id,))
@@ -4631,7 +4644,7 @@ def reply_to_review(review_id):
     cursor = conn.cursor()
     
     # Get contractor ID
-    cursor.execute('SELECT id FROM contractors WHERE user_id = %s', (session['user']['id'],))
+    cursor.execute('SELECT id FROM contractors WHERE user_id = ?', (session['user']['id'],))
     contractor = cursor.fetchone()
     if not contractor:
         cursor.close()
@@ -4641,7 +4654,7 @@ def reply_to_review(review_id):
     contractor_id = contractor['id']
     
     # Verify the review exists and belongs to this contractor
-    cursor.execute('SELECT id, contractor_id FROM reviews WHERE id = %s', (review_id,))
+    cursor.execute('SELECT id, contractor_id FROM reviews WHERE id = ?', (review_id,))
     review = cursor.fetchone()
     if not review:
         cursor.close()
@@ -4655,21 +4668,21 @@ def reply_to_review(review_id):
     
     try:
         # Check if reply already exists
-        cursor.execute('SELECT id FROM review_replies WHERE review_id = %s', (review_id,))
+        cursor.execute('SELECT id FROM review_replies WHERE review_id = ?', (review_id,))
         existing_reply = cursor.fetchone()
         
         if existing_reply:
             # Update existing reply
             cursor.execute('''
                 UPDATE review_replies 
-                SET reply_text = %s, updated_at = CURRENT_TIMESTAMP
-                WHERE review_id = %s AND contractor_id = %s
+                SET reply_text = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE review_id = ? AND contractor_id = ?
             ''', (reply_text, review_id, contractor_id))
         else:
             # Insert new reply
             cursor.execute('''
                 INSERT INTO review_replies (review_id, contractor_id, reply_text)
-                VALUES (%s, %s, %s)
+                VALUES (?, ?, ?)
             ''', (review_id, contractor_id, reply_text))
         
         conn.commit()
@@ -4699,7 +4712,7 @@ def get_contractor_projects_with_bids():
     cursor = conn.cursor()
     
     # Get contractor ID
-    cursor.execute('SELECT id FROM contractors WHERE user_id = %s', (session['user']['id'],))
+    cursor.execute('SELECT id FROM contractors WHERE user_id = ?', (session['user']['id'],))
     contractor = cursor.fetchone()
     if not contractor:
         cursor.close()
@@ -4716,7 +4729,7 @@ def get_contractor_projects_with_bids():
         JOIN bids b ON p.id = b.project_id
         JOIN homeowners h ON p.homeowner_id = h.id
         JOIN users u ON h.user_id = u.id
-        WHERE b.contractor_id = %s AND p.status IN ('Active', 'In Progress')
+        WHERE b.contractor_id = ? AND p.status IN ('Active', 'In Progress')
         ORDER BY p.created_at DESC
     ''', (contractor_id,))
     
@@ -4762,7 +4775,7 @@ def create_quote():
     
     try:
         # Get contractor ID
-        cursor.execute('SELECT id FROM contractors WHERE user_id = %s', (session['user']['id'],))
+        cursor.execute('SELECT id FROM contractors WHERE user_id = ?', (session['user']['id'],))
         contractor = cursor.fetchone()
         if not contractor:
             return jsonify({'success': False, 'message': 'Contractor not found'}), 404
@@ -4770,7 +4783,7 @@ def create_quote():
         contractor_id = contractor['id']
         
         # Verify contractor has bid on this project
-        cursor.execute('SELECT id FROM bids WHERE project_id = %s AND contractor_id = %s', 
+        cursor.execute('SELECT id FROM bids WHERE project_id = ? AND contractor_id = ?', 
                       (project_id, contractor_id))
         bid = cursor.fetchone()
         if not bid:
@@ -4785,7 +4798,7 @@ def create_quote():
         total_amount = labor_cost + materials_cost + other_costs
         
         # Generate quote number
-        cursor.execute('SELECT COUNT(*) as count FROM quotes WHERE contractor_id = %s', (contractor_id,))
+        cursor.execute('SELECT COUNT(*) as count FROM quotes WHERE contractor_id = ?', (contractor_id,))
         quote_count = cursor.fetchone()['count'] + 1
         quote_number = f"Q{contractor_id:04d}-{quote_count:04d}"
         
@@ -4794,7 +4807,7 @@ def create_quote():
             INSERT INTO quotes (quote_number, project_id, contractor_id, title, description, 
                               labor_cost, materials_cost, other_costs, total_amount, 
                               final_amount, valid_until, notes, status)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (quote_number, project_id, contractor_id, title, description, 
               labor_cost, materials_cost, other_costs, total_amount, total_amount, 
               valid_until, additional_info, status))
@@ -4830,7 +4843,7 @@ def send_quote(quote_id):
     
     try:
         # Get contractor ID
-        cursor.execute('SELECT id FROM contractors WHERE user_id = %s', (session['user']['id'],))
+        cursor.execute('SELECT id FROM contractors WHERE user_id = ?', (session['user']['id'],))
         contractor = cursor.fetchone()
         if not contractor:
             return jsonify({'success': False, 'message': 'Contractor not found'}), 404
@@ -4838,14 +4851,14 @@ def send_quote(quote_id):
         contractor_id = contractor['id']
         
         # Verify quote belongs to contractor
-        cursor.execute('SELECT id FROM quotes WHERE id = %s AND contractor_id = %s', 
+        cursor.execute('SELECT id FROM quotes WHERE id = ? AND contractor_id = ?', 
                       (quote_id, contractor_id))
         quote = cursor.fetchone()
         if not quote:
             return jsonify({'success': False, 'message': 'Quote not found'}), 404
         
         # Update quote status to sent
-        cursor.execute('UPDATE quotes SET status = %s, sent_at = CURRENT_TIMESTAMP WHERE id = %s', 
+        cursor.execute('UPDATE quotes SET status = ?, sent_at = CURRENT_TIMESTAMP WHERE id = ?', 
                       ('sent', quote_id))
         
         conn.commit()
@@ -4873,7 +4886,7 @@ def edit_quote(quote_id):
     
     try:
         # Get contractor ID
-        cursor.execute('SELECT id FROM contractors WHERE user_id = %s', (session['user']['id'],))
+        cursor.execute('SELECT id FROM contractors WHERE user_id = ?', (session['user']['id'],))
         contractor = cursor.fetchone()
         if not contractor:
             flash('Contractor not found')
@@ -4890,7 +4903,7 @@ def edit_quote(quote_id):
             JOIN projects p ON q.project_id = p.id
             JOIN homeowners h ON p.homeowner_id = h.id
             JOIN users u ON h.user_id = u.id
-            WHERE q.id = %s AND q.contractor_id = %s
+            WHERE q.id = ? AND q.contractor_id = ?
         ''', (quote_id, contractor_id))
         quote = cursor.fetchone()
         
@@ -4923,7 +4936,7 @@ def delete_quote(quote_id):
     
     try:
         # Get contractor ID
-        cursor.execute('SELECT id FROM contractors WHERE user_id = %s', (session['user']['id'],))
+        cursor.execute('SELECT id FROM contractors WHERE user_id = ?', (session['user']['id'],))
         contractor = cursor.fetchone()
         if not contractor:
             return jsonify({'success': False, 'message': 'Contractor not found'}), 404
@@ -4931,7 +4944,7 @@ def delete_quote(quote_id):
         contractor_id = contractor['id']
         
         # Verify quote belongs to contractor and can be deleted
-        cursor.execute('SELECT status FROM quotes WHERE id = %s AND contractor_id = %s', 
+        cursor.execute('SELECT status FROM quotes WHERE id = ? AND contractor_id = ?', 
                       (quote_id, contractor_id))
         quote = cursor.fetchone()
         if not quote:
@@ -4941,7 +4954,7 @@ def delete_quote(quote_id):
             return jsonify({'success': False, 'message': 'Cannot delete accepted or completed quotes'}), 400
         
         # Delete quote
-        cursor.execute('DELETE FROM quotes WHERE id = %s', (quote_id,))
+        cursor.execute('DELETE FROM quotes WHERE id = ?', (quote_id,))
         
         conn.commit()
         cursor.close()
@@ -4974,7 +4987,7 @@ def download_quote_pdf(quote_id):
             SELECT c.*, u.first_name, u.last_name, u.email
             FROM contractors c
             JOIN users u ON c.user_id = u.id
-            WHERE c.user_id = %s
+            WHERE c.user_id = ?
         ''', (session['user']['id'],))
         contractor = cursor.fetchone()
         if not contractor:
@@ -4991,7 +5004,7 @@ def download_quote_pdf(quote_id):
             JOIN projects p ON q.project_id = p.id
             JOIN homeowners h ON p.homeowner_id = h.id
             JOIN users u ON h.user_id = u.id
-            WHERE q.id = %s AND q.contractor_id = %s
+            WHERE q.id = ? AND q.contractor_id = ?
         ''', (quote_id, contractor['id']))
         quote = cursor.fetchone()
         
@@ -5403,12 +5416,12 @@ def admin_users():
     params = []
     
     if search:
-        where_conditions.append('(u.first_name LIKE %s OR u.last_name LIKE %s OR u.email LIKE %s)')
+        where_conditions.append('(u.first_name LIKE ? OR u.last_name LIKE ? OR u.email LIKE ?)')
         search_param = f'%{search}%'
         params.extend([search_param, search_param, search_param])
     
     if role_filter:
-        where_conditions.append('u.role = %s')
+        where_conditions.append('u.role = ?')
         params.append(role_filter)
     
     where_clause = 'WHERE ' + ' AND '.join(where_conditions) if where_conditions else ''
@@ -5433,7 +5446,7 @@ def admin_users():
         LEFT JOIN contractors c ON u.id = c.user_id
         {where_clause}
         ORDER BY u.created_at DESC
-        LIMIT %s OFFSET %s
+        LIMIT ? OFFSET ?
     ''', params + [per_page, offset])
     users = cursor.fetchall()
     
@@ -5472,11 +5485,11 @@ def admin_projects():
     params = []
     
     if status_filter:
-        where_conditions.append('p.status = %s')
+        where_conditions.append('p.status = ?')
         params.append(status_filter)
     
     if project_type_filter:
-        where_conditions.append('p.project_type = %s')
+        where_conditions.append('p.project_type = ?')
         params.append(project_type_filter)
     
     where_clause = 'WHERE ' + ' AND '.join(where_conditions) if where_conditions else ''
@@ -5498,7 +5511,7 @@ def admin_projects():
         JOIN users u ON h.user_id = u.id
         {where_clause}
         ORDER BY p.created_at DESC
-        LIMIT %s OFFSET %s
+        LIMIT ? OFFSET ?
     ''', params + [per_page, offset])
     projects = cursor.fetchall()
     
@@ -5696,7 +5709,7 @@ def admin_toggle_user_status(user_id):
     cursor = conn.cursor()
     
     # Get user details
-    cursor.execute('SELECT * FROM users WHERE id = %s', (user_id,))
+    cursor.execute('SELECT * FROM users WHERE id = ?', (user_id,))
     user = cursor.fetchone()
     if not user:
         cursor.close()
@@ -5738,7 +5751,7 @@ def admin_create_admin():
     cursor = conn.cursor()
     
     # Check if user exists
-    cursor.execute('SELECT * FROM users WHERE id = %s', (user_id,))
+    cursor.execute('SELECT * FROM users WHERE id = ?', (user_id,))
     user = cursor.fetchone()
     if not user:
         cursor.close()
@@ -5746,7 +5759,7 @@ def admin_create_admin():
         return jsonify({'success': False, 'message': 'User not found'}), 404
     
     # Check if user is already an admin
-    cursor.execute('SELECT * FROM admin_users WHERE user_id = %s', (user_id,))
+    cursor.execute('SELECT * FROM admin_users WHERE user_id = ?', (user_id,))
     existing_admin = cursor.fetchone()
     if existing_admin:
         cursor.close()
@@ -5756,7 +5769,7 @@ def admin_create_admin():
     # Create admin user
     cursor.execute('''
         INSERT INTO admin_users (user_id, admin_level, created_by)
-        VALUES (%s, %s, %s)
+        VALUES (?, ?, ?)
     ''', (user_id, new_admin_level, admin_user['id']))
     
     conn.commit()
@@ -5773,6 +5786,26 @@ def admin_create_admin():
 
 # def create_demo_users():
 #     """Adapted for Cognito - run manually or via script"""
+
+# Import and register agreement routes
+from agreement_routes import register_agreement_routes
+register_agreement_routes(app, get_db_connection, login_required)
+
+# Import and register milestone routes
+from milestone_routes import register_milestone_routes
+register_milestone_routes(app, get_db_connection, login_required)
+
+# Import and register evidence routes
+from evidence_routes import register_evidence_routes
+register_evidence_routes(app, get_db_connection, login_required)
+
+# Import and register dispute routes
+from dispute_routes import register_dispute_routes
+register_dispute_routes(app, get_db_connection, login_required)
+
+# Import and register completion routes
+from completion_routes import register_completion_routes
+register_completion_routes(app, get_db_connection, login_required)
 
 if __name__ == '__main__':
     # Startup health check: ensure MySQL is reachable before proceeding

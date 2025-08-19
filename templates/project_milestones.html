@@ -1,0 +1,421 @@
+{% extends "base.html" %}
+
+{% block title %}Project Milestones - {{ project_title }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2>Project Milestones</h2>
+                    <p class="text-muted mb-0">{{ project_title }}</p>
+                    <small class="text-muted">Homeowner: {{ homeowner_name }}</small>
+                    {% if contractor_info %}
+                        <br><small class="text-muted">Contractor: {{ contractor_info.name }}</small>
+                    {% endif %}
+                </div>
+                {% if user_role == 'contractor' %}
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createMilestoneModal">
+                    <i class="fas fa-plus"></i> Add Milestone
+                </button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Milestones List -->
+    <div class="row">
+        <div class="col-12">
+            <div id="milestonesContainer">
+                <div class="text-center py-5" id="loadingSpinner">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Loading milestones...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create Milestone Modal -->
+{% if user_role == 'contractor' %}
+<div class="modal fade" id="createMilestoneModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Create New Milestone</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="createMilestoneForm">
+                    <div class="mb-3">
+                        <label for="milestoneTitle" class="form-label">Milestone Title *</label>
+                        <input type="text" class="form-control" id="milestoneTitle" required>
+                        <div class="form-text">Brief, descriptive title for this milestone</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="milestoneDescription" class="form-label">Description *</label>
+                        <textarea class="form-control" id="milestoneDescription" rows="4" required></textarea>
+                        <div class="form-text">Detailed description of what needs to be completed</div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="milestoneDueDate" class="form-label">Due Date *</label>
+                                <input type="date" class="form-control" id="milestoneDueDate" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="milestonePayment" class="form-label">Payment Amount ($)</label>
+                                <input type="number" class="form-control" id="milestonePayment" min="0" step="0.01">
+                                <div class="form-text">Optional payment amount for this milestone</div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="createMilestone()">Create Milestone</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Milestone Modal -->
+<div class="modal fade" id="editMilestoneModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Milestone</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editMilestoneForm">
+                    <input type="hidden" id="editMilestoneId">
+                    
+                    <div class="mb-3">
+                        <label for="editMilestoneTitle" class="form-label">Milestone Title *</label>
+                        <input type="text" class="form-control" id="editMilestoneTitle" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="editMilestoneDescription" class="form-label">Description *</label>
+                        <textarea class="form-control" id="editMilestoneDescription" rows="4" required></textarea>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="editMilestoneDueDate" class="form-label">Due Date *</label>
+                                <input type="date" class="form-control" id="editMilestoneDueDate" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="editMilestonePayment" class="form-label">Payment Amount ($)</label>
+                                <input type="number" class="form-control" id="editMilestonePayment" min="0" step="0.01">
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="updateMilestone()">Update Milestone</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteMilestoneModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete this milestone?</p>
+                <p class="text-danger"><strong>This action cannot be undone.</strong></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" onclick="confirmDeleteMilestone()">Delete</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentMilestoneToDelete = null;
+const projectId = {{ project_id }};
+const userRole = '{{ user_role }}';
+
+// Load milestones on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadMilestones();
+});
+
+function loadMilestones() {
+    fetch(`/api/project/${projectId}/milestones`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                throw new Error(data.error);
+            }
+            displayMilestones(data.milestones);
+        })
+        .catch(error => {
+            console.error('Error loading milestones:', error);
+            document.getElementById('milestonesContainer').innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    Error loading milestones: ${error.message}
+                </div>
+            `;
+        });
+}
+
+function displayMilestones(milestones) {
+    const container = document.getElementById('milestonesContainer');
+    
+    if (milestones.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-5">
+                <i class="fas fa-tasks fa-3x text-muted mb-3"></i>
+                <h4 class="text-muted">No Milestones Yet</h4>
+                <p class="text-muted">No milestones have been created for this project.</p>
+                ${userRole === 'contractor' ? '<button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createMilestoneModal">Create First Milestone</button>' : ''}
+            </div>
+        `;
+        return;
+    }
+    
+    let html = '';
+    milestones.forEach(milestone => {
+        const statusClass = getStatusClass(milestone.status);
+        const statusIcon = getStatusIcon(milestone.status);
+        const dueDate = new Date(milestone.due_date).toLocaleDateString();
+        const isOverdue = new Date(milestone.due_date) < new Date() && milestone.status !== 'completed';
+        
+        html += `
+            <div class="card mb-3 ${isOverdue ? 'border-danger' : ''}">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="flex-grow-1">
+                            <div class="d-flex align-items-center mb-2">
+                                <h5 class="card-title mb-0">${milestone.title}</h5>
+                                <span class="badge ${statusClass} ms-2">
+                                    <i class="${statusIcon}"></i> ${milestone.status.charAt(0).toUpperCase() + milestone.status.slice(1)}
+                                </span>
+                                ${isOverdue ? '<span class="badge bg-danger ms-1"><i class="fas fa-exclamation-triangle"></i> Overdue</span>' : ''}
+                            </div>
+                            <p class="card-text text-muted">${milestone.description}</p>
+                            
+                            <div class="row text-sm">
+                                <div class="col-md-4">
+                                    <strong>Due Date:</strong> ${dueDate}
+                                </div>
+                                ${milestone.payment_amount > 0 ? `<div class="col-md-4"><strong>Payment:</strong> $${milestone.payment_amount.toLocaleString()}</div>` : ''}
+                                <div class="col-md-4">
+                                    <strong>Created:</strong> ${new Date(milestone.created_at).toLocaleDateString()}
+                                </div>
+                            </div>
+                            
+                            ${milestone.completion_date ? `
+                                <div class="mt-2">
+                                    <small class="text-success">
+                                        <i class="fas fa-check-circle"></i> 
+                                        Completed on ${new Date(milestone.completion_date).toLocaleDateString()}
+                                    </small>
+                                </div>
+                            ` : ''}
+                            
+                            <!-- Evidence Actions -->
+                            <div class="mt-3">
+                                <div class="btn-group" role="group">
+                                    <a href="/milestone/${milestone.id}/evidence" class="btn btn-outline-primary btn-sm">
+                                        <i class="fas fa-camera"></i> ${userRole === 'contractor' ? 'Submit Evidence' : 'View Evidence'}
+                                    </a>
+                                    ${milestone.status === 'submitted' && userRole === 'homeowner' ? `
+                                        <span class="badge bg-warning ms-2">
+                                            <i class="fas fa-clock"></i> Pending Review
+                                        </span>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        ${userRole === 'contractor' && milestone.status !== 'completed' ? `
+                            <div class="dropdown">
+                                <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="dropdown">
+                                    <i class="fas fa-ellipsis-v"></i>
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="#" onclick="editMilestone(${milestone.id})"><i class="fas fa-edit"></i> Edit</a></li>
+                                    <li><a class="dropdown-item text-danger" href="#" onclick="deleteMilestone(${milestone.id})"><i class="fas fa-trash"></i> Delete</a></li>
+                                </ul>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html;
+}
+
+function getStatusClass(status) {
+    switch(status) {
+        case 'pending': return 'bg-warning';
+        case 'in_progress': return 'bg-info';
+        case 'completed': return 'bg-success';
+        case 'overdue': return 'bg-danger';
+        default: return 'bg-secondary';
+    }
+}
+
+function getStatusIcon(status) {
+    switch(status) {
+        case 'pending': return 'fas fa-clock';
+        case 'in_progress': return 'fas fa-spinner';
+        case 'completed': return 'fas fa-check-circle';
+        case 'overdue': return 'fas fa-exclamation-triangle';
+        default: return 'fas fa-question-circle';
+    }
+}
+
+function createMilestone() {
+    const form = document.getElementById('createMilestoneForm');
+    const formData = new FormData(form);
+    
+    const data = {
+        title: document.getElementById('milestoneTitle').value,
+        description: document.getElementById('milestoneDescription').value,
+        due_date: document.getElementById('milestoneDueDate').value,
+        payment_amount: document.getElementById('milestonePayment').value || 0
+    };
+    
+    // Validate required fields
+    if (!data.title || !data.description || !data.due_date) {
+        alert('Please fill in all required fields.');
+        return;
+    }
+    
+    fetch(`/api/project/${projectId}/milestones`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const modal = bootstrap.Modal.getInstance(document.getElementById('createMilestoneModal'));
+            modal.hide();
+            form.reset();
+            alert('Milestone created successfully!');
+            loadMilestones();
+        } else {
+            alert('Error creating milestone: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred while creating the milestone.');
+    });
+}
+
+function editMilestone(milestoneId) {
+    // Find milestone data
+    fetch(`/api/project/${projectId}/milestones`)
+        .then(response => response.json())
+        .then(data => {
+            const milestone = data.milestones.find(m => m.id === milestoneId);
+            if (milestone) {
+                document.getElementById('editMilestoneId').value = milestone.id;
+                document.getElementById('editMilestoneTitle').value = milestone.title;
+                document.getElementById('editMilestoneDescription').value = milestone.description;
+                document.getElementById('editMilestoneDueDate').value = milestone.due_date;
+                document.getElementById('editMilestonePayment').value = milestone.payment_amount;
+                
+                new bootstrap.Modal(document.getElementById('editMilestoneModal')).show();
+            }
+        });
+}
+
+function updateMilestone() {
+    const milestoneId = document.getElementById('editMilestoneId').value;
+    const data = {
+        title: document.getElementById('editMilestoneTitle').value,
+        description: document.getElementById('editMilestoneDescription').value,
+        due_date: document.getElementById('editMilestoneDueDate').value,
+        payment_amount: document.getElementById('editMilestonePayment').value || 0
+    };
+    
+    fetch(`/api/milestone/${milestoneId}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const modal = bootstrap.Modal.getInstance(document.getElementById('editMilestoneModal'));
+            modal.hide();
+            alert('Milestone updated successfully!');
+            loadMilestones();
+        } else {
+            alert('Error updating milestone: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred while updating the milestone.');
+    });
+}
+
+function deleteMilestone(milestoneId) {
+    currentMilestoneToDelete = milestoneId;
+    new bootstrap.Modal(document.getElementById('deleteMilestoneModal')).show();
+}
+
+function confirmDeleteMilestone() {
+    if (!currentMilestoneToDelete) return;
+    
+    fetch(`/api/milestone/${currentMilestoneToDelete}`, {
+        method: 'DELETE'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const modal = bootstrap.Modal.getInstance(document.getElementById('deleteMilestoneModal'));
+            modal.hide();
+            alert('Milestone deleted successfully!');
+            loadMilestones();
+        } else {
+            alert('Error deleting milestone: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred while deleting the milestone.');
+    })
+    .finally(() => {
+        currentMilestoneToDelete = null;
+    });
+}
+</script>
+{% endblock %}

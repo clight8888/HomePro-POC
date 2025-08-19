@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Dispute - {{ project[1] }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+    <style>
+        .dispute-form {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 2rem 0;
+        }
+        .form-card {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .form-header {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+            color: white;
+            padding: 2rem;
+            text-align: center;
+        }
+        .category-card {
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            padding: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 1rem;
+        }
+        .category-card:hover {
+            border-color: #007bff;
+            background-color: #f8f9fa;
+        }
+        .category-card.selected {
+            border-color: #007bff;
+            background-color: #e3f2fd;
+        }
+        .priority-badge {
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            border: 2px solid transparent;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .priority-badge.selected {
+            border-color: #007bff;
+            background-color: #007bff;
+            color: white;
+        }
+        .evidence-upload {
+            border: 2px dashed #dee2e6;
+            border-radius: 10px;
+            padding: 2rem;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+        .evidence-upload:hover {
+            border-color: #007bff;
+            background-color: #f8f9fa;
+        }
+    </style>
+</head>
+<body>
+    <div class="dispute-form">
+        <div class="container">
+            <div class="row justify-content-center">
+                <div class="col-lg-8">
+                    <div class="form-card">
+                        <div class="form-header">
+                            <h2><i class="fas fa-exclamation-triangle me-2"></i>File Project Dispute</h2>
+                            <p class="mb-0">Project: {{ project[1] }}</p>
+                        </div>
+                        
+                        <div class="p-4">
+                            <form id="disputeForm">
+                                <input type="hidden" id="projectId" value="{{ project[0] }}">
+                                
+                                <!-- Dispute Category -->
+                                <div class="mb-4">
+                                    <label class="form-label fw-bold">Dispute Category *</label>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="category-card" data-category="quality">
+                                                <div class="d-flex align-items-center">
+                                                    <i class="fas fa-star text-warning me-3 fs-4"></i>
+                                                    <div>
+                                                        <h6 class="mb-1">Quality Issues</h6>
+                                                        <small class="text-muted">Work quality doesn't meet standards</small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="category-card" data-category="timeline">
+                                                <div class="d-flex align-items-center">
+                                                    <i class="fas fa-clock text-info me-3 fs-4"></i>
+                                                    <div>
+                                                        <h6 class="mb-1">Timeline Issues</h6>
+                                                        <small class="text-muted">Delays or scheduling problems</small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="category-card" data-category="payment">
+                                                <div class="d-flex align-items-center">
+                                                    <i class="fas fa-dollar-sign text-success me-3 fs-4"></i>
+                                                    <div>
+                                                        <h6 class="mb-1">Payment Issues</h6>
+                                                        <small class="text-muted">Billing or payment disputes</small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="category-card" data-category="scope">
+                                                <div class="d-flex align-items-center">
+                                                    <i class="fas fa-list text-primary me-3 fs-4"></i>
+                                                    <div>
+                                                        <h6 class="mb-1">Scope Changes</h6>
+                                                        <small class="text-muted">Work scope disagreements</small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="category-card" data-category="communication">
+                                                <div class="d-flex align-items-center">
+                                                    <i class="fas fa-comments text-secondary me-3 fs-4"></i>
+                                                    <div>
+                                                        <h6 class="mb-1">Communication</h6>
+                                                        <small class="text-muted">Poor communication or responsiveness</small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="category-card" data-category="other">
+                                                <div class="d-flex align-items-center">
+                                                    <i class="fas fa-question-circle text-dark me-3 fs-4"></i>
+                                                    <div>
+                                                        <h6 class="mb-1">Other Issues</h6>
+                                                        <small class="text-muted">Other concerns not listed above</small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Related Milestone/Agreement -->
+                                <div class="row mb-4">
+                                    <div class="col-md-6">
+                                        <label for="milestoneId" class="form-label fw-bold">Related Milestone (Optional)</label>
+                                        <select class="form-select" id="milestoneId" name="milestone_id">
+                                            <option value="">Select milestone...</option>
+                                            {% for milestone in milestones %}
+                                            <option value="{{ milestone[0] }}">{{ milestone[1] }} ({{ milestone[2] }})</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="agreementId" class="form-label fw-bold">Related Agreement (Optional)</label>
+                                        <select class="form-select" id="agreementId" name="agreement_id">
+                                            <option value="">Select agreement...</option>
+                                            {% for agreement in agreements %}
+                                            <option value="{{ agreement[0] }}">{{ agreement[1] }} ({{ agreement[2] }})</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <!-- Dispute Title -->
+                                <div class="mb-4">
+                                    <label for="disputeTitle" class="form-label fw-bold">Dispute Title *</label>
+                                    <input type="text" class="form-control" id="disputeTitle" name="title" 
+                                           placeholder="Brief summary of the issue" required>
+                                </div>
+                                
+                                <!-- Dispute Description -->
+                                <div class="mb-4">
+                                    <label for="disputeDescription" class="form-label fw-bold">Detailed Description *</label>
+                                    <textarea class="form-control" id="disputeDescription" name="description" rows="5" 
+                                              placeholder="Provide a detailed description of the issue, including dates, specific problems, and any attempts to resolve the matter..." required></textarea>
+                                </div>
+                                
+                                <!-- Requested Resolution -->
+                                <div class="mb-4">
+                                    <label for="requestedResolution" class="form-label fw-bold">Requested Resolution</label>
+                                    <textarea class="form-control" id="requestedResolution" name="requested_resolution" rows="3" 
+                                              placeholder="What would you like to see happen to resolve this dispute?"></textarea>
+                                </div>
+                                
+                                <!-- Priority Level -->
+                                <div class="mb-4">
+                                    <label class="form-label fw-bold">Priority Level *</label>
+                                    <div class="d-flex gap-2 flex-wrap">
+                                        <span class="priority-badge bg-light text-dark" data-priority="low">
+                                            <i class="fas fa-arrow-down me-1"></i>Low
+                                        </span>
+                                        <span class="priority-badge bg-warning text-dark selected" data-priority="medium">
+                                            <i class="fas fa-minus me-1"></i>Medium
+                                        </span>
+                                        <span class="priority-badge bg-danger text-white" data-priority="high">
+                                            <i class="fas fa-arrow-up me-1"></i>High
+                                        </span>
+                                        <span class="priority-badge bg-dark text-white" data-priority="urgent">
+                                            <i class="fas fa-exclamation me-1"></i>Urgent
+                                        </span>
+                                    </div>
+                                </div>
+                                
+                                <!-- Evidence Upload -->
+                                <div class="mb-4">
+                                    <label class="form-label fw-bold">Supporting Evidence (Optional)</label>
+                                    <div class="evidence-upload" id="evidenceUpload">
+                                        <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
+                                        <p class="text-muted mb-2">Drag and drop files here or click to browse</p>
+                                        <input type="file" id="evidenceFiles" multiple 
+                                               accept=".png,.jpg,.jpeg,.gif,.pdf,.doc,.docx,.txt" style="display: none;">
+                                        <button type="button" class="btn btn-outline-primary" onclick="document.getElementById('evidenceFiles').click()">
+                                            <i class="fas fa-folder-open me-1"></i>Browse Files
+                                        </button>
+                                        <small class="form-text text-muted d-block mt-2">
+                                            Supported formats: PNG, JPG, PDF, DOC, TXT. Max size: 10MB per file.
+                                        </small>
+                                    </div>
+                                    <div id="evidencePreview" class="mt-3"></div>
+                                </div>
+                                
+                                <!-- Form Actions -->
+                                <div class="d-flex justify-content-between">
+                                    <a href="{{ url_for('project_detail', project_id=project[0]) }}" class="btn btn-secondary">
+                                        <i class="fas fa-arrow-left me-1"></i>Cancel
+                                    </a>
+                                    <button type="submit" class="btn btn-danger" id="submitBtn">
+                                        <i class="fas fa-exclamation-triangle me-1"></i>File Dispute
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let selectedCategory = null;
+        let selectedPriority = 'medium';
+        let selectedFiles = [];
+        
+        // Category selection
+        document.querySelectorAll('.category-card').forEach(card => {
+            card.addEventListener('click', function() {
+                // Remove previous selection
+                document.querySelectorAll('.category-card').forEach(c => c.classList.remove('selected'));
+                
+                // Add selection to clicked card
+                this.classList.add('selected');
+                selectedCategory = this.dataset.category;
+            });
+        });
+        
+        // Priority selection
+        document.querySelectorAll('.priority-badge').forEach(badge => {
+            badge.addEventListener('click', function() {
+                // Remove previous selection
+                document.querySelectorAll('.priority-badge').forEach(b => b.classList.remove('selected'));
+                
+                // Add selection to clicked badge
+                this.classList.add('selected');
+                selectedPriority = this.dataset.priority;
+            });
+        });
+        
+        // File upload handling
+        const evidenceUpload = document.getElementById('evidenceUpload');
+        const evidenceFiles = document.getElementById('evidenceFiles');
+        const evidencePreview = document.getElementById('evidencePreview');
+        
+        evidenceUpload.addEventListener('click', () => {
+            evidenceFiles.click();
+        });
+        
+        evidenceUpload.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            evidenceUpload.style.borderColor = '#007bff';
+            evidenceUpload.style.backgroundColor = '#f8f9fa';
+        });
+        
+        evidenceUpload.addEventListener('dragleave', () => {
+            evidenceUpload.style.borderColor = '#dee2e6';
+            evidenceUpload.style.backgroundColor = 'transparent';
+        });
+        
+        evidenceUpload.addEventListener('drop', (e) => {
+            e.preventDefault();
+            evidenceUpload.style.borderColor = '#dee2e6';
+            evidenceUpload.style.backgroundColor = 'transparent';
+            handleFiles(e.dataTransfer.files);
+        });
+        
+        evidenceFiles.addEventListener('change', (e) => {
+            handleFiles(e.target.files);
+        });
+        
+        function handleFiles(files) {
+            selectedFiles = Array.from(files);
+            updateFilePreview();
+        }
+        
+        function updateFilePreview() {
+            evidencePreview.innerHTML = '';
+            
+            if (selectedFiles.length === 0) return;
+            
+            const previewContainer = document.createElement('div');
+            previewContainer.className = 'row g-2';
+            
+            selectedFiles.forEach((file, index) => {
+                const fileCard = document.createElement('div');
+                fileCard.className = 'col-md-6';
+                fileCard.innerHTML = `
+                    <div class="card">
+                        <div class="card-body p-2">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-file me-2"></i>
+                                <div class="flex-grow-1">
+                                    <small class="fw-bold">${file.name}</small><br>
+                                    <small class="text-muted">${formatFileSize(file.size)}</small>
+                                </div>
+                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeFile(${index})">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                previewContainer.appendChild(fileCard);
+            });
+            
+            evidencePreview.appendChild(previewContainer);
+        }
+        
+        function removeFile(index) {
+            selectedFiles.splice(index, 1);
+            updateFilePreview();
+        }
+        
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+        
+        // Form submission
+        document.getElementById('disputeForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            if (!selectedCategory) {
+                alert('Please select a dispute category');
+                return;
+            }
+            
+            const submitBtn = document.getElementById('submitBtn');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Filing Dispute...';
+            submitBtn.disabled = true;
+            
+            try {
+                const formData = {
+                    project_id: parseInt(document.getElementById('projectId').value),
+                    milestone_id: document.getElementById('milestoneId').value || null,
+                    agreement_id: document.getElementById('agreementId').value || null,
+                    dispute_category: selectedCategory,
+                    title: document.getElementById('disputeTitle').value,
+                    description: document.getElementById('disputeDescription').value,
+                    requested_resolution: document.getElementById('requestedResolution').value,
+                    priority: selectedPriority
+                };
+                
+                const response = await fetch('/api/dispute/file', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('Dispute filed successfully!');
+                    window.location.href = `/project/${formData.project_id}/disputes`;
+                } else {
+                    alert('Error: ' + result.error);
+                }
+            } catch (error) {
+                alert('Error filing dispute: ' + error.message);
+            } finally {
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>

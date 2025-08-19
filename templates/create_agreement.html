@@ -1,0 +1,252 @@
+{% extends "base.html" %}
+
+{% block title %}Create Project Agreement{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <!-- Header -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <i class="fas fa-file-contract text-primary me-3" style="font-size: 2rem;"></i>
+                        <div>
+                            <h2 class="mb-1">Create Project Agreement</h2>
+                            <p class="text-muted mb-0">Formalize the project terms and conditions</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Project Summary -->
+                    <div class="bg-light rounded p-3">
+                        <h5 class="mb-3"><i class="fas fa-info-circle text-info me-2"></i>Project Summary</h5>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p><strong>Project:</strong> {{ project.title }}</p>
+                                <p><strong>Location:</strong> {{ project.location or 'Not specified' }}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <p><strong>Bid Amount:</strong> ${{ "{:,.2f}".format(project.amount) }}</p>
+                                <p><strong>Timeline:</strong> {{ project.timeline }}</p>
+                            </div>
+                        </div>
+                        <p><strong>Contractor:</strong> {{ project.first_name }} {{ project.last_name }}
+                            {% if project.business_name %} ({{ project.business_name }}){% endif %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Agreement Creation Form -->
+            <form method="POST" id="agreementForm">
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-white border-bottom">
+                        <h5 class="mb-0"><i class="fas fa-file-alt text-primary me-2"></i>Agreement Template</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-4">
+                            <label for="template_id" class="form-label">Select Agreement Template</label>
+                            <select class="form-select" id="template_id" name="template_id" required>
+                                <option value="">Choose a template...</option>
+                                {% for template in templates %}
+                                <option value="{{ template.id }}" data-description="{{ template.description }}">
+                                    {{ template.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text" id="templateDescription"></div>
+                        </div>
+                        
+                        <!-- Template Preview -->
+                        <div id="templatePreview" class="d-none">
+                            <div class="alert alert-info">
+                                <i class="fas fa-eye me-2"></i>
+                                <strong>Template Preview:</strong>
+                                <div id="templateContent" class="mt-2 small"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-white border-bottom">
+                        <h5 class="mb-0"><i class="fas fa-calendar-alt text-success me-2"></i>Project Timeline</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label for="start_date" class="form-label">Project Start Date</label>
+                                <input type="date" class="form-control" id="start_date" name="start_date" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="completion_date" class="form-label">Expected Completion Date</label>
+                                <input type="date" class="form-control" id="completion_date" name="completion_date" required>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-white border-bottom">
+                        <h5 class="mb-0"><i class="fas fa-dollar-sign text-warning me-2"></i>Payment Terms</h5>
+                    </div>
+                    <div class="card-body">
+                        <label for="payment_schedule" class="form-label">Payment Schedule</label>
+                        <textarea class="form-control" id="payment_schedule" name="payment_schedule" rows="4" 
+                                  placeholder="Example: 25% upfront, 50% at midpoint, 25% upon completion"></textarea>
+                        <div class="form-text">Specify when and how payments will be made throughout the project.</div>
+                    </div>
+                </div>
+
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-white border-bottom">
+                        <h5 class="mb-0"><i class="fas fa-edit text-info me-2"></i>Additional Terms</h5>
+                    </div>
+                    <div class="card-body">
+                        <label for="custom_terms" class="form-label">Custom Terms & Conditions</label>
+                        <textarea class="form-control" id="custom_terms" name="custom_terms" rows="6" 
+                                  placeholder="Add any specific terms, conditions, or requirements for this project..."></textarea>
+                        <div class="form-text">Include any special requirements, materials specifications, or other important details.</div>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('view_project', project_id=project.id) }}" class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>Back to Project
+                            </a>
+                            <div>
+                                <button type="button" class="btn btn-outline-primary me-2" id="previewBtn">
+                                    <i class="fas fa-eye me-2"></i>Preview Agreement
+                                </button>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-file-contract me-2"></i>Create Agreement
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Preview Modal -->
+<div class="modal fade" id="previewModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-eye me-2"></i>Agreement Preview</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="previewContent" class="border rounded p-3" style="max-height: 500px; overflow-y: auto;">
+                    <!-- Preview content will be loaded here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="$('#agreementForm').submit();">
+                    <i class="fas fa-file-contract me-2"></i>Create Agreement
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+$(document).ready(function() {
+    // Set minimum dates to today
+    const today = new Date().toISOString().split('T')[0];
+    $('#start_date').attr('min', today);
+    $('#completion_date').attr('min', today);
+    
+    // Update completion date minimum when start date changes
+    $('#start_date').change(function() {
+        $('#completion_date').attr('min', this.value);
+    });
+    
+    // Template selection handler
+    $('#template_id').change(function() {
+        const selectedOption = $(this).find('option:selected');
+        const description = selectedOption.data('description');
+        
+        if (description) {
+            $('#templateDescription').text(description).show();
+        } else {
+            $('#templateDescription').hide();
+        }
+        
+        // Load template preview
+        if ($(this).val()) {
+            loadTemplatePreview($(this).val());
+        } else {
+            $('#templatePreview').addClass('d-none');
+        }
+    });
+    
+    // Preview button handler
+    $('#previewBtn').click(function() {
+        if (!$('#template_id').val()) {
+            alert('Please select a template first.');
+            return;
+        }
+        
+        generatePreview();
+    });
+    
+    function loadTemplatePreview(templateId) {
+        // Find template content from the templates data
+        const templates = {{ templates | tojsonfilter }};
+        const template = templates.find(t => t.id == templateId);
+        
+        if (template) {
+            const preview = template.template_content.substring(0, 300) + '...';
+            $('#templateContent').text(preview);
+            $('#templatePreview').removeClass('d-none');
+        }
+    }
+    
+    function generatePreview() {
+        const formData = new FormData($('#agreementForm')[0]);
+        const templates = {{ templates | tojsonfilter }};
+        const selectedTemplate = templates.find(t => t.id == $('#template_id').val());
+        
+        if (!selectedTemplate) return;
+        
+        let content = selectedTemplate.template_content;
+        
+        // Replace placeholders with form data
+        const replacements = {
+            '{PROJECT_TITLE}': '{{ project.title }}',
+            '{PROJECT_DESCRIPTION}': '{{ project.description }}',
+            '{PROJECT_LOCATION}': '{{ project.location or "Not specified" }}',
+            '{PROJECT_BUDGET}': '{{ "${:,.2f}".format(project.budget) if project.budget else "Not specified" }}',
+            '{BID_AMOUNT}': '{{ "${:,.2f}".format(project.amount) }}',
+            '{TIMELINE}': '{{ project.timeline }}',
+            '{CONTRACTOR_NAME}': '{{ project.first_name }} {{ project.last_name }}',
+            '{CONTRACTOR_BUSINESS}': '{{ project.business_name or "Individual Contractor" }}',
+            '{CONTRACTOR_LICENSE}': '{{ project.license_number or "Not provided" }}',
+            '{CONTRACTOR_EMAIL}': '{{ project.email }}',
+            '{CONTRACTOR_PHONE}': '{{ project.phone or "Not provided" }}',
+            '{START_DATE}': $('#start_date').val() || '[START_DATE]',
+            '{COMPLETION_DATE}': $('#completion_date').val() || '[COMPLETION_DATE]',
+            '{PAYMENT_SCHEDULE}': $('#payment_schedule').val() || '[PAYMENT_SCHEDULE]',
+            '{CUSTOM_TERMS}': $('#custom_terms').val() || '[CUSTOM_TERMS]',
+            '{CREATION_DATE}': new Date().toLocaleDateString('en-US', { 
+                year: 'numeric', month: 'long', day: 'numeric' 
+            })
+        };
+        
+        for (const [placeholder, value] of Object.entries(replacements)) {
+            content = content.replace(new RegExp(placeholder.replace(/[{}]/g, '\\$&'), 'g'), value);
+        }
+        
+        $('#previewContent').html('<pre style="white-space: pre-wrap; font-family: inherit;">' + content + '</pre>');
+        $('#previewModal').modal('show');
+    }
+});
+</script>
+{% endblock %}

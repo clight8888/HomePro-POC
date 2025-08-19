@@ -865,6 +865,15 @@ a.btn.btn-outline-danger:focus {
     font-size: 1.25rem;
 }
 
+/* Remove any default styling from business name headings */
+.card-body h5, .card-body h6 {
+    background: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    outline: none !important;
+}
+
 .footer-heading {
     color: #e2e8f0;
     font-weight: 600;

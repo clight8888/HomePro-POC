@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Milestone Evidence - {{ milestone_title }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .evidence-card {
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            transition: box-shadow 0.3s ease;
+        }
+        .evidence-card:hover {
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .evidence-status {
+            font-weight: bold;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+        }
+        .status-pending { background-color: #fff3cd; color: #856404; }
+        .status-approved { background-color: #d1edff; color: #0c5460; }
+        .status-rejected { background-color: #f8d7da; color: #721c24; }
+        .file-thumbnail {
+            width: 80px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .file-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            margin-bottom: 8px;
+        }
+        .upload-area {
+            border: 2px dashed #dee2e6;
+            border-radius: 8px;
+            padding: 40px;
+            text-align: center;
+            transition: border-color 0.3s ease;
+        }
+        .upload-area.dragover {
+            border-color: #007bff;
+            background-color: #f8f9fa;
+        }
+        .milestone-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px 0;
+            margin-bottom: 30px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('homeowner_dashboard' if user_role == 'homeowner' else 'contractor_dashboard') }}">
+                <i class="fas fa-home"></i> HomePro
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="{{ url_for('project_detail', project_id=project_id) }}">
+                    <i class="fas fa-arrow-left"></i> Back to Project
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Milestone Header -->
+    <div class="milestone-header">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-8">
+                    <h1><i class="fas fa-flag-checkered"></i> {{ milestone_title }}</h1>
+                    <p class="mb-2"><strong>Project:</strong> {{ project_title }}</p>
+                    {% if milestone_description %}
+                    <p class="mb-2"><strong>Description:</strong> {{ milestone_description }}</p>
+                    {% endif %}
+                    {% if milestone_due_date %}
+                    <p class="mb-0"><strong>Due Date:</strong> {{ milestone_due_date }}</p>
+                    {% endif %}
+                </div>
+                <div class="col-md-4 text-end">
+                    <span class="badge bg-light text-dark fs-6">
+                        Status: {{ milestone_status.title() }}
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Evidence Submission Form (Contractor Only) -->
+        {% if user_role == 'contractor' and milestone_status != 'completed' %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5><i class="fas fa-upload"></i> Submit Evidence</h5>
+            </div>
+            <div class="card-body">
+                <form id="evidenceForm" enctype="multipart/form-data">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="evidenceType" class="form-label">Evidence Type</label>
+                                <select class="form-select" id="evidenceType" name="evidence_type" required>
+                                    <option value="photo">Photos</option>
+                                    <option value="document">Documents</option>
+                                    <option value="video">Video</option>
+                                    <option value="other">Other</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="description" class="form-label">Description *</label>
+                                <textarea class="form-control" id="description" name="description" rows="3" 
+                                        placeholder="Describe the work completed and evidence provided..." required></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Upload Files</label>
+                        <div class="upload-area" id="uploadArea">
+                            <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">Drag and drop files here or click to browse</p>
+                            <input type="file" id="fileInput" name="files" multiple 
+                                   accept=".png,.jpg,.jpeg,.gif,.pdf,.doc,.docx,.txt" style="display: none;">
+                            <button type="button" class="btn btn-outline-primary" onclick="document.getElementById('fileInput').click()">
+                                <i class="fas fa-folder-open"></i> Browse Files
+                            </button>
+                            <small class="form-text text-muted d-block mt-2">
+                                Supported formats: PNG, JPG, PDF, DOC, TXT. Max size: 10MB per file.
+                            </small>
+                        </div>
+                        <div id="filePreview" class="mt-3"></div>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-success" id="submitBtn">
+                        <i class="fas fa-paper-plane"></i> Submit Evidence
+                    </button>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Evidence List -->
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5><i class="fas fa-list"></i> Submitted Evidence</h5>
+                <button class="btn btn-outline-primary btn-sm" onclick="loadEvidence()">
+                    <i class="fas fa-sync-alt"></i> Refresh
+                </button>
+            </div>
+            <div class="card-body">
+                <div id="evidenceList">
+                    <div class="text-center py-4">
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Loading evidence...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Evidence Review Modal (Homeowner Only) -->
+    {% if user_role == 'homeowner' %}
+    <div class="modal fade" id="reviewModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Review Evidence</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="reviewContent"></div>
+                    <div class="mb-3">
+                        <label for="reviewNotes" class="form-label">Review Notes (Optional)</label>
+                        <textarea class="form-control" id="reviewNotes" rows="3" 
+                                placeholder="Add any comments or feedback..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" onclick="reviewEvidence('reject')">
+                        <i class="fas fa-times"></i> Reject
+                    </button>
+                    <button type="button" class="btn btn-success" onclick="reviewEvidence('approve')">
+                        <i class="fas fa-check"></i> Approve
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- File Viewer Modal -->
+    <div class="modal fade" id="fileViewerModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="fileViewerTitle">File Viewer</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <div id="fileViewerContent"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let currentReviewEvidenceId = null;
+        
+        // File upload handling
+        const fileInput = document.getElementById('fileInput');
+        const uploadArea = document.getElementById('uploadArea');
+        const filePreview = document.getElementById('filePreview');
+        let selectedFiles = [];
+        
+        // Drag and drop functionality
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+        
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+        
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            handleFiles(e.dataTransfer.files);
+        });
+        
+        uploadArea.addEventListener('click', () => {
+            fileInput.click();
+        });
+        
+        fileInput.addEventListener('change', (e) => {
+            handleFiles(e.target.files);
+        });
+        
+        function handleFiles(files) {
+            selectedFiles = Array.from(files);
+            displayFilePreview();
+        }
+        
+        function displayFilePreview() {
+            filePreview.innerHTML = '';
+            
+            selectedFiles.forEach((file, index) => {
+                const fileItem = document.createElement('div');
+                fileItem.className = 'file-item';
+                
+                const fileIcon = getFileIcon(file.name);
+                const fileSize = formatFileSize(file.size);
+                
+                fileItem.innerHTML = `
+                    <i class="${fileIcon} fa-2x me-3"></i>
+                    <div class="flex-grow-1">
+                        <div class="fw-bold">${file.name}</div>
+                        <small class="text-muted">${fileSize}</small>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeFile(${index})">
+                        <i class="fas fa-times"></i>
+                    </button>
+                `;
+                
+                filePreview.appendChild(fileItem);
+            });
+        }
+        
+        function removeFile(index) {
+            selectedFiles.splice(index, 1);
+            displayFilePreview();
+        }
+        
+        function getFileIcon(filename) {
+            const ext = filename.split('.').pop().toLowerCase();
+            switch(ext) {
+                case 'pdf': return 'fas fa-file-pdf text-danger';
+                case 'doc':
+                case 'docx': return 'fas fa-file-word text-primary';
+                case 'jpg':
+                case 'jpeg':
+                case 'png':
+                case 'gif': return 'fas fa-file-image text-success';
+                default: return 'fas fa-file text-secondary';
+            }
+        }
+        
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+        
+        // Evidence form submission
+        document.getElementById('evidenceForm')?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('submitBtn');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
+            submitBtn.disabled = true;
+            
+            try {
+                const formData = new FormData();
+                formData.append('evidence_type', document.getElementById('evidenceType').value);
+                formData.append('description', document.getElementById('description').value);
+                
+                selectedFiles.forEach(file => {
+                    formData.append('files', file);
+                });
+                
+                const response = await fetch(`/api/milestone/{{ milestone_id }}/evidence`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('Evidence submitted successfully!');
+                    document.getElementById('evidenceForm').reset();
+                    selectedFiles = [];
+                    displayFilePreview();
+                    loadEvidence();
+                } else {
+                    alert('Error: ' + result.error);
+                }
+            } catch (error) {
+                alert('Error submitting evidence: ' + error.message);
+            } finally {
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+            }
+        });
+        
+        // Load evidence
+        async function loadEvidence() {
+            try {
+                const response = await fetch(`/api/milestone/{{ milestone_id }}/evidence`);
+                const result = await response.json();
+                
+                if (result.evidence) {
+                    displayEvidence(result.evidence);
+                } else {
+                    document.getElementById('evidenceList').innerHTML = 
+                        '<div class="alert alert-warning">Error loading evidence: ' + result.error + '</div>';
+                }
+            } catch (error) {
+                document.getElementById('evidenceList').innerHTML = 
+                    '<div class="alert alert-danger">Error loading evidence: ' + error.message + '</div>';
+            }
+        }
+        
+        function displayEvidence(evidenceList) {
+            const container = document.getElementById('evidenceList');
+            
+            if (evidenceList.length === 0) {
+                container.innerHTML = '<div class="alert alert-info">No evidence submitted yet.</div>';
+                return;
+            }
+            
+            container.innerHTML = '';
+            
+            evidenceList.forEach(evidence => {
+                const evidenceCard = document.createElement('div');
+                evidenceCard.className = 'evidence-card p-3';
+                
+                const statusClass = `status-${evidence.status}`;
+                const submittedDate = new Date(evidence.submitted_at).toLocaleDateString();
+                
+                let filesHtml = '';
+                if (evidence.files && evidence.files.length > 0) {
+                    filesHtml = '<div class="mt-3"><strong>Files:</strong><div class="row mt-2">';
+                    evidence.files.forEach(file => {
+                        const isImage = file.original_filename.match(/\.(jpg|jpeg|png|gif)$/i);
+                        filesHtml += `
+                            <div class="col-md-3 mb-2">
+                                <div class="file-item" onclick="viewFile('${file.stored_filename}', '${file.original_filename}', ${isImage})">
+                                    ${isImage && file.thumbnail_path ? 
+                                        `<img src="/evidence/file/${file.stored_filename}" class="file-thumbnail me-2" alt="${file.original_filename}">` :
+                                        `<i class="${getFileIcon(file.original_filename)} fa-2x me-2"></i>`
+                                    }
+                                    <div class="flex-grow-1">
+                                        <small class="fw-bold">${file.original_filename}</small><br>
+                                        <small class="text-muted">${formatFileSize(file.file_size)}</small>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    filesHtml += '</div></div>';
+                }
+                
+                let reviewSection = '';
+                if (evidence.status === 'pending' && '{{ user_role }}' === 'homeowner') {
+                    reviewSection = `
+                        <div class="mt-3">
+                            <button class="btn btn-primary btn-sm" onclick="openReviewModal(${evidence.id}, '${evidence.description}')">
+                                <i class="fas fa-gavel"></i> Review Evidence
+                            </button>
+                        </div>
+                    `;
+                } else if (evidence.reviewed_at) {
+                    const reviewedDate = new Date(evidence.reviewed_at).toLocaleDateString();
+                    reviewSection = `
+                        <div class="mt-3">
+                            <small class="text-muted">Reviewed on ${reviewedDate}</small>
+                            ${evidence.reviewer_notes ? `<div class="mt-1"><strong>Notes:</strong> ${evidence.reviewer_notes}</div>` : ''}
+                        </div>
+                    `;
+                }
+                
+                evidenceCard.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="flex-grow-1">
+                            <div class="d-flex align-items-center mb-2">
+                                <h6 class="mb-0 me-3">${evidence.evidence_type.charAt(0).toUpperCase() + evidence.evidence_type.slice(1)} Evidence</h6>
+                                <span class="evidence-status ${statusClass}">${evidence.status.charAt(0).toUpperCase() + evidence.status.slice(1)}</span>
+                            </div>
+                            <p class="mb-2">${evidence.description}</p>
+                            <small class="text-muted">Submitted on ${submittedDate}</small>
+                            ${filesHtml}
+                            ${reviewSection}
+                        </div>
+                    </div>
+                `;
+                
+                container.appendChild(evidenceCard);
+            });
+        }
+        
+        function viewFile(storedFilename, originalFilename, isImage) {
+            const modal = new bootstrap.Modal(document.getElementById('fileViewerModal'));
+            document.getElementById('fileViewerTitle').textContent = originalFilename;
+            
+            const content = document.getElementById('fileViewerContent');
+            if (isImage) {
+                content.innerHTML = `<img src="/evidence/file/${storedFilename}" class="img-fluid" alt="${originalFilename}">`;
+            } else {
+                content.innerHTML = `
+                    <div class="text-center">
+                        <i class="${getFileIcon(originalFilename)} fa-5x mb-3"></i>
+                        <p>${originalFilename}</p>
+                        <a href="/evidence/file/${storedFilename}" class="btn btn-primary" target="_blank">
+                            <i class="fas fa-download"></i> Download File
+                        </a>
+                    </div>
+                `;
+            }
+            
+            modal.show();
+        }
+        
+        {% if user_role == 'homeowner' %}
+        function openReviewModal(evidenceId, description) {
+            currentReviewEvidenceId = evidenceId;
+            document.getElementById('reviewContent').innerHTML = `
+                <div class="alert alert-info">
+                    <strong>Evidence Description:</strong><br>
+                    ${description}
+                </div>
+            `;
+            document.getElementById('reviewNotes').value = '';
+            
+            const modal = new bootstrap.Modal(document.getElementById('reviewModal'));
+            modal.show();
+        }
+        
+        async function reviewEvidence(action) {
+            if (!currentReviewEvidenceId) return;
+            
+            try {
+                const notes = document.getElementById('reviewNotes').value;
+                
+                const response = await fetch(`/api/evidence/${currentReviewEvidenceId}/review`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        action: action,
+                        notes: notes
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert(`Evidence ${action}d successfully!`);
+                    bootstrap.Modal.getInstance(document.getElementById('reviewModal')).hide();
+                    loadEvidence();
+                } else {
+                    alert('Error: ' + result.error);
+                }
+            } catch (error) {
+                alert('Error reviewing evidence: ' + error.message);
+            }
+        }
+        {% endif %}
+        
+        // Load evidence on page load
+        document.addEventListener('DOMContentLoaded', loadEvidence);
+    </script>
+</body>
+</html>
